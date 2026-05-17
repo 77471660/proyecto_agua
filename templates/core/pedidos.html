@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Pedidos - AquaSmart CRM
+{% endblock %}
+
+{% block content %}
+
+<div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+        <h2>Lista de pedidos</h2>
+        <small class="text-muted">
+            Seguimiento de entregas, cancelaciones y pedidos programados.
+        </small>
+    </div>
+
+    <a href="/registrar-pedido/" class="btn btn-success">
+        Nuevo pedido
+    </a>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+
+        <form method="GET" class="row g-3">
+
+            <div class="col-md-6">
+                <label class="form-label">Buscar cliente</label>
+                <input
+                    type="text"
+                    name="busqueda"
+                    class="form-control"
+                    placeholder="Ejemplo: Juan"
+                    value="{{ busqueda }}"
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select">
+                    <option value="">Todos</option>
+
+                    <option value="PENDIENTE" {% if estado_actual == 'PENDIENTE' %}selected{% endif %}>
+                        Pendiente
+                    </option>
+
+                    <option value="ENTREGADO" {% if estado_actual == 'ENTREGADO' %}selected{% endif %}>
+                        Entregado
+                    </option>
+
+                    <option value="CANCELADO" {% if estado_actual == 'CANCELADO' %}selected{% endif %}>
+                        Cancelado
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    Filtrar
+                </button>
+            </div>
+
+        </form>
+
+        <div class="mt-3">
+            <a href="/pedidos/" class="btn btn-outline-secondary btn-sm">
+                Limpiar filtros
+            </a>
+
+            <a
+                href="/pedidos/?filtro=atrasados"
+                class="btn btn-sm {% if filtro_actual == 'atrasados' %}btn-danger{% else %}btn-outline-danger{% endif %}"
+            >
+                Atrasados
+            </a>
+
+            <a
+                href="/pedidos/?filtro=hoy"
+                class="btn btn-sm {% if filtro_actual == 'hoy' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+            >
+                Hoy
+            </a>
+
+            <a
+                href="/pedidos/?filtro=programados"
+                class="btn btn-sm {% if filtro_actual == 'programados' %}btn-info text-white{% else %}btn-outline-info{% endif %}"
+            >
+                Programados
+            </a>
+
+            <a
+                href="/pedidos/?filtro=entregados"
+                class="btn btn-sm {% if filtro_actual == 'entregados' %}btn-success{% else %}btn-outline-success{% endif %}"
+            >
+                Entregados
+            </a>
+
+            <a
+                href="/pedidos/?filtro=cancelados"
+                class="btn btn-sm {% if filtro_actual == 'cancelados' %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+            >
+                Cancelados
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 orders-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Repartidor</th>
+                        <th>Fecha / prioridad</th>
+                        <th class="text-center">Cantidad</th>
+                        <th class="text-end">Total</th>
+                        <th>Estado</th>
+                        <th>Observación</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for pedido in pedidos %}
+                        <tr class="{{ pedido.fila_prioridad_clase }}">
+                            <td>#{{ pedido.id }}</td>
+
+                            <td>
+                                {{ pedido.cliente.nombre }}
+                            </td>
+
+                            <td>
+                                {% if pedido.repartidor %}
+                                    <span class="badge bg-primary">
+                                        {% if pedido.repartidor.get_full_name %}
+                                            {{ pedido.repartidor.get_full_name }}
+                                        {% else %}
+                                            {{ pedido.repartidor.username }}
+                                        {% endif %}
+                                    </span>
+                                {% else %}
+                                    <span class="badge-estado badge-muted">
+                                        Sin asignar
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="order-date-cell">
+                                <div>{{ pedido.fecha_pedido|date:"d/m/Y" }}</div>
+                                <small class="text-muted">
+                                    {{ pedido.fecha_pedido|date:"H:i" }}
+                                </small>
+
+                                {% if pedido.programacion_texto %}
+                                    <div class="temporal-priority mt-1">
+                                        <span class="temporal-label">Prioridad</span>
+                                        <span class="badge-estado {{ pedido.programacion_clase }}">
+                                            {{ pedido.programacion_texto }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                {{ pedido.cantidad_bidones }}
+                            </td>
+
+                            <td class="text-end money-cell">
+                                S/ {{ pedido.total|floatformat:2 }}
+                            </td>
+
+                            <td>
+                                {% if pedido.estado == 'ENTREGADO' %}
+                                    <span class="badge-estado badge-entregado">
+                                        Entregado
+                                    </span>
+                                {% elif pedido.estado == 'PENDIENTE' %}
+                                    <span class="badge-estado badge-pendiente">
+                                        Pendiente
+                                    </span>
+                                {% elif pedido.estado == 'CANCELADO' %}
+                                    <span class="badge-estado badge-cancelado">
+                                        Cancelado
+                                    </span>
+                                {% else %}
+                                    <span class="badge-estado badge-muted">
+                                        {{ pedido.estado }}
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ pedido.observacion|default:"-" }}
+                            </td>
+
+                            <td>
+                                {% if pedido.estado == 'PENDIENTE' %}
+
+                                    <div class="action-group table-action-group d-flex gap-2 flex-nowrap">
+                                        <form
+                                            method="POST"
+                                            action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}"
+                                        >
+                                            {% csrf_token %}
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-success"
+                                            >
+                                                Entregar
+                                            </button>
+                                        </form>
+
+                                        <form
+                                            method="POST"
+                                            action="{% url 'cambiar_estado_pedido' pedido.id 'CANCELADO' %}"
+                                        >
+                                            {% csrf_token %}
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('¿Seguro que deseas cancelar este pedido?')"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                {% else %}
+
+                                    <span class="text-muted small">Sin acciones</span>
+
+                                {% endif %}
+                            </td>
+                        </tr>
+
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">
+                                No se encontraron pedidos.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% include 'includes/pagination.html' %}
+
+    </div>
+</div>
+
+{% endblock %}

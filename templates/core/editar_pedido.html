@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Editar pedido
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2>Editar pedido #{{ pedido.id }}</h2>
+                <small class="text-muted">
+                    {{ pedido.cliente.nombre }} - {{ pedido.cliente.telefono }}
+                </small>
+            </div>
+
+            {% if origen == 'panel_jefe' %}
+                <a href="{% url 'panel_jefe_repartidores' %}" class="btn btn-outline-secondary">
+                    Volver
+                </a>
+            {% else %}
+                <a href="{% url 'detalle_cliente' pedido.cliente.id %}" class="btn btn-outline-secondary">
+                    Volver
+                </a>
+            {% endif %}
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning">
+                Corrección del pedido
+            </div>
+
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="origen" value="{{ origen }}">
+
+                    <div class="alert alert-info">
+                        El total se recalcula automáticamente como cantidad por precio unitario.
+                        Estado actual: <strong>{{ pedido.estado }}</strong>.
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="cantidad_bidones">
+                                Cantidad de bidones
+                            </label>
+                            <input
+                                type="number"
+                                id="cantidad_bidones"
+                                name="cantidad_bidones"
+                                class="form-control"
+                                min="1"
+                                max="100"
+                                value="{{ pedido.cantidad_bidones }}"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="precio_unitario">
+                                Precio unitario
+                            </label>
+                            <input
+                                type="number"
+                                id="precio_unitario"
+                                name="precio_unitario"
+                                class="form-control"
+                                step="0.01"
+                                min="1.00"
+                                max="50.00"
+                                value="{{ pedido.precio_unitario|floatformat:2 }}"
+                                required
+                            >
+                            <small class="text-muted">
+                                Total actual: S/ {{ pedido.total|floatformat:2 }}
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="fecha_programada">
+                            Fecha programada
+                        </label>
+                        <input
+                            type="date"
+                            id="fecha_programada"
+                            name="fecha_programada"
+                            class="form-control"
+                            min="{{ hoy|date:'Y-m-d' }}"
+                            value="{{ pedido.fecha_programada|date:'Y-m-d' }}"
+                        >
+                        <small class="text-muted">
+                            Déjalo vacío si el pedido será entregado hoy.
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="repartidor">
+                            Repartidor asignado
+                        </label>
+                        <select id="repartidor" name="repartidor" class="form-select">
+                            <option value="">Sin asignar</option>
+                            {% for repartidor in repartidores %}
+                                <option
+                                    value="{{ repartidor.id }}"
+                                    {% if pedido.repartidor_id == repartidor.id %}selected{% endif %}
+                                >
+                                    {% if repartidor.get_full_name %}
+                                        {{ repartidor.get_full_name }}
+                                    {% else %}
+                                        {{ repartidor.username }}
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label" for="observacion">
+                            Observación
+                        </label>
+                        <textarea
+                            id="observacion"
+                            name="observacion"
+                            class="form-control"
+                            rows="3"
+                        >{{ pedido.observacion|default_if_none:"" }}</textarea>
+                    </div>
+
+                    <div class="form-actions d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-success">
+                            Guardar cambios
+                        </button>
+
+                        {% if origen == 'panel_jefe' %}
+                            <a href="{% url 'panel_jefe_repartidores' %}" class="btn btn-outline-secondary">
+                                Cancelar
+                            </a>
+                        {% else %}
+                            <a href="{% url 'detalle_cliente' pedido.cliente.id %}" class="btn btn-outline-secondary">
+                                Cancelar
+                            </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

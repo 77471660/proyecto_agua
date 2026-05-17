@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Django local data
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Logs and local runtime files
+*.log
+*.pot
+*.pid
+
+# Test and coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# OS metadata
+.DS_Store
+Thumbs.db

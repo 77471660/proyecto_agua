@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Nuevo cliente - AquaSmart CRM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        body {
+            background: #f8fafc;
+            color: #1f2937;
+        }
+
+        .top-bar {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .form-card {
+            border: 0;
+            border-radius: 8px;
+            box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.08);
+        }
+
+        .action-button {
+            min-height: 48px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="top-bar py-3 mb-3">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center gap-3">
+            <div>
+                <h1 class="h5 mb-0">Nuevo cliente</h1>
+                <small>Panel repartidor</small>
+            </div>
+
+            <a href="/pedidos/repartidor/" class="btn btn-outline-light btn-sm">
+                Volver
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="container pb-4">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"
+                ></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <section class="card form-card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label" for="nombre">Nombre</label>
+                    <input
+                        type="text"
+                        id="nombre"
+                        name="nombre"
+                        class="form-control form-control-lg"
+                        maxlength="100"
+                        required
+                    >
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="telefono">Teléfono</label>
+                    <input
+                        type="tel"
+                        id="telefono"
+                        name="telefono"
+                        class="form-control form-control-lg"
+                        maxlength="20"
+                        required
+                    >
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="direccion">Dirección</label>
+                    <input
+                        type="text"
+                        id="direccion"
+                        name="direccion"
+                        class="form-control form-control-lg"
+                        maxlength="255"
+                        required
+                    >
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label" for="referencia">Referencia</label>
+                    <textarea
+                        id="referencia"
+                        name="referencia"
+                        class="form-control"
+                        rows="3"
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 action-button">
+                    Guardar cliente
+                </button>
+            </form>
+        </div>
+    </section>
+
+</main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+</script>
+
+</body>
+</html>

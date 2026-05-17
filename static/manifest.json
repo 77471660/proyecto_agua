@@ -1,0 +1,26 @@
+{
+  "name": "AquaSmart CRM",
+  "short_name": "AquaSmart",
+  "description": "Panel operativo de pedidos y reparto de AquaSmart CRM.",
+  "start_url": "/pedidos/repartidor/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#0d6efd",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/img/icons/aquasmart-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mi reparto",
+      "short_name": "Reparto",
+      "url": "/pedidos/repartidor/"
+    }
+  ]
+}

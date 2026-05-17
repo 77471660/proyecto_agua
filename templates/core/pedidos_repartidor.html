@@ -1,0 +1,532 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Pedidos repartidor - AquaSmart CRM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        body {
+            background: #f8fafc;
+            color: #1f2937;
+        }
+
+        .top-bar {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .order-card {
+            border: 0;
+            border-radius: 8px;
+            box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.08);
+        }
+
+        .summary-card {
+            border: 0;
+            border-radius: 8px;
+            box-shadow: 0 0.25rem 0.8rem rgba(15, 23, 42, 0.06);
+        }
+
+        .order-label {
+            color: #64748b;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .order-value {
+            font-size: 1rem;
+            overflow-wrap: anywhere;
+        }
+
+        .action-button {
+            min-height: 48px;
+            font-weight: 700;
+        }
+
+        .action-stack {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .action-details {
+            margin-top: 1.5rem;
+        }
+
+        .action-summary,
+        .history-summary {
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            list-style: none;
+            min-height: 48px;
+            padding: 0.7rem 1rem;
+            text-align: center;
+        }
+
+        .action-summary {
+            background: #eff6ff;
+            border: 1px solid #93c5fd;
+            color: #0d6efd;
+        }
+
+        .history-details {
+            margin-top: 1.75rem;
+        }
+
+        .history-summary.delivered {
+            background: #dcfce7;
+            border: 1px solid #86efac;
+            color: #166534;
+        }
+
+        .history-summary.cancelled {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .history-summary.scheduled {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+        }
+
+        .action-summary::-webkit-details-marker,
+        .history-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .btn-whatsapp {
+            background: #25D366;
+            border-color: #25D366;
+            color: white;
+        }
+
+        .btn-whatsapp:hover,
+        .btn-whatsapp:focus {
+            background: #1fb85a;
+            border-color: #1fb85a;
+            color: white;
+        }
+
+        .badge,
+        .badge-estado,
+        .waiting-badge {
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 0.38rem 0.68rem;
+            white-space: nowrap;
+        }
+
+        .waiting-badge {
+            margin-top: 0.35rem;
+        }
+
+        .waiting-ok {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .waiting-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .waiting-danger {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .waiting-critical {
+            background: #991b1b;
+            color: white;
+        }
+
+        .badge-entregado {
+            background: #dcfce7;
+            border: 1px solid #86efac;
+            color: #166534;
+        }
+
+        .badge-pendiente {
+            background: #fef3c7;
+            border: 1px solid #facc15;
+            color: #854d0e;
+        }
+
+        .badge-hoy {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            color: #1d4ed8;
+        }
+
+        .badge-atrasado {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+        }
+
+        .badge-cancelado {
+            background: #e5e7eb;
+            border: 1px solid #cbd5e1;
+            color: #374151;
+        }
+
+        .alert-info {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e3a8a;
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .alert-warning {
+            background: #fffbeb;
+            border-color: #fde68a;
+            color: #854d0e;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+
+        .new-client-badge {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            color: #1d4ed8;
+            margin-top: 0.4rem;
+        }
+
+        .alert {
+            border-radius: 8px;
+            border-width: 1px;
+        }
+
+        .btn-outline-primary,
+        .btn-outline-danger,
+        .btn-outline-light {
+            font-weight: 700;
+        }
+
+        .mobile-actions .dropdown-toggle {
+            min-width: 8.5rem;
+        }
+
+        .mobile-actions .dropdown-item {
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="top-bar py-3 mb-3">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+            <div>
+                <h1 class="h5 mb-0">Pedidos activos</h1>
+                <small>AquaSmart CRM</small>
+                <div class="small mt-1">
+                    Repartidor:
+                    {% if request.user.get_full_name %}
+                        {{ request.user.get_full_name }}
+                    {% else %}
+                        {{ request.user.username }}
+                    {% endif %}
+                </div>
+                <div class="small opacity-75">
+                    Solo ves pedidos asignados a este usuario.
+                </div>
+            </div>
+
+            <div class="d-none d-sm-flex gap-2 flex-wrap align-items-stretch justify-content-sm-end">
+                <a href="/clientes/" class="btn btn-outline-light btn-sm">
+                    Ver clientes
+                </a>
+
+                <a href="/repartidor/clientes/nuevo/" class="btn btn-light btn-sm">
+                    Nuevo cliente
+                </a>
+
+                <a href="/repartidor/pedidos/nuevo/" class="btn btn-light btn-sm">
+                    Nuevo pedido
+                </a>
+
+                {% if menu_es_jefe_repartidores %}
+                    <a href="/repartidor/jefe/" class="btn btn-outline-light btn-sm">
+                        Panel jefe reparto
+                    </a>
+                {% endif %}
+
+                {% if menu_puede_crm_operativo %}
+                    <a href="/pedidos/" class="btn btn-outline-light btn-sm">
+                        Volver
+                    </a>
+                {% endif %}
+
+                <form method="post" action="{% url 'cerrar_sesion_repartidor' %}" class="mb-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-light btn-sm">
+                        Cerrar sesión
+                    </button>
+                </form>
+            </div>
+
+            <div class="dropdown mobile-actions d-sm-none ms-auto">
+                <button
+                    class="btn btn-outline-light btn-sm dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                >
+                    Acciones
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item" href="/clientes/">Ver clientes</a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="/repartidor/clientes/nuevo/">Nuevo cliente</a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="/repartidor/pedidos/nuevo/">Nuevo pedido</a>
+                    </li>
+                    {% if menu_es_jefe_repartidores %}
+                        <li>
+                            <a class="dropdown-item" href="/repartidor/jefe/">Panel jefe reparto</a>
+                        </li>
+                    {% endif %}
+                    {% if menu_puede_crm_operativo %}
+                        <li>
+                            <a class="dropdown-item" href="/pedidos/">Volver</a>
+                        </li>
+                    {% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form method="post" action="{% url 'cerrar_sesion_repartidor' %}" class="mb-0">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item">
+                                Cerrar sesión
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="container pb-4">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"
+                ></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <section class="card summary-card mb-3">
+        <div class="card-body">
+            <h2 class="h6 mb-3">Resumen de hoy</h2>
+            <div class="row g-3 text-center">
+                <div class="col-4">
+                    <div class="order-label">Bidones</div>
+                    <div class="fw-bold">{{ total_bidones_hoy }}</div>
+                </div>
+
+                <div class="col-4">
+                    <div class="order-label">Dinero</div>
+                    <div class="fw-bold">S/ {{ total_dinero_hoy|floatformat:2 }}</div>
+                </div>
+
+                <div class="col-4">
+                    <div class="order-label">Pedidos</div>
+                    <div class="fw-bold">{{ total_pedidos_hoy }}</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <h2 class="h6 mb-3">Pedidos para hoy / atrasados</h2>
+
+    {% for pedido in pedidos_hoy %}
+        {% include 'core/includes/pedido_repartidor_card.html' %}
+    {% empty %}
+        <div class="card order-card">
+            <div class="card-body text-center py-5">
+                <h2 class="h5">No hay pedidos para hoy</h2>
+                <p class="text-muted mb-0">
+                    Los pedidos futuros aparecen en la sección de programados.
+                </p>
+            </div>
+        </div>
+    {% endfor %}
+
+    <details class="history-details">
+        <summary class="history-summary scheduled">
+            Ver pedidos programados ({{ total_pedidos_programados }})
+        </summary>
+
+        <div class="mt-3">
+            {% for pedido in pedidos_programados %}
+                {% include 'core/includes/pedido_repartidor_card.html' %}
+            {% empty %}
+                <div class="card order-card">
+                    <div class="card-body text-center py-4">
+                        <p class="text-muted mb-0">
+                            No hay pedidos programados para próximas fechas.
+                        </p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </details>
+
+
+    <details class="history-details">
+        <summary class="history-summary delivered">
+            Ver entregas de hoy
+        </summary>
+
+        <div class="mt-3">
+            {% for entrega in entregas_hoy %}
+                <article class="card order-card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <h3 class="h6 mb-1">{{ entrega.cliente.nombre }}</h3>
+                                <div class="small text-muted">
+                                    Hora: {{ entrega.hora_entrega_panel }}
+                                </div>
+                            </div>
+
+                            <span class="badge-estado badge-entregado">
+                                Entregado
+                            </span>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="order-label">Dirección</div>
+                                <div class="order-value">{{ entrega.cliente.direccion }}</div>
+                            </div>
+
+                            {% if entrega.cliente.referencia %}
+                                <div class="col-12">
+                                    <div class="order-label">Referencia</div>
+                                    <div class="order-value">{{ entrega.cliente.referencia }}</div>
+                                </div>
+                            {% endif %}
+
+                            <div class="col-6">
+                                <div class="order-label">Bidones</div>
+                                <div class="order-value">{{ entrega.cantidad_bidones }}</div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="order-label">Total</div>
+                                <div class="order-value">S/ {{ entrega.total|floatformat:2 }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            {% empty %}
+                <div class="card order-card">
+                    <div class="card-body text-center py-4">
+                        <p class="text-muted mb-0">
+                            Todavía no hay entregas registradas hoy.
+                        </p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </details>
+
+    <details class="history-details">
+        <summary class="history-summary cancelled">
+            Ver cancelados de hoy
+        </summary>
+
+        <div class="mt-3">
+            {% for cancelado in cancelados_hoy %}
+                <article class="card order-card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <h3 class="h6 mb-1">{{ cancelado.cliente.nombre }}</h3>
+                                <div class="small text-muted">
+                                    Hora: {{ cancelado.hora_cancelacion_panel }}
+                                </div>
+                            </div>
+
+                            <span class="badge-estado badge-cancelado">
+                                Cancelado
+                            </span>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="order-label">Bidones</div>
+                                <div class="order-value">{{ cancelado.cantidad_bidones }}</div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="order-label">Total</div>
+                                <div class="order-value">S/ {{ cancelado.total|floatformat:2 }}</div>
+                            </div>
+
+                            {% if cancelado.observacion %}
+                                <div class="col-12">
+                                    <div class="order-label">Observación</div>
+                                    <div class="order-value">{{ cancelado.observacion }}</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+            {% empty %}
+                <div class="card order-card">
+                    <div class="card-body text-center py-4">
+                        <p class="text-muted mb-0">
+                            Todavía no hay cancelaciones registradas hoy.
+                        </p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </details>
+
+</main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+</script>
+
+</body>
+</html>

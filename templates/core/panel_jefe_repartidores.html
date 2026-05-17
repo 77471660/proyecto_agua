@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Panel jefe reparto - AquaSmart CRM
+{% endblock %}
+
+{% block content %}
+
+<div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+        <h2>Panel jefe reparto</h2>
+        <small class="text-muted">
+            Asignación de pedidos y estado operativo de repartidores.
+        </small>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/clientes/" class="btn btn-outline-primary">
+            Ver clientes
+        </a>
+
+        <a href="/repartidor/pedidos/nuevo/" class="btn btn-success">
+            Nuevo pedido
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        Resumen de repartidores hoy
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Repartidor</th>
+                        <th>Pendientes</th>
+                        <th>Entregados hoy</th>
+                        <th>Cancelados hoy</th>
+                        <th>Bidones hoy</th>
+                        <th>Dinero hoy</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for resumen in resumen_repartidores %}
+                        <tr>
+                            <td>
+                                {% if resumen.usuario.get_full_name %}
+                                    {{ resumen.usuario.get_full_name }}
+                                {% else %}
+                                    {{ resumen.usuario.username }}
+                                {% endif %}
+                            </td>
+                            <td>{{ resumen.pendientes }}</td>
+                            <td>{{ resumen.entregados_hoy }}</td>
+                            <td>{{ resumen.cancelados_hoy }}</td>
+                            <td>{{ resumen.bidones_hoy }}</td>
+                            <td>S/ {{ resumen.dinero_hoy|floatformat:2 }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">
+                                No hay usuarios activos en Repartidor o JefeRepartidores.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-warning">
+        Pedidos sin asignar de hoy / atrasados
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Dirección</th>
+                        <th>Referencia</th>
+                        <th>Bidones</th>
+                        <th>Total</th>
+                        <th>Fecha programada</th>
+                        <th>Tiempo esperando</th>
+                        <th>Asignar</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for pedido in pedidos_sin_asignar %}
+                        <tr>
+                            <td>{{ pedido.cliente.nombre }}</td>
+                            <td>{{ pedido.cliente.direccion }}</td>
+                            <td>{{ pedido.cliente.referencia|default:"-" }}</td>
+                            <td>{{ pedido.cantidad_bidones }}</td>
+                            <td class="fw-semibold text-success">
+                                S/ {{ pedido.total|floatformat:2 }}
+                            </td>
+                            <td>{{ pedido.fecha_programada|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge-estado {{ pedido.badge_tiempo_panel }}">
+                                    {{ pedido.tiempo_panel }}
+                                </span>
+                            </td>
+                            <td>
+                                <form
+                                    method="post"
+                                    action="{% url 'asignar_pedido_repartidor' pedido.id %}"
+                                    class="table-action-group d-flex gap-2 flex-nowrap align-items-start"
+                                >
+                                    {% csrf_token %}
+                                    <select name="repartidor" class="form-select form-select-sm" style="min-width: 150px;" required>
+                                        <option value="">Repartidor</option>
+                                        {% for repartidor in repartidores %}
+                                            <option value="{{ repartidor.id }}">
+                                                {% if repartidor.get_full_name %}
+                                                    {{ repartidor.get_full_name }}
+                                                {% else %}
+                                                    {{ repartidor.username }}
+                                                {% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        Asignar
+                                    </button>
+                                </form>
+                            </td>
+                            <td>
+                                <a
+                                    href="{% url 'editar_pedido' pedido.id %}?origen=panel_jefe"
+                                    class="btn btn-sm btn-warning"
+                                >
+                                    Editar
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">
+                                No hay pedidos sin asignar para hoy ni atrasados.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if hay_mas_sin_asignar %}
+            <div class="mt-3">
+                <a href="{% url 'lista_pedidos' %}?estado=PENDIENTE" class="btn btn-outline-primary btn-sm">
+                    Ver todos los pedidos pendientes
+                </a>
+                <small class="text-muted ms-2">
+                    Mostrando 15 de {{ total_pedidos_sin_asignar }} sin asignar.
+                </small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+        Pedidos asignados de hoy / atrasados
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Repartidor</th>
+                        <th>Dirección</th>
+                        <th>Bidones</th>
+                        <th>Total</th>
+                        <th>Fecha programada</th>
+                        <th>Tiempo esperando</th>
+                        <th>Reasignar</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for pedido in pedidos_asignados %}
+                        <tr>
+                            <td>{{ pedido.cliente.nombre }}</td>
+                            <td>
+                                {% if pedido.repartidor.get_full_name %}
+                                    {{ pedido.repartidor.get_full_name }}
+                                {% else %}
+                                    {{ pedido.repartidor.username }}
+                                {% endif %}
+                            </td>
+                            <td>{{ pedido.cliente.direccion }}</td>
+                            <td>{{ pedido.cantidad_bidones }}</td>
+                            <td class="fw-semibold text-success">
+                                S/ {{ pedido.total|floatformat:2 }}
+                            </td>
+                            <td>{{ pedido.fecha_programada|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge-estado {{ pedido.badge_tiempo_panel }}">
+                                    {{ pedido.tiempo_panel }}
+                                </span>
+                            </td>
+                            <td>
+                                <form
+                                    method="post"
+                                    action="{% url 'asignar_pedido_repartidor' pedido.id %}"
+                                    class="table-action-group d-flex gap-2 flex-nowrap align-items-start"
+                                >
+                                    {% csrf_token %}
+                                    <select name="repartidor" class="form-select form-select-sm" style="min-width: 150px;" required>
+                                        {% for repartidor in repartidores %}
+                                            <option
+                                                value="{{ repartidor.id }}"
+                                                {% if pedido.repartidor_id == repartidor.id %}selected{% endif %}
+                                            >
+                                                {% if repartidor.get_full_name %}
+                                                    {{ repartidor.get_full_name }}
+                                                {% else %}
+                                                    {{ repartidor.username }}
+                                                {% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        Reasignar
+                                    </button>
+                                </form>
+                            </td>
+                            <td>
+                                <a
+                                    href="{% url 'editar_pedido' pedido.id %}?origen=panel_jefe"
+                                    class="btn btn-sm btn-warning"
+                                >
+                                    Editar
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">
+                                No hay pedidos asignados para hoy ni atrasados.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if hay_mas_asignados %}
+            <div class="mt-3">
+                <a href="{% url 'lista_pedidos' %}?estado=PENDIENTE" class="btn btn-outline-primary btn-sm">
+                    Ver todos los pedidos pendientes
+                </a>
+                <small class="text-muted ms-2">
+                    Mostrando 15 de {{ total_pedidos_asignados }} asignados.
+                </small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-info text-white">
+        Pedidos programados futuros
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Repartidor</th>
+                        <th>Dirección</th>
+                        <th>Bidones</th>
+                        <th>Total</th>
+                        <th>Fecha programada</th>
+                        <th>Programación</th>
+                        <th>Asignar / reasignar</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for pedido in pedidos_programados %}
+                        <tr>
+                            <td>{{ pedido.cliente.nombre }}</td>
+                            <td>
+                                {% if pedido.repartidor %}
+                                    {% if pedido.repartidor.get_full_name %}
+                                        {{ pedido.repartidor.get_full_name }}
+                                    {% else %}
+                                        {{ pedido.repartidor.username }}
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge-estado badge-muted">
+                                        Sin asignar
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ pedido.cliente.direccion }}</td>
+                            <td>{{ pedido.cantidad_bidones }}</td>
+                            <td class="fw-semibold text-success">
+                                S/ {{ pedido.total|floatformat:2 }}
+                            </td>
+                            <td>{{ pedido.fecha_programada|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge-estado {{ pedido.badge_programacion_panel }}">
+                                    {{ pedido.programacion_panel }}
+                                </span>
+                            </td>
+                            <td>
+                                <form
+                                    method="post"
+                                    action="{% url 'asignar_pedido_repartidor' pedido.id %}"
+                                    class="table-action-group d-flex gap-2 flex-nowrap align-items-start"
+                                >
+                                    {% csrf_token %}
+                                    <select name="repartidor" class="form-select form-select-sm" style="min-width: 150px;" required>
+                                        <option value="">Repartidor</option>
+                                        {% for repartidor in repartidores %}
+                                            <option
+                                                value="{{ repartidor.id }}"
+                                                {% if pedido.repartidor_id == repartidor.id %}selected{% endif %}
+                                            >
+                                                {% if repartidor.get_full_name %}
+                                                    {{ repartidor.get_full_name }}
+                                                {% else %}
+                                                    {{ repartidor.username }}
+                                                {% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        {% if pedido.repartidor %}Reasignar{% else %}Asignar{% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                            <td>
+                                <a
+                                    href="{% url 'editar_pedido' pedido.id %}?origen=panel_jefe"
+                                    class="btn btn-sm btn-warning"
+                                >
+                                    Editar
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">
+                                No hay pedidos programados para próximas fechas.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if hay_mas_programados %}
+            <div class="mt-3">
+                <a href="{% url 'lista_pedidos' %}?estado=PENDIENTE" class="btn btn-outline-primary btn-sm">
+                    Ver todos los pedidos pendientes
+                </a>
+                <small class="text-muted ms-2">
+                    Mostrando 15 de {{ total_pedidos_programados }} programados.
+                </small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

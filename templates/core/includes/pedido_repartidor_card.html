@@ -1,0 +1,123 @@
+<article class="card order-card mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div>
+                <h2 class="h5 mb-1">{{ pedido.cliente.nombre }}</h2>
+                <a class="text-decoration-none" href="tel:{{ pedido.telefono_limpio }}">
+                    {{ pedido.cliente.telefono }}
+                </a>
+                <div class="waiting-badge {{ pedido.tiempo_esperando_clase }}">
+                    {{ pedido.tiempo_esperando }}
+                </div>
+            </div>
+
+            {% if pedido.es_atrasado %}
+                <span class="badge-estado badge-atrasado">
+                    Atrasado
+                </span>
+            {% elif pedido.fecha_programada == hoy %}
+                <span class="badge-estado badge-hoy">
+                    Hoy
+                </span>
+            {% else %}
+                <span class="badge-estado {{ pedido.fecha_programada_clase }}">
+                    {{ pedido.fecha_programada_texto }}
+                </span>
+            {% endif %}
+
+            {% if pedido.cliente_nuevo %}
+                <span class="badge-estado new-client-badge">
+                    Nuevo
+                </span>
+            {% endif %}
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="order-label">Dirección</div>
+                <div class="order-value">{{ pedido.cliente.direccion }}</div>
+            </div>
+
+            <div class="col-12">
+                <div class="order-label">Referencia</div>
+                <div class="order-value">
+                    {{ pedido.cliente.referencia|default:"Sin referencia" }}
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="order-label">Bidones</div>
+                <div class="order-value">{{ pedido.cantidad_bidones }}</div>
+            </div>
+
+            <div class="col-6">
+                <div class="order-label">Total</div>
+                <div class="order-value fw-semibold text-success">
+                    S/ {{ pedido.total|floatformat:2 }}
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="order-label">Fecha programada</div>
+                <div class="order-value">
+                    {{ pedido.fecha_programada_texto }}
+                </div>
+            </div>
+
+            {% if pedido.observacion %}
+                <div class="col-12">
+                    <div class="order-label">Observación</div>
+                    <div class="order-value">{{ pedido.observacion }}</div>
+                </div>
+            {% endif %}
+        </div>
+
+        <details class="action-details">
+            <summary class="action-summary">
+                Gestionar pedido
+            </summary>
+
+            <div class="action-stack mt-3">
+                <a
+                    href="tel:{{ pedido.telefono_limpio }}"
+                    class="btn btn-outline-primary w-100 action-button"
+                >
+                    Llamar
+                </a>
+
+                <a
+                    href="{{ pedido.whatsapp_url }}"
+                    target="_blank"
+                    rel="noopener"
+                    class="btn btn-whatsapp w-100 action-button"
+                >
+                    WhatsApp
+                </a>
+
+                <form
+                    method="post"
+                    action="{% url 'marcar_pedido_entregado_repartidor' pedido.id %}"
+                    class="mb-0"
+                >
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary w-100 action-button">
+                        Marcar entregado
+                    </button>
+                </form>
+
+                {% if pedido.estado == 'PENDIENTE' %}
+                    <form
+                        method="post"
+                        action="{% url 'cancelar_pedido_repartidor' pedido.id %}"
+                        class="mb-0"
+                    >
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger w-100 action-button">
+                            Cancelar pedido
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </details>
+    </div>
+</article>

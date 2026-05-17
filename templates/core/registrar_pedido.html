@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+    .client-search {
+        position: relative;
+    }
+
+    .client-suggestions {
+        background: white;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        box-shadow: 0 0.5rem 1.2rem rgba(15, 23, 42, 0.12);
+        left: 0;
+        max-height: 260px;
+        overflow-y: auto;
+        position: absolute;
+        right: 0;
+        top: calc(100% + 0.25rem);
+        z-index: 20;
+    }
+
+    .client-suggestion {
+        background: white;
+        border: 0;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0.75rem;
+        text-align: left;
+        width: 100%;
+    }
+
+    .client-suggestion:last-child {
+        border-bottom: 0;
+    }
+
+    .client-suggestion:focus,
+    .client-suggestion:hover {
+        background: #eff6ff;
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+<div class="card shadow-sm">
+
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+            Registrar pedido
+        </h5>
+    </div>
+
+    <div class="card-body">
+
+    {% if not clientes %}
+        <div class="alert alert-info">
+            Primero registra un cliente activo para poder crear pedidos.
+        </div>
+    {% endif %}
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        <div
+            class="mb-3 client-search"
+            data-client-search
+            data-search-url="{% url 'buscar_clientes' %}"
+            data-summary-target="#resumen_cliente"
+        >
+            <label class="form-label" for="cliente_busqueda">
+                Cliente
+            </label>
+
+            <input
+                type="search"
+                id="cliente_busqueda"
+                class="form-control"
+                placeholder="Buscar por nombre, teléfono o dirección..."
+                autocomplete="off"
+                data-client-input
+                value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.nombre }} - {{ cliente_preseleccionado.telefono }}{% endif %}"
+                required
+            >
+            <input
+                type="hidden"
+                id="cliente"
+                name="cliente"
+                data-client-hidden
+                value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.id }}{% endif %}"
+                required
+            >
+            <div id="cliente_sugerencias" class="client-suggestions d-none" data-client-suggestions></div>
+            <div id="cliente_error" class="text-danger small mt-2 d-none" data-client-error>
+                Selecciona un cliente válido de la lista.
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Repartidor asignado
+            </label>
+
+            <select
+                name="repartidor"
+                class="form-select"
+            >
+                <option value="">
+                    Sin asignar
+                </option>
+
+                {% for repartidor in repartidores %}
+                    <option value="{{ repartidor.id }}">
+                        {% if repartidor.get_full_name %}
+                            {{ repartidor.get_full_name }}
+                        {% else %}
+                            {{ repartidor.username }}
+                        {% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <small class="text-muted">
+                Solo los pedidos asignados aparecerán en el panel del repartidor.
+            </small>
+        </div>
+
+        <div id="resumen_cliente" class="alert alert-info {% if not cliente_preseleccionado %}d-none{% endif %}">
+            <h6 class="mb-2">
+                Resumen inteligente del cliente
+            </h6>
+
+            <p class="mb-1">
+                <strong>Teléfono:</strong>
+                <span id="resumen_telefono">{{ cliente_preseleccionado.telefono }}</span>
+            </p>
+
+            <p class="mb-1">
+                <strong>Dirección:</strong>
+                <span id="resumen_direccion">{{ cliente_preseleccionado.direccion }}</span>
+            </p>
+
+            <p class="mb-1">
+                <strong>Estado:</strong>
+                <span id="resumen_estado">{{ cliente_preseleccionado.estado }}</span>
+            </p>
+
+            <p class="mb-1">
+                <strong>Pedidos entregados:</strong>
+                <span id="resumen_pedidos">{{ cliente_preseleccionado.pedidos_entregados|default:"0" }}</span>
+            </p>
+
+            <p class="mb-1">
+                <strong>Última compra:</strong>
+                <span id="resumen_ultima">
+                    {% if cliente_preseleccionado.ultima_compra %}
+                        {{ cliente_preseleccionado.ultima_compra|date:"d/m/Y" }}
+                    {% else %}
+                        Sin compras
+                    {% endif %}
+                </span>
+            </p>
+
+            <p class="mb-0">
+                <strong>Total gastado:</strong>
+                S/ <span id="resumen_total">{{ cliente_preseleccionado.total_gastado|default:"0.00" }}</span>
+            </p>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Tipo de entrega
+            </label>
+
+            <select
+                id="tipo_entrega"
+                class="form-select"
+            >
+                <option value="">
+                    Seleccione tipo de entrega
+                </option>
+
+                <option value="5.00">
+                    Recojo en planta - S/ 5.00
+                </option>
+
+                <option value="7.00">
+                    Domicilio cercano - S/ 7.00
+                </option>
+
+                <option value="8.00">
+                    Domicilio intermedio - S/ 8.00
+                </option>
+
+                <option value="9.00">
+                    Domicilio lejano - S/ 9.00
+                </option>
+
+                <option value="">
+                    Precio personalizado
+                </option>
+            </select>
+
+            <small class="text-muted">
+                El precio sugerido puede ajustarse manualmente si el caso lo requiere.
+            </small>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Cantidad de bidones
+            </label>
+
+            <input
+                type="number"
+                name="cantidad_bidones"
+                class="form-control"
+                min="1"
+                required
+            >
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Precio unitario
+            </label>
+
+            <input
+                type="number"
+                step="0.01"
+                min="1.00"
+                max="50.00"
+                name="precio_unitario"
+                id="precio_unitario"
+                class="form-control"
+                required
+            >
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Fecha programada
+            </label>
+
+            <input
+                type="date"
+                name="fecha_programada"
+                class="form-control"
+                min="{{ hoy|date:'Y-m-d' }}"
+            >
+
+            <small class="text-muted">
+                Déjalo vacío si el pedido será entregado hoy.
+            </small>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Estado
+            </label>
+
+            <select
+                name="estado"
+                class="form-select"
+                required
+            >
+                <option value="PENDIENTE" selected>
+                    PENDIENTE
+                </option>
+
+                <option value="ENTREGADO">
+                    ENTREGADO
+                </option>
+
+                <option value="CANCELADO">
+                    CANCELADO
+                </option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">
+                Observación
+            </label>
+
+            <textarea
+                name="observacion"
+                class="form-control"
+                rows="3"
+                placeholder="Ejemplo: Entregar por la tarde, cliente paga al recibir, zona lejana, etc."
+            ></textarea>
+        </div>
+
+        <div class="form-actions d-flex gap-2 flex-wrap">
+            <button
+                type="submit"
+                class="btn btn-success"
+                {% if not clientes %}disabled{% endif %}
+            >
+                Guardar pedido
+            </button>
+
+            <a
+                href="/pedidos/"
+                class="btn btn-outline-secondary"
+            >
+                Volver
+            </a>
+        </div>
+
+    </form>
+
+</div>
+</div>
+
+    </div>
+</div>
+
+<script>
+    const tipoEntrega = document.getElementById('tipo_entrega');
+    const precioUnitario = document.getElementById('precio_unitario');
+
+    tipoEntrega.addEventListener('change', function () {
+        if (this.value) {
+            precioUnitario.value = this.value;
+        } else {
+            precioUnitario.value = '';
+            precioUnitario.focus();
+        }
+    });
+</script>
+<script src="{% static 'js/client_search.js' %}"></script>
+
+{% endblock %}

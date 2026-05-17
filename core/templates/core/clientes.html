@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Clientes - AquaSmart CRM
+{% endblock %}
+
+{% block content %}
+
+<div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+        <h2>Lista de clientes</h2>
+        <small class="text-muted">
+            Gestión de clientes registrados y clasificación automática.
+        </small>
+    </div>
+
+    <a href="/registrar-cliente/" class="btn btn-success">
+        Nuevo cliente
+    </a>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" action="/clientes/">
+            <div class="row g-2">
+                <div class="col-md-9">
+                    <input
+                        type="text"
+                        name="q"
+                        class="form-control"
+                        placeholder="Buscar por nombre, teléfono o dirección..."
+                        value="{{ busqueda }}"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="col-md-3 d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        Buscar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+
+                <thead class="table-light">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Teléfono</th>
+                        <th>Dirección</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acción</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for cliente in clientes %}
+
+                    <tr>
+                        <td>
+                            <strong>{{ cliente.nombre }}</strong>
+                            {% if cliente.fecha_registro|date:"Y-m-d" == hoy|date:"Y-m-d" %}
+                                <span class="badge-estado badge-hoy ms-2">
+                                    Nuevo
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ cliente.telefono }}</td>
+                        <td>{{ cliente.direccion }}</td>
+
+                        <td>
+                            {% if cliente.estado == 'ACTIVO' %}
+                                <span class="badge-estado badge-entregado">
+                                    Activo
+                                </span>
+
+                            {% elif cliente.estado == 'RIESGO' %}
+                                <span class="badge-estado badge-pendiente">
+                                    En riesgo
+                                </span>
+
+                            {% elif cliente.estado == 'ABANDONADO' %}
+                                <span class="badge-estado badge-atrasado">
+                                    Abandonado
+                                </span>
+
+                            {% else %}
+                                <span class="badge-estado badge-cancelado">
+                                    Sin historial
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <div class="table-action-group d-flex justify-content-end gap-2 flex-nowrap">
+                                <a
+                                    href="{% url 'detalle_cliente' cliente.id %}"
+                                    class="btn btn-sm btn-outline-primary"
+                                >
+                                    Ver
+                                </a>
+
+                                {% if menu_puede_crm_operativo %}
+                                    <a
+                                        href="{% url 'registrar_pedido' %}?cliente={{ cliente.id }}"
+                                        class="btn btn-sm btn-success"
+                                    >
+                                        Pedido
+                                    </a>
+                                {% else %}
+                                    <a
+                                        href="{% url 'nuevo_pedido_repartidor' %}?cliente={{ cliente.id }}"
+                                        class="btn btn-sm btn-success"
+                                    >
+                                        Pedido
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            No se encontraron clientes registrados.
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+        </div>
+
+        {% include 'includes/pagination.html' %}
+
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,485 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <title>
+        {% block title %}AquaSmart CRM{% endblock %}
+    </title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="AquaSmart">
+
+    <link rel="manifest" href="{% url 'pwa_manifest' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/icons/aquasmart-icon.svg' %}">
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+    body {
+        color: #1f2937;
+    }
+
+    .navbar {
+        box-shadow: 0 0.25rem 0.75rem rgba(15, 23, 42, 0.08);
+    }
+
+    .page-heading {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-heading h2 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-bottom: 0;
+    }
+
+    .page-heading .text-muted {
+        font-size: 0.92rem;
+    }
+
+    .card {
+        border: 0;
+        box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.08);
+    }
+
+    .card-header {
+        font-weight: 600;
+    }
+
+    .table {
+        --bs-table-bg: transparent;
+    }
+
+    .table th {
+        color: #475569;
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .badge,
+    .badge-estado {
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        line-height: 1;
+        padding: 0.38rem 0.68rem;
+        white-space: nowrap;
+    }
+
+    .badge-entregado {
+        background: #dcfce7;
+        border: 1px solid #86efac;
+        color: #166534;
+    }
+
+    .badge-pendiente {
+        background: #fef3c7;
+        border: 1px solid #facc15;
+        color: #854d0e;
+    }
+
+    .badge-hoy {
+        background: #dbeafe;
+        border: 1px solid #93c5fd;
+        color: #1d4ed8;
+    }
+
+    .badge-manana {
+        background: #ecfeff;
+        border: 1px solid #67e8f9;
+        color: #0e7490;
+    }
+
+    .badge-atrasado {
+        background: #fee2e2;
+        border: 1px solid #fca5a5;
+        color: #991b1b;
+    }
+
+    .badge-cancelado {
+        background: #e5e7eb;
+        border: 1px solid #cbd5e1;
+        color: #374151;
+    }
+
+    .badge-muted {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+    }
+
+    .progress-entregado {
+        background-color: #22c55e;
+    }
+
+    .progress-pendiente {
+        background-color: #eab308;
+    }
+
+    .progress-cancelado {
+        background-color: #94a3b8;
+    }
+
+    .alert {
+        border-radius: 8px;
+        border-width: 1px;
+    }
+
+    .alert-info {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1e3a8a;
+    }
+
+    .alert-success {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+        color: #166534;
+    }
+
+    .alert-warning {
+        background: #fffbeb;
+        border-color: #fde68a;
+        color: #854d0e;
+    }
+
+    .alert-danger {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #991b1b;
+    }
+
+    .btn-outline-secondary,
+    .btn-outline-dark {
+        border-color: #cbd5e1;
+        color: #334155;
+    }
+
+    .btn-outline-secondary:hover,
+    .btn-outline-secondary:focus,
+    .btn-outline-dark:hover,
+    .btn-outline-dark:focus {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
+
+    .action-group form {
+        margin-bottom: 0;
+    }
+
+    .action-group {
+        gap: 0.5rem !important;
+    }
+
+    .navbar-actions-mobile .dropdown-toggle {
+        width: auto;
+    }
+
+    .navbar-actions-mobile .dropdown-menu {
+        min-width: 13rem;
+    }
+
+    .navbar-actions-mobile .dropdown-item {
+        font-weight: 600;
+    }
+
+    .table-action-group .btn {
+        min-width: 6.25rem;
+    }
+
+    .orders-table th,
+    .orders-table td {
+        padding-top: 0.55rem;
+        padding-bottom: 0.55rem;
+    }
+
+    .orders-table .order-date-cell {
+        min-width: 11.5rem;
+    }
+
+    .orders-table .money-cell {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .temporal-priority {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+
+    .temporal-label {
+        color: #64748b;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .pedido-row-atrasado {
+        box-shadow: inset 4px 0 0 #dc2626;
+    }
+
+    .pedido-row-hoy {
+        box-shadow: inset 4px 0 0 #2563eb;
+    }
+
+    .pedido-row-manana {
+        box-shadow: inset 4px 0 0 #0891b2;
+    }
+
+    .pedido-row-futuro {
+        box-shadow: inset 4px 0 0 #64748b;
+    }
+
+    @media (max-width: 575.98px) {
+        .navbar .container {
+            align-items: center !important;
+        }
+
+        .page-heading {
+            align-items: stretch !important;
+        }
+
+        .page-heading .btn,
+        .form-actions .btn,
+        .action-group .btn {
+            width: 100%;
+        }
+
+        .table-action-group .btn {
+            width: auto;
+        }
+
+        .orders-table th,
+        .orders-table td {
+            padding-top: 0.48rem;
+            padding-bottom: 0.48rem;
+        }
+
+        .orders-table .order-date-cell {
+            min-width: 10.5rem;
+        }
+
+        .page-heading h2 {
+            font-size: 1.35rem;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+    }
+
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        body {
+            background: white !important;
+            font-size: 12px;
+        }
+
+        .container {
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+
+        .card {
+            border: 1px solid #ccc !important;
+            box-shadow: none !important;
+            page-break-inside: avoid;
+        }
+
+        .table-responsive {
+            overflow: visible !important;
+        }
+
+        table {
+            width: 100% !important;
+            font-size: 11px;
+        }
+
+        th, td {
+            white-space: normal !important;
+            padding: 6px !important;
+        }
+
+        .badge {
+            font-size: 10px;
+        }
+    }
+</style>
+</head>
+
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-primary mb-4 no-print">
+    <div class="container">
+        <a href="/" class="navbar-brand">
+            AquaSmart CRM
+        </a>
+
+        <div class="navbar-actions-desktop d-none d-md-flex gap-2 flex-wrap">
+            {% if user.is_authenticated %}
+                {% if menu_puede_crm_operativo %}
+                    <a
+                        href="/"
+                        class="btn btn-sm {% if request.path == '/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Inicio</a>
+
+                    <a
+                        href="/clientes/"
+                        class="btn btn-sm {% if request.path == '/clientes/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Clientes</a>
+
+                    <a
+                        href="/pedidos/"
+                        class="btn btn-sm {% if request.path == '/pedidos/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Pedidos</a>
+
+                    <a
+                        href="/reporte-diario/"
+                        class="btn btn-sm {% if request.path == '/reporte-diario/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Reporte Diario</a>
+
+                    <a
+                        href="/reporte-mensual/"
+                        class="btn btn-sm {% if request.path == '/reporte-mensual/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Reporte Mensual</a>
+
+                    <a
+                        href="/registrar-cliente/"
+                        class="btn btn-sm {% if request.path == '/registrar-cliente/' %}btn-light{% else %}btn-success{% endif %}"
+                    >Nuevo cliente</a>
+
+                    <a
+                        href="/registrar-pedido/"
+                        class="btn btn-sm {% if request.path == '/registrar-pedido/' %}btn-light{% else %}btn-warning{% endif %}"
+                    >Nuevo pedido</a>
+                {% endif %}
+
+                {% if menu_puede_mi_reparto %}
+                    <a
+                        href="/pedidos/repartidor/"
+                        class="btn btn-sm {% if request.path == '/pedidos/repartidor/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Mi reparto</a>
+                {% endif %}
+
+                {% if menu_es_jefe_repartidores %}
+                    <a
+                        href="/repartidor/jefe/"
+                        class="btn btn-sm {% if request.path == '/repartidor/jefe/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Panel jefe reparto</a>
+                {% endif %}
+
+                <form method="post" action="{% url 'logout' %}" class="mb-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-light btn-sm">
+                        Cerrar sesión
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+
+        {% if user.is_authenticated %}
+            <div class="navbar-actions-mobile dropdown d-md-none ms-auto">
+                <button
+                    class="btn btn-outline-light btn-sm dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                >
+                    Acciones
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-end">
+                    {% if menu_puede_crm_operativo %}
+                        <li>
+                            <a class="dropdown-item" href="/clientes/">Ver clientes</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/registrar-cliente/">Nuevo cliente</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/registrar-pedido/">Nuevo pedido</a>
+                        </li>
+                    {% endif %}
+
+                    {% if menu_puede_mi_reparto %}
+                        <li>
+                            <a class="dropdown-item" href="/pedidos/repartidor/">Mi reparto</a>
+                        </li>
+                    {% endif %}
+
+                    {% if menu_es_jefe_repartidores %}
+                        <li>
+                            <a class="dropdown-item" href="/repartidor/jefe/">Panel jefe reparto</a>
+                        </li>
+                    {% endif %}
+
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form method="post" action="{% url 'logout' %}" class="mb-0">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item">
+                                Cerrar sesión
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+</nav>
+
+<div class="container pb-5">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show no-print" role="alert">
+                {{ message }}
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"
+                ></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% block content %}
+    {% endblock %}
+
+</div>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+</script>
+<script src="{% static 'js/pwa.js' %}"></script>
+
+</body>
+</html>
+

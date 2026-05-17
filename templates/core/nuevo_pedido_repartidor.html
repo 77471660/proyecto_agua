@@ -1,0 +1,245 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Nuevo pedido - AquaSmart CRM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        body {
+            background: #f8fafc;
+            color: #1f2937;
+        }
+
+        .top-bar {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .form-card {
+            border: 0;
+            border-radius: 8px;
+            box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.08);
+        }
+
+        .action-button {
+            min-height: 48px;
+            font-weight: 700;
+        }
+
+        .client-search {
+            position: relative;
+        }
+
+        .client-suggestions {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 0.5rem 1.2rem rgba(15, 23, 42, 0.12);
+            left: 0;
+            max-height: 260px;
+            overflow-y: auto;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 0.25rem);
+            z-index: 20;
+        }
+
+        .client-suggestion {
+            background: white;
+            border: 0;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.75rem;
+            text-align: left;
+            width: 100%;
+        }
+
+        .client-suggestion:last-child {
+            border-bottom: 0;
+        }
+
+        .client-suggestion:focus,
+        .client-suggestion:hover {
+            background: #eff6ff;
+        }
+
+        .selected-client {
+            border-left: 4px solid #0d6efd;
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="top-bar py-3 mb-3">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center gap-3">
+            <div>
+                <h1 class="h5 mb-0">Nuevo pedido</h1>
+                <small>Panel repartidor</small>
+            </div>
+
+            <a href="/pedidos/repartidor/" class="btn btn-outline-light btn-sm">
+                Volver
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="container pb-4">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"
+                ></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <section class="card form-card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <div
+                    class="mb-3 client-search"
+                    data-client-search
+                    data-search-url="{% url 'buscar_clientes' %}"
+                    data-selected-target="#cliente_seleccionado"
+                >
+                    <label class="form-label" for="cliente_busqueda">Cliente</label>
+                    <input
+                        type="search"
+                        id="cliente_busqueda"
+                        class="form-control form-control-lg"
+                        placeholder="Buscar por nombre, teléfono o dirección..."
+                        autocomplete="off"
+                        data-client-input
+                        value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.nombre }} - {{ cliente_preseleccionado.telefono }}{% endif %}"
+                        required
+                    >
+                    <input
+                        type="hidden"
+                        id="cliente"
+                        name="cliente"
+                        data-client-hidden
+                        value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.id }}{% endif %}"
+                        required
+                    >
+                    <div id="cliente_sugerencias" class="client-suggestions d-none" data-client-suggestions></div>
+                    <div id="cliente_seleccionado" class="alert alert-info selected-client mt-2 {% if not cliente_preseleccionado %}d-none{% endif %} mb-0">
+                        {% if cliente_preseleccionado %}
+                            <strong>{{ cliente_preseleccionado.nombre }}</strong><br>
+                            <span>{{ cliente_preseleccionado.telefono }}</span><br>
+                            <small>{{ cliente_preseleccionado.direccion|default:"Sin dirección registrada" }}</small>
+                        {% endif %}
+                    </div>
+                    <div id="cliente_error" class="text-danger small mt-2 d-none" data-client-error>
+                        Selecciona un cliente válido de la lista.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="cantidad_bidones">
+                        Cantidad de bidones
+                    </label>
+                    <input
+                        type="number"
+                        id="cantidad_bidones"
+                        name="cantidad_bidones"
+                        class="form-control form-control-lg"
+                        min="1"
+                        max="100"
+                        required
+                    >
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="precio_unitario">
+                        Precio unitario
+                    </label>
+                    <input
+                        type="number"
+                        id="precio_unitario"
+                        name="precio_unitario"
+                        class="form-control form-control-lg"
+                        step="0.01"
+                        min="0.01"
+                        value="{{ precio_sugerido|floatformat:2 }}"
+                        required
+                    >
+                    <small class="text-muted">
+                        Precio sugerido: S/ {{ precio_sugerido|floatformat:2 }}. Puede ajustarse antes de guardar.
+                    </small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="observacion">
+                        Observación opcional
+                    </label>
+                    <textarea
+                        id="observacion"
+                        name="observacion"
+                        class="form-control"
+                        rows="3"
+                    ></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="fecha_programada">
+                        Fecha programada
+                    </label>
+                    <input
+                        type="date"
+                        id="fecha_programada"
+                        name="fecha_programada"
+                        class="form-control form-control-lg"
+                        min="{{ hoy|date:'Y-m-d' }}"
+                    >
+                    <small class="text-muted">
+                        Déjalo vacío si el pedido será entregado hoy.
+                    </small>
+                </div>
+
+                <div class="form-check form-switch mb-4">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        id="entregar_ahora"
+                        name="entregar_ahora"
+                    >
+                    <label class="form-check-label" for="entregar_ahora">
+                        Entregar ahora
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 action-button">
+                    Guardar pedido
+                </button>
+            </form>
+        </div>
+    </section>
+
+</main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+</script>
+
+<script src="{% static 'js/client_search.js' %}"></script>
+
+</body>
+</html>
