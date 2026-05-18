@@ -38,6 +38,8 @@ from .auth_utils import (
     puede_ver_panel_repartidor,
     repartidor_required,
     secretaria_required,
+    REPARTIDOR_GROUP_NAMES,
+    JEFE_REPARTIDORES_GROUP,
 )
 from .models import Cliente, Pedido, PedidoHistorial
 
@@ -433,8 +435,8 @@ def repartidores_disponibles():
 
     grupos_reparto = Group.objects.filter(
         name__in=[
-            'Repartidor',
-            'JefeRepartidores',
+            *REPARTIDOR_GROUP_NAMES,
+            JEFE_REPARTIDORES_GROUP,
         ]
     )
 
@@ -1809,8 +1811,7 @@ def pedidos_repartidor(request):
         'total_dinero_hoy': total_dinero_hoy,
         'total_pedidos_hoy': total_pedidos_hoy,
         'hoy': hoy,
-        # Futuro: restringir a usuarios del grupo "Repartidor".
-        'grupo_repartidor': 'Repartidor',
+        'grupo_repartidor': 'Repartidores',
     }
 
     return render(

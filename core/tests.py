@@ -15,20 +15,20 @@ class PermisosRolesTests(TestCase):
     def setUp(self):
         User = get_user_model()
 
-        self.grupo_secretaria, _ = Group.objects.get_or_create(name='Secretaria')
-        self.grupo_repartidor, _ = Group.objects.get_or_create(name='Repartidor')
+        self.grupo_admin, _ = Group.objects.get_or_create(name='ADMIN')
+        self.grupo_repartidor, _ = Group.objects.get_or_create(name='Repartidores')
+        self.grupo_repartidor_legacy, _ = Group.objects.get_or_create(
+            name='Repartidor'
+        )
         self.grupo_jefe_repartidores, _ = Group.objects.get_or_create(
             name='JefeRepartidores'
-        )
-        self.grupo_administrador, _ = Group.objects.get_or_create(
-            name='Administrador'
         )
 
         self.secretaria = User.objects.create_user(
             username='ADMINISTRADOR',
             password='clave-secreta'
         )
-        self.secretaria.groups.add(self.grupo_secretaria)
+        self.secretaria.groups.add(self.grupo_admin)
 
         self.repartidor = User.objects.create_user(
             username='ECOAGUA',
@@ -449,6 +449,43 @@ class PermisosRolesTests(TestCase):
         self.assertRedirects(
             response,
             reverse('panel_jefe_repartidores'),
+            fetch_redirect_response=False
+        )
+
+    def test_login_de_repartidor_normal_redirige_a_mi_reparto(self):
+        response = self.client.post(
+            reverse('login'),
+            {
+                'username': 'ECOAGUA',
+                'password': 'clave-repartidor',
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('pedidos_repartidor'),
+            fetch_redirect_response=False
+        )
+
+    def test_grupo_legacy_repartidor_sigue_entrando_a_mi_reparto(self):
+        User = get_user_model()
+        repartidor_legacy = User.objects.create_user(
+            username='LEGACY',
+            password='clave-legacy'
+        )
+        repartidor_legacy.groups.add(self.grupo_repartidor_legacy)
+
+        response = self.client.post(
+            reverse('login'),
+            {
+                'username': 'LEGACY',
+                'password': 'clave-legacy',
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('pedidos_repartidor'),
             fetch_redirect_response=False
         )
 
