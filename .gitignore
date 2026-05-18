@@ -10,8 +10,10 @@ env/
 ENV/
 
 # Django local data
-db.sqlite3
 *.sqlite3
+# Temporal para Render Free: permite versionar la base local con el superusuario.
+# Quitar esta excepcion al migrar a PostgreSQL.
+!db.sqlite3
 media/
 staticfiles/
 backups/
