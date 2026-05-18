@@ -174,7 +174,10 @@ def destino_usuario(user):
     if user.is_superuser:
         return '/'
 
-    if es_repartidor(user) or es_jefe_repartidores(user):
+    if es_jefe_repartidores(user):
+        return '/repartidor/jefe/'
+
+    if es_repartidor(user):
         return '/pedidos/repartidor/'
 
     if es_secretaria(user):

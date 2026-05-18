@@ -25,13 +25,13 @@ class PermisosRolesTests(TestCase):
         )
 
         self.secretaria = User.objects.create_user(
-            username='secretaria',
+            username='ADMINISTRADOR',
             password='clave-secreta'
         )
         self.secretaria.groups.add(self.grupo_secretaria)
 
         self.repartidor = User.objects.create_user(
-            username='HERAL',
+            username='ECOAGUA',
             password='clave-repartidor'
         )
         self.repartidor.groups.add(self.grupo_repartidor)
@@ -43,7 +43,7 @@ class PermisosRolesTests(TestCase):
         self.otro_repartidor.groups.add(self.grupo_repartidor)
 
         self.jefe_reparto = User.objects.create_user(
-            username='JEFE',
+            username='HERAL',
             password='clave-jefe'
         )
         self.jefe_reparto.groups.add(self.grupo_jefe_repartidores)
@@ -412,18 +412,43 @@ class PermisosRolesTests(TestCase):
         self.assertContains(response, 'Mi reparto')
         self.assertContains(response, 'Resumen de repartidores hoy')
 
-    def test_login_de_jefe_repartidores_redirige_a_mi_reparto(self):
+    def test_login_redirige_cada_rol_a_su_panel(self):
+        casos = [
+            ('DANIEL', 'clave-daniel', reverse('dashboard')),
+            ('ADMINISTRADOR', 'clave-secreta', reverse('dashboard')),
+            ('HERAL', 'clave-jefe', reverse('panel_jefe_repartidores')),
+            ('ECOAGUA', 'clave-repartidor', reverse('pedidos_repartidor')),
+        ]
+
+        for username, password, destino in casos:
+            self.client.logout()
+
+            response = self.client.post(
+                reverse('login'),
+                {
+                    'username': username,
+                    'password': password,
+                }
+            )
+
+            self.assertRedirects(
+                response,
+                destino,
+                fetch_redirect_response=False
+            )
+
+    def test_login_de_jefe_repartidores_redirige_a_panel_jefe(self):
         response = self.client.post(
             reverse('login'),
             {
-                'username': 'JEFE',
+                'username': 'HERAL',
                 'password': 'clave-jefe',
             }
         )
 
         self.assertRedirects(
             response,
-            reverse('pedidos_repartidor'),
+            reverse('panel_jefe_repartidores'),
             fetch_redirect_response=False
         )
 
@@ -432,9 +457,9 @@ class PermisosRolesTests(TestCase):
             repartidores_disponibles().values_list('username', flat=True)
         )
 
+        self.assertIn('ECOAGUA', usuarios)
         self.assertIn('HERAL', usuarios)
-        self.assertIn('JEFE', usuarios)
-        self.assertNotIn('secretaria', usuarios)
+        self.assertNotIn('ADMINISTRADOR', usuarios)
         self.assertNotIn('DANIEL', usuarios)
 
     def test_panel_jefe_permita_asignar_a_jefe_repartidor(self):
