@@ -1,34 +1,40 @@
 <article class="card order-card mb-3">
     <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-            <div>
-                <h2 class="h5 mb-1">{{ pedido.cliente.nombre }}</h2>
-                <a class="text-decoration-none" href="tel:{{ pedido.telefono_limpio }}">
-                    {{ pedido.cliente.telefono }}
-                </a>
-                <div class="waiting-badge {{ pedido.tiempo_esperando_clase }}">
-                    {{ pedido.tiempo_esperando }}
-                </div>
+        <div class="order-card-header">
+            <div class="order-card-row">
+                <h2 class="order-card-title">{{ pedido.cliente.nombre }}</h2>
+
+                {% if pedido.es_atrasado %}
+                    <span class="badge-estado badge-atrasado">
+                        Atrasado
+                    </span>
+                {% elif pedido.fecha_programada == hoy %}
+                    <span class="badge-estado badge-hoy">
+                        Hoy
+                    </span>
+                {% else %}
+                    <span class="badge-estado {{ pedido.fecha_programada_clase }}">
+                        {{ pedido.fecha_programada_texto }}
+                    </span>
+                {% endif %}
             </div>
 
-            {% if pedido.es_atrasado %}
-                <span class="badge-estado badge-atrasado">
-                    Atrasado
+            <div class="order-card-row">
+                <a class="order-card-phone text-decoration-none" href="tel:{{ pedido.telefono_limpio }}">
+                    {{ pedido.cliente.telefono }}
+                </a>
+
+                <span class="waiting-badge {{ pedido.tiempo_esperando_clase }}">
+                    {{ pedido.tiempo_esperando }}
                 </span>
-            {% elif pedido.fecha_programada == hoy %}
-                <span class="badge-estado badge-hoy">
-                    Hoy
-                </span>
-            {% else %}
-                <span class="badge-estado {{ pedido.fecha_programada_clase }}">
-                    {{ pedido.fecha_programada_texto }}
-                </span>
-            {% endif %}
+            </div>
 
             {% if pedido.cliente_nuevo %}
-                <span class="badge-estado new-client-badge">
-                    Nuevo
-                </span>
+                <div class="order-card-badges">
+                    <span class="badge-estado new-client-badge">
+                        Nuevo
+                    </span>
+                </div>
             {% endif %}
         </div>
 

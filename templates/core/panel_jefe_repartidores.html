@@ -6,6 +6,56 @@ Panel jefe reparto - AquaSmart CRM
 
 {% block content %}
 
+<style>
+    @media (max-width: 575.98px) {
+        .dispatch-panel .page-heading h2 {
+            font-size: 1.2rem;
+        }
+
+        .dispatch-panel .page-heading .btn {
+            padding-bottom: 0.4rem;
+            padding-top: 0.4rem;
+        }
+
+        .dispatch-panel .card {
+            margin-bottom: 0.9rem !important;
+        }
+
+        .dispatch-panel .card-header {
+            font-size: 0.9rem;
+            padding: 0.55rem 0.75rem;
+        }
+
+        .dispatch-panel .card-body {
+            padding: 0.75rem;
+        }
+
+        .dispatch-panel .table {
+            font-size: 0.86rem;
+        }
+
+        .dispatch-panel .table th,
+        .dispatch-panel .table td {
+            padding: 0.45rem 0.5rem;
+        }
+
+        .dispatch-panel .badge-estado {
+            font-size: 0.68rem;
+            padding: 0.29rem 0.48rem;
+        }
+
+        .dispatch-panel .table-action-group {
+            gap: 0.35rem !important;
+        }
+
+        .dispatch-panel .table-action-group .form-select {
+            min-width: 7.75rem !important;
+        }
+    }
+</style>
+
+<div class="dispatch-panel">
+
 <div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
     <div>
         <h2>Panel jefe reparto</h2>
@@ -382,6 +432,8 @@ Panel jefe reparto - AquaSmart CRM
             </div>
         {% endif %}
     </div>
+</div>
+
 </div>
 
 {% endblock %}

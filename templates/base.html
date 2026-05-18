@@ -253,18 +253,40 @@
     }
 
     @media (max-width: 575.98px) {
+        .navbar {
+            margin-bottom: 1rem !important;
+        }
+
         .navbar .container {
             align-items: center !important;
+            gap: 0.5rem;
+            padding-bottom: 0.25rem;
+            padding-top: 0.25rem;
+        }
+
+        .navbar-brand {
+            font-size: 1rem;
+            line-height: 1.1;
         }
 
         .page-heading {
             align-items: stretch !important;
+            gap: 0.75rem !important;
+            margin-bottom: 1rem;
         }
 
         .page-heading .btn,
         .form-actions .btn,
         .action-group .btn {
             width: 100%;
+        }
+
+        .page-heading .text-muted {
+            font-size: 0.8rem;
+        }
+
+        .navbar-actions-mobile .dropdown-toggle {
+            padding: 0.28rem 0.55rem;
         }
 
         .table-action-group .btn {

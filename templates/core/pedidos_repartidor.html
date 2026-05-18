@@ -19,12 +19,55 @@
         .top-bar {
             background: #0d6efd;
             color: white;
+            padding-bottom: 0.85rem !important;
+            padding-top: 0.85rem !important;
         }
 
         .order-card {
             border: 0;
             border-radius: 8px;
+            margin-bottom: 0.75rem !important;
             box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.08);
+        }
+
+        .order-card .card-body {
+            padding: 1rem;
+        }
+
+        .order-card-header {
+            display: grid;
+            gap: 0.4rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .order-card-row {
+            align-items: center;
+            display: grid;
+            gap: 0.65rem;
+            grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .order-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin: 0;
+            min-width: 0;
+        }
+
+        .order-card-phone {
+            font-size: 0.95rem;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .order-card-badges {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
         }
 
         .summary-card {
@@ -52,11 +95,11 @@
 
         .action-stack {
             display: grid;
-            gap: 0.75rem;
+            gap: 0.55rem;
         }
 
         .action-details {
-            margin-top: 1.5rem;
+            margin-top: 1rem;
         }
 
         .action-summary,
@@ -126,12 +169,17 @@
             font-size: 0.78rem;
             font-weight: 700;
             line-height: 1;
-            padding: 0.38rem 0.68rem;
+            padding: 0.34rem 0.62rem;
             white-space: nowrap;
         }
 
         .waiting-badge {
-            margin-top: 0.35rem;
+            font-size: 0.72rem;
+            justify-self: end;
+            margin-top: 0;
+            max-width: 8.75rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .waiting-ok {
@@ -212,7 +260,7 @@
             background: #dbeafe;
             border: 1px solid #93c5fd;
             color: #1d4ed8;
-            margin-top: 0.4rem;
+            margin-top: 0;
         }
 
         .alert {
@@ -233,6 +281,120 @@
         .mobile-actions .dropdown-item {
             font-weight: 700;
         }
+
+        .min-w-0 {
+            min-width: 0;
+        }
+
+        @media (max-width: 575.98px) {
+            .top-bar {
+                margin-bottom: 0.75rem !important;
+                padding-bottom: 0.55rem !important;
+                padding-top: 0.55rem !important;
+            }
+
+            .top-bar .container {
+                padding-left: 0.85rem;
+                padding-right: 0.85rem;
+            }
+
+            .top-bar h1 {
+                font-size: 1rem;
+                line-height: 1.15;
+            }
+
+            .top-bar small,
+            .top-bar .small {
+                font-size: 0.72rem;
+                line-height: 1.25;
+            }
+
+            .top-bar .small.mt-1 {
+                margin-top: 0.15rem !important;
+            }
+
+            .top-bar .opacity-75 {
+                display: none;
+            }
+
+            .mobile-actions .dropdown-toggle {
+                min-width: auto;
+                padding: 0.28rem 0.55rem;
+            }
+
+            main.container {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .summary-card {
+                margin-bottom: 0.8rem !important;
+            }
+
+            .summary-card .card-body {
+                padding: 0.8rem;
+            }
+
+            .summary-card h2,
+            main > h2 {
+                margin-bottom: 0.55rem !important;
+            }
+
+            .order-card .card-body {
+                padding: 0.78rem;
+            }
+
+            .order-card-header {
+                gap: 0.28rem;
+                margin-bottom: 0.62rem;
+            }
+
+            .order-card-title {
+                font-size: 0.98rem;
+            }
+
+            .order-card-phone {
+                font-size: 0.88rem;
+            }
+
+            .badge,
+            .badge-estado,
+            .waiting-badge {
+                font-size: 0.68rem;
+                padding: 0.29rem 0.48rem;
+            }
+
+            .waiting-badge {
+                max-width: 7.7rem;
+            }
+
+            .order-label {
+                font-size: 0.68rem;
+            }
+
+            .order-value {
+                font-size: 0.92rem;
+            }
+
+            .order-card .row {
+                --bs-gutter-y: 0.62rem;
+            }
+
+            .action-button,
+            .action-summary,
+            .history-summary {
+                min-height: 42px;
+            }
+
+            .action-summary,
+            .history-summary {
+                padding: 0.55rem 0.8rem;
+            }
+
+            .history-details {
+                margin-top: 1rem;
+            }
+        }
     </style>
 </head>
 
@@ -240,8 +402,8 @@
 
 <header class="top-bar py-3 mb-3">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-            <div>
+        <div class="d-flex justify-content-between align-items-center gap-2 flex-nowrap">
+            <div class="min-w-0">
                 <h1 class="h5 mb-0">Pedidos activos</h1>
                 <small>AquaSmart CRM</small>
                 <div class="small mt-1">
