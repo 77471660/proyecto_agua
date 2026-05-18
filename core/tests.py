@@ -7,7 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Cliente, Pedido
+from .models import Cliente, Pedido, PedidoHistorial
 from .views import repartidores_disponibles
 
 
@@ -487,6 +487,89 @@ class PermisosRolesTests(TestCase):
             pedido.observacion,
             'Cliente corrigió cantidad al recibir.'
         )
+
+    def test_historial_registra_creacion_y_entrega_de_pedido(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('registrar_pedido'),
+            {
+                'cliente': str(self.cliente.id),
+                'repartidor': str(self.repartidor.id),
+                'cantidad_bidones': '2',
+                'precio_unitario': '7.00',
+                'estado': Pedido.PENDIENTE,
+                'observacion': '',
+                'fecha_programada': '',
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('lista_pedidos'),
+            fetch_redirect_response=False
+        )
+        pedido = Pedido.objects.latest('id')
+        self.assertTrue(
+            PedidoHistorial.objects.filter(
+                pedido=pedido,
+                usuario=self.secretaria,
+                tipo_accion=PedidoHistorial.CREADO
+            ).exists()
+        )
+
+        self.client.post(
+            reverse(
+                'cambiar_estado_pedido',
+                kwargs={
+                    'pedido_id': pedido.id,
+                    'nuevo_estado': Pedido.ENTREGADO,
+                }
+            )
+        )
+
+        self.assertTrue(
+            PedidoHistorial.objects.filter(
+                pedido=pedido,
+                usuario=self.secretaria,
+                tipo_accion=PedidoHistorial.ENTREGADO,
+                valor_anterior=Pedido.PENDIENTE,
+                valor_nuevo=Pedido.ENTREGADO
+            ).exists()
+        )
+
+    def test_historial_de_pedidos_solo_visible_para_roles_autorizados(self):
+        pedido = self.crear_pedido(self.repartidor)
+        PedidoHistorial.objects.create(
+            pedido=pedido,
+            usuario=self.secretaria,
+            tipo_accion=PedidoHistorial.EDITADO,
+            descripcion='Cambio administrativo sensible.',
+            valor_anterior='Antes',
+            valor_nuevo='Ahora'
+        )
+
+        self.client.force_login(self.secretaria)
+        response = self.client.get(
+            reverse(
+                'detalle_cliente',
+                kwargs={'cliente_id': self.cliente.id}
+            )
+        )
+
+        self.assertContains(response, 'Historial de cambios de pedidos')
+        self.assertContains(response, 'Cambio administrativo sensible.')
+
+        self.client.force_login(self.repartidor)
+        response = self.client.get(
+            reverse(
+                'detalle_cliente',
+                kwargs={'cliente_id': self.cliente.id}
+            )
+        )
+
+        self.assertNotContains(response, 'Historial de cambios de pedidos')
+        self.assertNotContains(response, 'Cambio administrativo sensible.')
 
     def test_jefe_repartidores_puede_editar_y_asignar_pedido(self):
         pedido = self.crear_pedido(repartidor=None)

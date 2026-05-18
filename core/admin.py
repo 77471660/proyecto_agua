@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cliente, Pedido
+from .models import Cliente, Pedido, PedidoHistorial
 
 
 @admin.register(Cliente)
@@ -16,3 +16,11 @@ class PedidoAdmin(admin.ModelAdmin):
     search_fields = ('cliente__nombre', 'repartidor__username')
     list_filter = ('estado', 'repartidor', 'fecha_pedido')
     ordering = ('-fecha_pedido',)
+
+
+@admin.register(PedidoHistorial)
+class PedidoHistorialAdmin(admin.ModelAdmin):
+    list_display = ('pedido', 'tipo_accion', 'usuario', 'fecha')
+    search_fields = ('pedido__cliente__nombre', 'usuario__username', 'descripcion')
+    list_filter = ('tipo_accion', 'fecha')
+    ordering = ('-fecha', '-id')

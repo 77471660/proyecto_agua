@@ -336,6 +336,80 @@ Detalle del cliente
 
         </div>
 
+        {% if puede_ver_historial_pedidos %}
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-dark text-white">
+                Historial de cambios de pedidos
+            </div>
+
+            <div class="card-body">
+                {% if historial_pedidos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Pedido</th>
+                                    <th>Acción</th>
+                                    <th>Usuario</th>
+                                    <th>Descripción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in historial_pedidos %}
+                                    <tr>
+                                        <td>
+                                            <div>{{ item.fecha|date:"d/m/Y" }}</div>
+                                            <small class="text-muted">
+                                                {{ item.fecha|date:"H:i" }}
+                                            </small>
+                                        </td>
+                                        <td>#{{ item.pedido.id }}</td>
+                                        <td>
+                                            <span class="badge-estado badge-muted">
+                                                {{ item.get_tipo_accion_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if item.usuario %}
+                                                {% if item.usuario.get_full_name %}
+                                                    {{ item.usuario.get_full_name }}
+                                                {% else %}
+                                                    {{ item.usuario.username }}
+                                                {% endif %}
+                                            {% else %}
+                                                Sistema
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div>{{ item.descripcion }}</div>
+                                            {% if item.valor_anterior or item.valor_nuevo %}
+                                                <small class="text-muted">
+                                                    Antes: {{ item.valor_anterior|default:"-" }}<br>
+                                                    Ahora: {{ item.valor_nuevo|default:"-" }}
+                                                </small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if historial_pedidos_tiene_mas %}
+                        <small class="text-muted d-block mt-3">
+                            Mostrando los últimos 10 cambios.
+                        </small>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-secondary mb-0">
+                        Todavía no hay cambios registrados en pedidos de este cliente.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
     </div>
     {% endif %}
 

@@ -96,3 +96,48 @@ class Pedido(models.Model):
 
     def __str__(self):
         return f"Pedido #{self.id} - {self.cliente.nombre}"
+
+
+class PedidoHistorial(models.Model):
+
+    CREADO = 'creado'
+    EDITADO = 'editado'
+    ENTREGADO = 'entregado'
+    CANCELADO = 'cancelado'
+    REASIGNADO = 'reasignado'
+    REVERTIDO = 'revertido'
+
+    TIPOS_ACCION = [
+        (CREADO, 'Creado'),
+        (EDITADO, 'Editado'),
+        (ENTREGADO, 'Entregado'),
+        (CANCELADO, 'Cancelado'),
+        (REASIGNADO, 'Reasignado'),
+        (REVERTIDO, 'Revertido'),
+    ]
+
+    pedido = models.ForeignKey(
+        Pedido,
+        on_delete=models.CASCADE,
+        related_name='historial'
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL
+    )
+    fecha = models.DateTimeField(auto_now_add=True)
+    tipo_accion = models.CharField(
+        max_length=20,
+        choices=TIPOS_ACCION
+    )
+    descripcion = models.TextField()
+    valor_anterior = models.TextField(blank=True)
+    valor_nuevo = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-fecha', '-id']
+
+    def __str__(self):
+        return f"{self.get_tipo_accion_display()} - Pedido #{self.pedido_id}"

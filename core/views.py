@@ -39,13 +39,99 @@ from .auth_utils import (
     repartidor_required,
     secretaria_required,
 )
-from .models import Cliente, Pedido
+from .models import Cliente, Pedido, PedidoHistorial
 
 
 PEDIDOS_POR_PAGINA = 15
 CLIENTES_POR_PAGINA = 15
 PANEL_JEFE_LIMITE_PEDIDOS = 15
 HISTORIAL_CLIENTE_LIMITE = 10
+
+
+def nombre_usuario_historial(usuario):
+
+    if not usuario:
+        return 'Sistema'
+
+    return usuario.get_full_name() or usuario.username
+
+
+def nombre_repartidor_historial(repartidor):
+
+    if not repartidor:
+        return 'Sin asignar'
+
+    return repartidor.get_full_name() or repartidor.username
+
+
+def formato_fecha_historial(valor):
+
+    if not valor:
+        return 'Sin fecha'
+
+    return valor.strftime('%d/%m/%Y')
+
+
+def resumen_pedido_historial(pedido):
+
+    return (
+        f"{pedido.cantidad_bidones} bidones, "
+        f"S/ {pedido.total}, "
+        f"estado {pedido.estado}, "
+        f"programado {formato_fecha_historial(pedido.fecha_programada)}, "
+        f"repartidor {nombre_repartidor_historial(pedido.repartidor)}"
+    )
+
+
+def registrar_historial_pedido(
+    pedido,
+    usuario,
+    tipo_accion,
+    descripcion,
+    valor_anterior='',
+    valor_nuevo=''
+):
+
+    PedidoHistorial.objects.create(
+        pedido=pedido,
+        usuario=usuario if usuario and usuario.is_authenticated else None,
+        tipo_accion=tipo_accion,
+        descripcion=descripcion,
+        valor_anterior=valor_anterior or '',
+        valor_nuevo=valor_nuevo or ''
+    )
+
+
+def cambios_edicion_pedido(pedido, nuevos_valores):
+
+    campos = [
+        ('cantidad_bidones', 'Cantidad'),
+        ('precio_unitario', 'Precio unitario'),
+        ('total', 'Total'),
+        ('fecha_programada', 'Fecha programada'),
+        ('observacion', 'Observación'),
+    ]
+    cambios = []
+
+    for campo, etiqueta in campos:
+        anterior = getattr(pedido, campo)
+        nuevo = nuevos_valores[campo]
+
+        if anterior != nuevo:
+            if campo == 'fecha_programada':
+                anterior_texto = formato_fecha_historial(anterior)
+                nuevo_texto = formato_fecha_historial(nuevo)
+            else:
+                anterior_texto = str(anterior or '')
+                nuevo_texto = str(nuevo or '')
+
+            cambios.append({
+                'etiqueta': etiqueta,
+                'anterior': anterior_texto,
+                'nuevo': nuevo_texto,
+            })
+
+    return cambios
 
 
 def pwa_manifest(request):
@@ -901,6 +987,22 @@ def detalle_cliente(request, cliente_id):
     )['total'] or 0
 
     ultimo_pedido = pedidos.first()
+    puede_ver_historial_pedidos = (
+        puede_ver_crm_operativo(request.user)
+        or es_jefe_repartidores(request.user)
+    )
+    historial_pedidos = []
+    historial_pedidos_tiene_mas = False
+
+    if puede_ver_historial_pedidos:
+        historial_queryset = PedidoHistorial.objects.filter(
+            pedido__cliente=cliente
+        ).select_related(
+            'pedido',
+            'usuario'
+        )
+        historial_pedidos = historial_queryset[:10]
+        historial_pedidos_tiene_mas = historial_queryset.count() > 10
 
     context = {
         'cliente': cliente,
@@ -909,6 +1011,9 @@ def detalle_cliente(request, cliente_id):
         'total_gastado': total_gastado,
         'ultimo_pedido': ultimo_pedido,
         'historial_tiene_mas': historial_tiene_mas,
+        'historial_pedidos': historial_pedidos,
+        'historial_pedidos_tiene_mas': historial_pedidos_tiene_mas,
+        'puede_ver_historial_pedidos': puede_ver_historial_pedidos,
     }
 
     return render(
@@ -1206,7 +1311,7 @@ def registrar_pedido(request):
         elif estado == Pedido.CANCELADO:
             fecha_cancelacion = timezone.now()
 
-        Pedido.objects.create(
+        pedido = Pedido.objects.create(
             cliente=cliente,
             repartidor=repartidor,
             cantidad_bidones=cantidad_bidones,
@@ -1217,6 +1322,16 @@ def registrar_pedido(request):
             fecha_programada=fecha_programada_valor,
             fecha_entrega=fecha_entrega,
             fecha_cancelacion=fecha_cancelacion,
+        )
+        registrar_historial_pedido(
+            pedido,
+            request.user,
+            PedidoHistorial.CREADO,
+            (
+                'Pedido creado por '
+                f'{nombre_usuario_historial(request.user)}.'
+            ),
+            valor_nuevo=resumen_pedido_historial(pedido)
         )
 
         actualizar_estados_clientes()
@@ -1344,9 +1459,23 @@ def editar_pedido(request, pedido_id):
                 )
                 return redirect('editar_pedido', pedido_id=pedido.id)
 
+        nuevo_total = cantidad_bidones * precio_unitario
+        nuevos_valores = {
+            'cantidad_bidones': cantidad_bidones,
+            'precio_unitario': precio_unitario,
+            'total': nuevo_total,
+            'fecha_programada': fecha_programada_valor,
+            'observacion': observacion,
+        }
+        cambios = cambios_edicion_pedido(pedido, nuevos_valores)
+        repartidor_anterior = pedido.repartidor
+        repartidor_cambio = pedido.repartidor_id != (
+            repartidor.id if repartidor else None
+        )
+
         pedido.cantidad_bidones = cantidad_bidones
         pedido.precio_unitario = precio_unitario
-        pedido.total = cantidad_bidones * precio_unitario
+        pedido.total = nuevo_total
         pedido.fecha_programada = fecha_programada_valor
         pedido.observacion = observacion
         pedido.repartidor = repartidor
@@ -1360,6 +1489,41 @@ def editar_pedido(request, pedido_id):
                 'repartidor',
             ]
         )
+
+        if cambios:
+            descripcion_cambios = [
+                (
+                    f"{cambio['etiqueta']}: "
+                    f"{cambio['anterior']} -> {cambio['nuevo']}"
+                )
+                for cambio in cambios
+            ]
+            registrar_historial_pedido(
+                pedido,
+                request.user,
+                PedidoHistorial.EDITADO,
+                'Pedido editado: ' + '; '.join(descripcion_cambios),
+                valor_anterior='; '.join(
+                    f"{cambio['etiqueta']}: {cambio['anterior']}"
+                    for cambio in cambios
+                ),
+                valor_nuevo='; '.join(
+                    f"{cambio['etiqueta']}: {cambio['nuevo']}"
+                    for cambio in cambios
+                )
+            )
+
+        if repartidor_cambio:
+            anterior_texto = nombre_repartidor_historial(repartidor_anterior)
+            nuevo_texto = nombre_repartidor_historial(repartidor)
+            registrar_historial_pedido(
+                pedido,
+                request.user,
+                PedidoHistorial.REASIGNADO,
+                f'Repartidor reasignado: {anterior_texto} -> {nuevo_texto}.',
+                valor_anterior=anterior_texto,
+                valor_nuevo=nuevo_texto
+            )
 
         messages.success(
             request,
@@ -1803,8 +1967,21 @@ def asignar_pedido_repartidor(request, pedido_id):
         estado=Pedido.PENDIENTE
     )
 
+    repartidor_anterior = pedido.repartidor
     pedido.repartidor = repartidor
     pedido.save(update_fields=['repartidor'])
+    registrar_historial_pedido(
+        pedido,
+        request.user,
+        PedidoHistorial.REASIGNADO,
+        (
+            'Repartidor asignado: '
+            f'{nombre_repartidor_historial(repartidor_anterior)} -> '
+            f'{nombre_repartidor_historial(repartidor)}.'
+        ),
+        valor_anterior=nombre_repartidor_historial(repartidor_anterior),
+        valor_nuevo=nombre_repartidor_historial(repartidor)
+    )
 
     messages.success(
         request,
@@ -1826,10 +2003,19 @@ def marcar_pedido_entregado_repartidor(request, pedido_id):
         repartidor=request.user
     )
 
+    estado_anterior = pedido.estado
     pedido.estado = Pedido.ENTREGADO
     pedido.repartidor = request.user
     pedido.fecha_entrega = timezone.now()
     pedido.save(update_fields=['estado', 'repartidor', 'fecha_entrega'])
+    registrar_historial_pedido(
+        pedido,
+        request.user,
+        PedidoHistorial.ENTREGADO,
+        'Pedido marcado como entregado por repartidor.',
+        valor_anterior=estado_anterior,
+        valor_nuevo=Pedido.ENTREGADO
+    )
 
     actualizar_estados_clientes()
 
@@ -1931,6 +2117,16 @@ def nuevo_pedido_repartidor(request):
             fecha_programada=fecha_programada_valor,
             fecha_entrega=fecha_entrega,
         )
+        registrar_historial_pedido(
+            pedido,
+            request.user,
+            PedidoHistorial.CREADO,
+            (
+                'Pedido creado desde panel repartidor por '
+                f'{nombre_usuario_historial(request.user)}.'
+            ),
+            valor_nuevo=resumen_pedido_historial(pedido)
+        )
 
         actualizar_estados_clientes()
 
@@ -2031,10 +2227,19 @@ def cancelar_pedido_repartidor(request, pedido_id):
         repartidor=request.user
     )
 
+    estado_anterior = pedido.estado
     pedido.estado = Pedido.CANCELADO
     pedido.repartidor = request.user
     pedido.fecha_cancelacion = timezone.now()
     pedido.save(update_fields=['estado', 'repartidor', 'fecha_cancelacion'])
+    registrar_historial_pedido(
+        pedido,
+        request.user,
+        PedidoHistorial.CANCELADO,
+        'Pedido cancelado por repartidor.',
+        valor_anterior=estado_anterior,
+        valor_nuevo=Pedido.CANCELADO
+    )
 
     actualizar_estados_clientes()
 
@@ -2092,6 +2297,7 @@ def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
         messages.error(request, 'El pedido ya tiene ese estado.')
         return redirect('lista_pedidos')
 
+    estado_anterior = pedido.estado
     pedido.estado = nuevo_estado
     update_fields = ['estado']
 
@@ -2103,6 +2309,19 @@ def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
         update_fields.append('fecha_cancelacion')
 
     pedido.save(update_fields=update_fields)
+    tipo_historial = (
+        PedidoHistorial.ENTREGADO
+        if nuevo_estado == Pedido.ENTREGADO
+        else PedidoHistorial.CANCELADO
+    )
+    registrar_historial_pedido(
+        pedido,
+        request.user,
+        tipo_historial,
+        f'Estado de pedido actualizado a {nuevo_estado}.',
+        valor_anterior=estado_anterior,
+        valor_nuevo=nuevo_estado
+    )
 
     actualizar_estados_clientes()
 
@@ -2144,9 +2363,18 @@ def revertir_entrega(request, pedido_id):
         )
         return redirect('lista_pedidos')
 
+    estado_anterior = pedido.estado
     pedido.estado = Pedido.PENDIENTE
     pedido.fecha_entrega = None
     pedido.save(update_fields=['estado', 'fecha_entrega'])
+    registrar_historial_pedido(
+        pedido,
+        request.user,
+        PedidoHistorial.REVERTIDO,
+        'Entrega revertida a estado pendiente.',
+        valor_anterior=estado_anterior,
+        valor_nuevo=Pedido.PENDIENTE
+    )
 
     actualizar_estados_clientes()
 
