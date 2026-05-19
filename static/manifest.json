@@ -1,6 +1,6 @@
 {
-  "name": "AquaSmart CRM",
-  "short_name": "AquaSmart",
+  "name": "EcoAgua",
+  "short_name": "EcoAgua",
   "description": "Panel operativo de pedidos y reparto de AquaSmart CRM.",
   "start_url": "/pedidos/repartidor/",
   "scope": "/",
@@ -10,12 +10,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/static/img/icons/icon-192.png",
+      "src": "/static/img/icons/android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/static/img/icons/icon-512.png",
+      "src": "/static/img/icons/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
