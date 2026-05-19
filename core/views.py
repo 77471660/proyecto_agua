@@ -194,6 +194,11 @@ def webpush_public_key(request):
 @require_POST
 def webpush_subscribe(request):
 
+    logger.info(
+        'POST /webpush/subscribe/ recibido. usuario=%s',
+        request.user.id
+    )
+
     if not puede_ver_panel_repartidor(request.user):
         logger.warning(
             'Web Push subscribe rechazado. usuario=%s',
