@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cliente, Pedido, PedidoHistorial
+from .models import Cliente, Pedido, PedidoHistorial, PushSubscription
 
 
 @admin.register(Cliente)
@@ -24,3 +24,11 @@ class PedidoHistorialAdmin(admin.ModelAdmin):
     search_fields = ('pedido__cliente__nombre', 'usuario__username', 'descripcion')
     list_filter = ('tipo_accion', 'fecha')
     ordering = ('-fecha', '-id')
+
+
+@admin.register(PushSubscription)
+class PushSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'is_active', 'created_at', 'updated_at')
+    search_fields = ('user__username', 'endpoint')
+    list_filter = ('is_active', 'created_at', 'updated_at')
+    ordering = ('-updated_at', '-id')

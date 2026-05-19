@@ -421,6 +421,17 @@
                     >Panel jefe reparto</a>
                 {% endif %}
 
+                {% if menu_puede_mi_reparto %}
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-light"
+                        data-webpush-toggle
+                        data-public-key-url="{% url 'webpush_public_key' %}"
+                        data-subscribe-url="{% url 'webpush_subscribe' %}"
+                        data-unsubscribe-url="{% url 'webpush_unsubscribe' %}"
+                    >Activar notificaciones</button>
+                {% endif %}
+
                 <form method="post" action="{% url 'logout' %}" class="mb-0">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-light btn-sm">
@@ -463,6 +474,19 @@
                     {% if menu_es_jefe_repartidores %}
                         <li>
                             <a class="dropdown-item" href="/repartidor/jefe/">Panel jefe reparto</a>
+                        </li>
+                    {% endif %}
+
+                    {% if menu_puede_mi_reparto %}
+                        <li>
+                            <button
+                                type="button"
+                                class="dropdown-item"
+                                data-webpush-toggle
+                                data-public-key-url="{% url 'webpush_public_key' %}"
+                                data-subscribe-url="{% url 'webpush_subscribe' %}"
+                                data-unsubscribe-url="{% url 'webpush_unsubscribe' %}"
+                            >Activar notificaciones</button>
                         </li>
                     {% endif %}
 

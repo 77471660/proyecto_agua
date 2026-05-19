@@ -26,6 +26,7 @@ from calendar import monthrange
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote
+import json
 import re
 
 from .auth_utils import (
@@ -41,7 +42,8 @@ from .auth_utils import (
     REPARTIDOR_GROUP_NAMES,
     JEFE_REPARTIDORES_GROUP,
 )
-from .models import Cliente, Pedido, PedidoHistorial
+from .models import Cliente, Pedido, PedidoHistorial, PushSubscription
+from .push_notifications import send_order_assignment_push
 
 
 PEDIDOS_POR_PAGINA = 15
@@ -158,6 +160,75 @@ def service_worker(request):
     response['Cache-Control'] = 'no-cache'
 
     return response
+
+
+@login_required
+def webpush_public_key(request):
+
+    if not puede_ver_panel_repartidor(request.user):
+        return JsonResponse({'error': 'No autorizado.'}, status=403)
+
+    return JsonResponse({
+        'publicKey': settings.WEBPUSH_VAPID_PUBLIC_KEY,
+    })
+
+
+@login_required
+@require_POST
+def webpush_subscribe(request):
+
+    if not puede_ver_panel_repartidor(request.user):
+        return JsonResponse({'error': 'No autorizado.'}, status=403)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'JSON invalido.'}, status=400)
+
+    endpoint = data.get('endpoint', '').strip()
+    keys = data.get('keys') or {}
+    p256dh = keys.get('p256dh', '').strip()
+    auth = keys.get('auth', '').strip()
+
+    if not endpoint or not p256dh or not auth:
+        return JsonResponse({'error': 'Suscripcion incompleta.'}, status=400)
+
+    PushSubscription.objects.update_or_create(
+        endpoint=endpoint,
+        defaults={
+            'user': request.user,
+            'p256dh': p256dh,
+            'auth': auth,
+            'is_active': True,
+        }
+    )
+
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_POST
+def webpush_unsubscribe(request):
+
+    if not puede_ver_panel_repartidor(request.user):
+        return JsonResponse({'error': 'No autorizado.'}, status=403)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'JSON invalido.'}, status=400)
+
+    endpoint = data.get('endpoint', '').strip()
+
+    if not endpoint:
+        return JsonResponse({'error': 'Endpoint requerido.'}, status=400)
+
+    PushSubscription.objects.filter(
+        user=request.user,
+        endpoint=endpoint
+    ).update(is_active=False)
+
+    return JsonResponse({'ok': True})
 
 
 def paginar_queryset(request, queryset, por_pagina, page_param='page'):
@@ -1529,6 +1600,10 @@ def editar_pedido(request, pedido_id):
                 valor_anterior=anterior_texto,
                 valor_nuevo=nuevo_texto
             )
+            send_order_assignment_push(
+                pedido,
+                previous_repartidor=repartidor_anterior
+            )
 
         messages.success(
             request,
@@ -1985,6 +2060,10 @@ def asignar_pedido_repartidor(request, pedido_id):
         ),
         valor_anterior=nombre_repartidor_historial(repartidor_anterior),
         valor_nuevo=nombre_repartidor_historial(repartidor)
+    )
+    send_order_assignment_push(
+        pedido,
+        previous_repartidor=repartidor_anterior
     )
 
     messages.success(

@@ -141,3 +141,24 @@ class PedidoHistorial(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_accion_display()} - Pedido #{self.pedido_id}"
+
+
+class PushSubscription(models.Model):
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='push_subscriptions'
+    )
+    endpoint = models.URLField(unique=True, max_length=500)
+    p256dh = models.TextField()
+    auth = models.TextField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at', '-id']
+
+    def __str__(self):
+        return f"Push subscription {self.id} - {self.user}"

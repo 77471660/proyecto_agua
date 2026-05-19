@@ -17,6 +17,24 @@ urlpatterns = [
     ),
 
     path(
+        'webpush/public-key/',
+        views.webpush_public_key,
+        name='webpush_public_key'
+    ),
+
+    path(
+        'webpush/subscribe/',
+        views.webpush_subscribe,
+        name='webpush_subscribe'
+    ),
+
+    path(
+        'webpush/unsubscribe/',
+        views.webpush_unsubscribe,
+        name='webpush_unsubscribe'
+    ),
+
+    path(
         'login/',
         views.login_usuario,
         name='login'
