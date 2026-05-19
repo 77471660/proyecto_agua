@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from django.conf import settings
 
@@ -8,6 +9,8 @@ from .models import PushSubscription
 
 logger = logging.getLogger(__name__)
 EXPECTED_VAPID_SUBJECT = 'mailto:villarcalderondaniel@gmail.com'
+PUSH_ICON_URL = '/static/img/icons/android-chrome-192x192.png'
+PUSH_BADGE_URL = '/static/img/icons/favicon-96x96.png'
 
 
 def endpoint_for_log(endpoint):
@@ -31,6 +34,22 @@ def vapid_status():
         'has_subject': bool(subject),
         'subject_is_mailto': subject.startswith('mailto:'),
         'subject_is_expected': subject == EXPECTED_VAPID_SUBJECT,
+    }
+
+
+def payload_for_log(payload):
+
+    return {
+        'title': payload.get('title'),
+        'body': payload.get('body'),
+        'url': payload.get('url'),
+        'tag': payload.get('tag'),
+        'icon': payload.get('icon'),
+        'badge': payload.get('badge'),
+        'renotify': payload.get('renotify'),
+        'requireInteraction': payload.get('requireInteraction'),
+        'timestamp': payload.get('timestamp'),
+        'vibrate': payload.get('vibrate'),
     }
 
 
@@ -67,11 +86,12 @@ def send_push_to_user(user, payload):
 
     logger.info(
         'Web Push envio iniciado. usuario_destino=%s suscripciones_activas=%s '
-        'tag=%s status_vapid=%s',
+        'tag=%s status_vapid=%s payload=%s',
         user.id,
         subscription_count,
         payload.get('tag'),
-        vapid_status()
+        vapid_status(),
+        payload_for_log(payload)
     )
 
     if subscription_count == 0:
@@ -163,27 +183,43 @@ def send_order_assignment_push(pedido, previous_repartidor=None):
         )
         return
 
-    if previous_repartidor and previous_repartidor.id != pedido.repartidor_id:
+    is_reassignment = (
+        previous_repartidor
+        and previous_repartidor.id != pedido.repartidor_id
+    )
+
+    if is_reassignment:
         title = 'Pedido reasignado'
-        body = f'Pedido #{pedido.id} reasignado a tu reparto.'
+        body = f'Pedido #{pedido.id} fue reasignado a tu reparto.'
+        tag_suffix = 'reasignado'
+        renotify = True
     else:
         title = 'Pedido asignado'
-        body = f'Pedido #{pedido.id} asignado a tu reparto.'
+        body = f'Pedido #{pedido.id} fue asignado a tu reparto.'
+        tag_suffix = 'asignado'
+        renotify = False
+
+    url = f'/pedidos/repartidor/#pedido-{pedido.id}'
+    payload = {
+        'title': title,
+        'body': body,
+        'icon': PUSH_ICON_URL,
+        'badge': PUSH_BADGE_URL,
+        'url': url,
+        'tag': f'pedido-{pedido.id}-{tag_suffix}',
+        'renotify': renotify,
+        'requireInteraction': is_reassignment,
+        'timestamp': int(time.time() * 1000),
+        'vibrate': [180, 90, 180, 90, 240] if is_reassignment else [160, 80, 160],
+    }
 
     logger.info(
         'Web Push preparando notificacion de pedido. pedido_id=%s '
-        'repartidor_destino=%s repartidor_anterior=%s titulo=%s',
+        'repartidor_destino=%s repartidor_anterior=%s titulo=%s payload=%s',
         pedido.id,
         pedido.repartidor_id,
         previous_repartidor.id if previous_repartidor else None,
-        title
+        title,
+        payload_for_log(payload)
     )
-    send_push_to_user(
-        pedido.repartidor,
-        {
-            'title': title,
-            'body': body,
-            'url': '/pedidos/repartidor/',
-            'tag': f'pedido-{pedido.id}-asignacion',
-        }
-    )
+    send_push_to_user(pedido.repartidor, payload)

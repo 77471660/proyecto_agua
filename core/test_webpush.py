@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import Cliente, Pedido, PushSubscription
-from .push_notifications import send_push_to_user
+from .push_notifications import send_order_assignment_push, send_push_to_user
 
 
 class WebPushTests(TestCase):
@@ -128,6 +128,60 @@ class WebPushTests(TestCase):
         )
         self.assertEqual(pedido.repartidor, self.repartidor)
         send_push.assert_called_once()
+
+    def test_payload_de_pedido_asignado_abre_ancla_del_pedido(self):
+        pedido = Pedido.objects.create(
+            cliente=self.cliente,
+            repartidor=self.repartidor,
+            cantidad_bidones=2,
+            precio_unitario=Decimal('7.00'),
+            total=Decimal('14.00'),
+            fecha_programada=timezone.localdate()
+        )
+
+        with patch('core.push_notifications.send_push_to_user') as send_push:
+            send_order_assignment_push(pedido)
+
+        send_push.assert_called_once()
+        user, payload = send_push.call_args.args
+        self.assertEqual(user, self.repartidor)
+        self.assertEqual(payload['title'], 'Pedido asignado')
+        self.assertEqual(payload['tag'], f'pedido-{pedido.id}-asignado')
+        self.assertEqual(payload['url'], f'/pedidos/repartidor/#pedido-{pedido.id}')
+        self.assertFalse(payload['renotify'])
+        self.assertFalse(payload['requireInteraction'])
+        self.assertIn('android-chrome-192x192.png', payload['icon'])
+        self.assertIn('favicon-96x96.png', payload['badge'])
+        self.assertIn('timestamp', payload)
+        self.assertIn('vibrate', payload)
+
+    def test_payload_de_pedido_reasignado_renotifica(self):
+        User = get_user_model()
+        repartidor_anterior = User.objects.create_user(
+            username='push-anterior',
+            password='clave-repartidor'
+        )
+        repartidor_anterior.groups.add(self.grupo_repartidor)
+        pedido = Pedido.objects.create(
+            cliente=self.cliente,
+            repartidor=self.repartidor,
+            cantidad_bidones=2,
+            precio_unitario=Decimal('7.00'),
+            total=Decimal('14.00'),
+            fecha_programada=timezone.localdate()
+        )
+
+        with patch('core.push_notifications.send_push_to_user') as send_push:
+            send_order_assignment_push(
+                pedido,
+                previous_repartidor=repartidor_anterior
+            )
+
+        payload = send_push.call_args.args[1]
+        self.assertEqual(payload['title'], 'Pedido reasignado')
+        self.assertEqual(payload['tag'], f'pedido-{pedido.id}-reasignado')
+        self.assertTrue(payload['renotify'])
+        self.assertTrue(payload['requireInteraction'])
 
     @override_settings(
         WEBPUSH_VAPID_PUBLIC_KEY='clave-publica',
