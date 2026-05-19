@@ -8,6 +8,7 @@ from django.contrib.auth.models import Group
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from pywebpush import WebPushException
 
 from .models import Cliente, Pedido, PushSubscription
 from .push_notifications import send_order_assignment_push, send_push_to_user
@@ -80,7 +81,24 @@ class WebPushTests(TestCase):
         self.assertIn('registration.pushManager.subscribe', pwa_js)
         self.assertIn('sendSubscriptionToBackend', pwa_js)
         self.assertIn('Push subscription existente detectada; sincronizando backend', pwa_js)
-        self.assertIn("button.dataset.webpushActive === 'true'", pwa_js)
+        self.assertIn('Permiso granted sin push subscription; recreando suscripcion', pwa_js)
+        self.assertIn("button.dataset.webpushState === 'renew'", pwa_js)
+        self.assertIn("const ACTIVE_PUSH_TEXT = '\\u{1F514} Notificaciones activas';", pwa_js)
+        self.assertIn("const INACTIVE_PUSH_TEXT = '\\u26A0\\uFE0F Activar notificaciones';", pwa_js)
+        self.assertIn("const RENEW_PUSH_TEXT = '\\u{1F504} Renovar notificaciones';", pwa_js)
+        self.assertIn('setActivePushState();', pwa_js)
+
+    def test_titulo_pedidos_hoy_es_subtitulo_discreto(self):
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(reverse('pedidos_repartidor'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'orders-section-title')
+        self.assertContains(response, 'font-size: 16px;')
+        self.assertContains(response, 'font-weight: 600;')
+        self.assertContains(response, 'color: #64748b;')
+        self.assertContains(response, 'margin: 18px 0 10px;')
 
     def test_repartidor_registra_y_desactiva_suscripcion(self):
         self.client.force_login(self.repartidor)
@@ -194,9 +212,23 @@ class WebPushTests(TestCase):
         self.assertFalse(payload['renotify'])
         self.assertFalse(payload['requireInteraction'])
         self.assertIn('android-chrome-192x192.png', payload['icon'])
-        self.assertIn('favicon-96x96.png', payload['badge'])
+        self.assertIn('badge-72x72.png', payload['badge'])
         self.assertIn('timestamp', payload)
         self.assertIn('vibrate', payload)
+
+    def test_iconos_push_android_existen_y_no_reusan_favicon_como_badge(self):
+        icons_dir = Path(settings.BASE_DIR) / 'static' / 'img' / 'icons'
+        service_worker = (
+            Path(settings.BASE_DIR)
+            / 'static'
+            / 'service-worker.js'
+        ).read_text(encoding='utf-8')
+
+        self.assertTrue((icons_dir / 'android-chrome-192x192.png').exists())
+        self.assertTrue((icons_dir / 'badge-72x72.png').exists())
+        self.assertIn('/static/img/icons/android-chrome-192x192.png', service_worker)
+        self.assertIn('/static/img/icons/badge-72x72.png', service_worker)
+        self.assertNotIn("badge: data.badge || '/static/img/icons/favicon-96x96.png'", service_worker)
 
     def test_payload_de_pedido_reasignado_renotifica(self):
         User = get_user_model()
@@ -253,3 +285,44 @@ class WebPushTests(TestCase):
 
         subscription.refresh_from_db()
         self.assertIn('boom diag', subscription.last_error)
+
+    @override_settings(
+        WEBPUSH_VAPID_PUBLIC_KEY='clave-publica',
+        WEBPUSH_VAPID_PRIVATE_KEY='clave-privada',
+        WEBPUSH_VAPID_SUBJECT='mailto:villarcalderondaniel@gmail.com'
+    )
+    def test_error_410_desactiva_suscripcion_expirada(self):
+        class FakeResponse:
+            status_code = 410
+
+        subscription = PushSubscription.objects.create(
+            user=self.repartidor,
+            endpoint='https://push.example.com/subscription/gone',
+            p256dh='p256dh-value',
+            auth='auth-value'
+        )
+
+        with self.assertLogs('core.push_notifications', level='WARNING') as logs:
+            with patch(
+                'pywebpush.webpush',
+                side_effect=WebPushException('gone', response=FakeResponse())
+            ):
+                send_push_to_user(
+                    self.repartidor,
+                    {
+                        'title': 'Pedido reasignado',
+                        'body': 'Pedido #1 reasignado a tu reparto.',
+                        'url': '/pedidos/repartidor/',
+                        'tag': 'pedido-1-reasignado',
+                    }
+                )
+
+        subscription.refresh_from_db()
+        self.assertFalse(subscription.is_active)
+        self.assertIn('status=410', subscription.last_error)
+        self.assertTrue(
+            any(
+                'Web Push suscripcion invalida desactivada' in line
+                for line in logs.output
+            )
+        )

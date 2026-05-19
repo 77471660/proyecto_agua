@@ -10,7 +10,7 @@ from .models import PushSubscription
 logger = logging.getLogger(__name__)
 EXPECTED_VAPID_SUBJECT = 'mailto:villarcalderondaniel@gmail.com'
 PUSH_ICON_URL = '/static/img/icons/android-chrome-192x192.png'
-PUSH_BADGE_URL = '/static/img/icons/favicon-96x96.png'
+PUSH_BADGE_URL = '/static/img/icons/badge-72x72.png'
 
 
 def endpoint_for_log(endpoint):
@@ -138,7 +138,11 @@ def send_push_to_user(user, payload):
                 endpoint_log
             )
         except WebPushException as exc:
-            status_code = getattr(getattr(exc, 'response', None), 'status_code', None)
+            response = getattr(exc, 'response', None)
+            status_code = (
+                getattr(response, 'status_code', None)
+                or getattr(response, 'status', None)
+            )
             error_text = str(exc)[:500]
             logger.exception(
                 'Error pywebpush. usuario_destino=%s subscription_id=%s '
@@ -158,6 +162,15 @@ def send_push_to_user(user, payload):
             if status_code in {404, 410}:
                 subscription.is_active = False
                 update_fields.append('is_active')
+                logger.warning(
+                    'Web Push suscripcion invalida desactivada. '
+                    'usuario_destino=%s subscription_id=%s endpoint=%s '
+                    'status_code=%s',
+                    user.id,
+                    subscription.id,
+                    endpoint_log,
+                    status_code
+                )
 
             subscription.save(update_fields=update_fields)
         except Exception as exc:
