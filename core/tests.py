@@ -148,6 +148,12 @@ class PermisosRolesTests(TestCase):
     def test_vistas_operativas_principales_renderizan(self):
         self.crear_pedido(self.repartidor)
 
+        self.client.force_login(self.daniel)
+        self.assertEqual(
+            self.client.get(reverse('pedidos_repartidor')).status_code,
+            200
+        )
+
         self.client.force_login(self.secretaria)
         self.assertEqual(self.client.get(reverse('dashboard')).status_code, 200)
         self.assertEqual(self.client.get(reverse('lista_pedidos')).status_code, 200)

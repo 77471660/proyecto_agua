@@ -43,7 +43,11 @@ def es_jefe_repartidores(user):
 
 
 def puede_ver_panel_repartidor(user):
-    return es_repartidor(user) or es_jefe_repartidores(user)
+    return (
+        user.is_authenticated
+        and user.is_active
+        and user.is_superuser
+    ) or es_repartidor(user) or es_jefe_repartidores(user)
 
 
 def puede_ver_panel_jefe_repartidores(user):
