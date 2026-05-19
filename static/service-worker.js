@@ -30,7 +30,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body || 'Tienes una nueva actualizacion.',
     icon: data.icon || '/static/img/icons/android-chrome-192x192.png',
-    badge: data.badge || '/static/img/icons/badge-72x72.png',
+    badge: data.badge || '/static/img/icons/notification-bidon.png',
     data: {
       url: data.url || '/pedidos/repartidor/',
     },

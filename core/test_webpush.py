@@ -212,7 +212,7 @@ class WebPushTests(TestCase):
         self.assertFalse(payload['renotify'])
         self.assertFalse(payload['requireInteraction'])
         self.assertIn('android-chrome-192x192.png', payload['icon'])
-        self.assertIn('badge-72x72.png', payload['badge'])
+        self.assertIn('notification-bidon.png', payload['badge'])
         self.assertIn('timestamp', payload)
         self.assertIn('vibrate', payload)
 
@@ -225,9 +225,9 @@ class WebPushTests(TestCase):
         ).read_text(encoding='utf-8')
 
         self.assertTrue((icons_dir / 'android-chrome-192x192.png').exists())
-        self.assertTrue((icons_dir / 'badge-72x72.png').exists())
+        self.assertTrue((icons_dir / 'notification-bidon.png').exists())
         self.assertIn('/static/img/icons/android-chrome-192x192.png', service_worker)
-        self.assertIn('/static/img/icons/badge-72x72.png', service_worker)
+        self.assertIn('/static/img/icons/notification-bidon.png', service_worker)
         self.assertNotIn("badge: data.badge || '/static/img/icons/favicon-96x96.png'", service_worker)
 
     def test_payload_de_pedido_reasignado_renotifica(self):

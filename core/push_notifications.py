@@ -10,7 +10,7 @@ from .models import PushSubscription
 logger = logging.getLogger(__name__)
 EXPECTED_VAPID_SUBJECT = 'mailto:villarcalderondaniel@gmail.com'
 PUSH_ICON_URL = '/static/img/icons/android-chrome-192x192.png'
-PUSH_BADGE_URL = '/static/img/icons/badge-72x72.png'
+PUSH_BADGE_URL = '/static/img/icons/notification-bidon.png'
 
 
 def endpoint_for_log(endpoint):
