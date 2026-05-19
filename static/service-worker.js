@@ -1,4 +1,4 @@
-const SW_VERSION = 'aquasmart-pwa-v1';
+const SW_VERSION = 'aquasmart-pwa-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
