@@ -56,6 +56,16 @@ class WebPushTests(TestCase):
         self.assertContains(response, 'Activar notificaciones')
         self.assertContains(response, 'js/pwa.js')
 
+    def test_panel_jefe_muestra_activacion_en_acciones(self):
+        self.client.force_login(self.jefe)
+
+        response = self.client.get(reverse('panel_jefe_repartidores'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'navbar-actions-mobile')
+        self.assertContains(response, 'data-webpush-toggle')
+        self.assertContains(response, 'Activar notificaciones')
+
     def test_repartidor_registra_y_desactiva_suscripcion(self):
         self.client.force_login(self.repartidor)
         payload = {

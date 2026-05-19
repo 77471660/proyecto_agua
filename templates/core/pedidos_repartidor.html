@@ -445,15 +445,6 @@
                     </a>
                 {% endif %}
 
-                <button
-                    type="button"
-                    class="btn btn-outline-light btn-sm"
-                    data-webpush-toggle
-                    data-public-key-url="{% url 'webpush_public_key' %}"
-                    data-subscribe-url="{% url 'webpush_subscribe' %}"
-                    data-unsubscribe-url="{% url 'webpush_unsubscribe' %}"
-                >Activar notificaciones</button>
-
                 <form method="post" action="{% url 'cerrar_sesion_repartidor' %}" class="mb-0">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-light btn-sm">
@@ -492,16 +483,18 @@
                             <a class="dropdown-item" href="/pedidos/">Volver</a>
                         </li>
                     {% endif %}
-                    <li>
-                        <button
-                            type="button"
-                            class="dropdown-item"
-                            data-webpush-toggle
-                            data-public-key-url="{% url 'webpush_public_key' %}"
-                            data-subscribe-url="{% url 'webpush_subscribe' %}"
-                            data-unsubscribe-url="{% url 'webpush_unsubscribe' %}"
-                        >Activar notificaciones</button>
-                    </li>
+                    {% if menu_puede_mi_reparto %}
+                        <li>
+                            <button
+                                type="button"
+                                class="dropdown-item"
+                                data-webpush-toggle
+                                data-public-key-url="{% url 'webpush_public_key' %}"
+                                data-subscribe-url="{% url 'webpush_subscribe' %}"
+                                data-unsubscribe-url="{% url 'webpush_unsubscribe' %}"
+                            >Activar notificaciones</button>
+                        </li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form method="post" action="{% url 'cerrar_sesion_repartidor' %}" class="mb-0">
