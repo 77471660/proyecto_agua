@@ -27,6 +27,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote
 import json
+import logging
 import re
 
 from .auth_utils import (
@@ -43,13 +44,18 @@ from .auth_utils import (
     JEFE_REPARTIDORES_GROUP,
 )
 from .models import Cliente, Pedido, PedidoHistorial, PushSubscription
-from .push_notifications import send_order_assignment_push
+from .push_notifications import (
+    endpoint_for_log,
+    send_order_assignment_push,
+    vapid_status,
+)
 
 
 PEDIDOS_POR_PAGINA = 15
 CLIENTES_POR_PAGINA = 15
 PANEL_JEFE_LIMITE_PEDIDOS = 15
 HISTORIAL_CLIENTE_LIMITE = 10
+logger = logging.getLogger(__name__)
 
 
 def nombre_usuario_historial(usuario):
@@ -166,7 +172,18 @@ def service_worker(request):
 def webpush_public_key(request):
 
     if not puede_ver_panel_repartidor(request.user):
+        logger.warning(
+            'Web Push public-key rechazado. usuario=%s status_vapid=%s',
+            request.user.id,
+            vapid_status()
+        )
         return JsonResponse({'error': 'No autorizado.'}, status=403)
+
+    logger.info(
+        'Web Push public-key solicitado. usuario=%s status_vapid=%s',
+        request.user.id,
+        vapid_status()
+    )
 
     return JsonResponse({
         'publicKey': settings.WEBPUSH_VAPID_PUBLIC_KEY,
@@ -178,11 +195,19 @@ def webpush_public_key(request):
 def webpush_subscribe(request):
 
     if not puede_ver_panel_repartidor(request.user):
+        logger.warning(
+            'Web Push subscribe rechazado. usuario=%s',
+            request.user.id
+        )
         return JsonResponse({'error': 'No autorizado.'}, status=403)
 
     try:
         data = json.loads(request.body.decode('utf-8'))
     except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning(
+            'Web Push subscribe con JSON invalido. usuario=%s',
+            request.user.id
+        )
         return JsonResponse({'error': 'JSON invalido.'}, status=400)
 
     endpoint = data.get('endpoint', '').strip()
@@ -191,16 +216,39 @@ def webpush_subscribe(request):
     auth = keys.get('auth', '').strip()
 
     if not endpoint or not p256dh or not auth:
+        logger.warning(
+            'Web Push subscribe incompleto. usuario=%s endpoint=%s '
+            'tiene_p256dh=%s tiene_auth=%s',
+            request.user.id,
+            endpoint_for_log(endpoint),
+            bool(p256dh),
+            bool(auth)
+        )
         return JsonResponse({'error': 'Suscripcion incompleta.'}, status=400)
 
-    PushSubscription.objects.update_or_create(
+    subscription, created = PushSubscription.objects.update_or_create(
         endpoint=endpoint,
         defaults={
             'user': request.user,
             'p256dh': p256dh,
             'auth': auth,
             'is_active': True,
+            'last_error': '',
         }
+    )
+    active_count = PushSubscription.objects.filter(
+        user=request.user,
+        is_active=True
+    ).count()
+
+    logger.info(
+        'Web Push subscribe guardado. usuario=%s subscription_id=%s '
+        'created=%s endpoint=%s suscripciones_activas_usuario=%s',
+        request.user.id,
+        subscription.id,
+        created,
+        endpoint_for_log(endpoint),
+        active_count
     )
 
     return JsonResponse({'ok': True})
@@ -211,22 +259,41 @@ def webpush_subscribe(request):
 def webpush_unsubscribe(request):
 
     if not puede_ver_panel_repartidor(request.user):
+        logger.warning(
+            'Web Push unsubscribe rechazado. usuario=%s',
+            request.user.id
+        )
         return JsonResponse({'error': 'No autorizado.'}, status=403)
 
     try:
         data = json.loads(request.body.decode('utf-8'))
     except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning(
+            'Web Push unsubscribe con JSON invalido. usuario=%s',
+            request.user.id
+        )
         return JsonResponse({'error': 'JSON invalido.'}, status=400)
 
     endpoint = data.get('endpoint', '').strip()
 
     if not endpoint:
+        logger.warning(
+            'Web Push unsubscribe sin endpoint. usuario=%s',
+            request.user.id
+        )
         return JsonResponse({'error': 'Endpoint requerido.'}, status=400)
 
-    PushSubscription.objects.filter(
+    updated = PushSubscription.objects.filter(
         user=request.user,
         endpoint=endpoint
     ).update(is_active=False)
+    logger.info(
+        'Web Push unsubscribe procesado. usuario=%s endpoint=%s '
+        'suscripciones_desactivadas=%s',
+        request.user.id,
+        endpoint_for_log(endpoint),
+        updated
+    )
 
     return JsonResponse({'ok': True})
 
@@ -1592,6 +1659,13 @@ def editar_pedido(request, pedido_id):
         if repartidor_cambio:
             anterior_texto = nombre_repartidor_historial(repartidor_anterior)
             nuevo_texto = nombre_repartidor_historial(repartidor)
+            logger.info(
+                'Web Push diagnostico: reasignacion desde editar_pedido. '
+                'pedido_id=%s repartidor_anterior=%s repartidor_destino=%s',
+                pedido.id,
+                repartidor_anterior.id if repartidor_anterior else None,
+                repartidor.id if repartidor else None
+            )
             registrar_historial_pedido(
                 pedido,
                 request.user,
@@ -2049,6 +2123,13 @@ def asignar_pedido_repartidor(request, pedido_id):
     repartidor_anterior = pedido.repartidor
     pedido.repartidor = repartidor
     pedido.save(update_fields=['repartidor'])
+    logger.info(
+        'Web Push diagnostico: asignacion desde panel jefe. pedido_id=%s '
+        'repartidor_anterior=%s repartidor_destino=%s',
+        pedido.id,
+        repartidor_anterior.id if repartidor_anterior else None,
+        repartidor.id
+    )
     registrar_historial_pedido(
         pedido,
         request.user,

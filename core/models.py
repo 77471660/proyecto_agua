@@ -154,6 +154,7 @@ class PushSubscription(models.Model):
     p256dh = models.TextField()
     auth = models.TextField()
     is_active = models.BooleanField(default=True)
+    last_error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

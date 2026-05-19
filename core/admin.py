@@ -28,7 +28,14 @@ class PedidoHistorialAdmin(admin.ModelAdmin):
 
 @admin.register(PushSubscription)
 class PushSubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'is_active', 'created_at', 'updated_at')
+    list_display = (
+        'user',
+        'endpoint',
+        'is_active',
+        'created_at',
+        'updated_at',
+        'last_error',
+    )
     search_fields = ('user__username', 'endpoint')
     list_filter = ('is_active', 'created_at', 'updated_at')
     ordering = ('-updated_at', '-id')

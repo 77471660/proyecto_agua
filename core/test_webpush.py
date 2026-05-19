@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import Cliente, Pedido, PushSubscription
+from .push_notifications import send_push_to_user
 
 
 class WebPushTests(TestCase):
@@ -67,6 +68,7 @@ class WebPushTests(TestCase):
         )
         self.assertEqual(subscription.user, self.repartidor)
         self.assertTrue(subscription.is_active)
+        self.assertEqual(subscription.last_error, '')
 
         response = self.client.post(
             reverse('webpush_unsubscribe'),
@@ -126,3 +128,31 @@ class WebPushTests(TestCase):
         )
         self.assertEqual(pedido.repartidor, self.repartidor)
         send_push.assert_called_once()
+
+    @override_settings(
+        WEBPUSH_VAPID_PUBLIC_KEY='clave-publica',
+        WEBPUSH_VAPID_PRIVATE_KEY='clave-privada',
+        WEBPUSH_VAPID_SUBJECT='mailto:villarcalderondaniel@gmail.com'
+    )
+    def test_error_de_pywebpush_queda_registrado_en_suscripcion(self):
+        subscription = PushSubscription.objects.create(
+            user=self.repartidor,
+            endpoint='https://push.example.com/subscription/error',
+            p256dh='p256dh-value',
+            auth='auth-value'
+        )
+
+        with self.assertLogs('core.push_notifications', level='ERROR'):
+            with patch('pywebpush.webpush', side_effect=RuntimeError('boom diag')):
+                send_push_to_user(
+                    self.repartidor,
+                    {
+                        'title': 'Pedido asignado',
+                        'body': 'Pedido #1 asignado a tu reparto.',
+                        'url': '/pedidos/repartidor/',
+                        'tag': 'pedido-1-asignacion',
+                    }
+                )
+
+        subscription.refresh_from_db()
+        self.assertIn('boom diag', subscription.last_error)

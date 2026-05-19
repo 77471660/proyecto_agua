@@ -7,6 +7,31 @@ from .models import PushSubscription
 
 
 logger = logging.getLogger(__name__)
+EXPECTED_VAPID_SUBJECT = 'mailto:villarcalderondaniel@gmail.com'
+
+
+def endpoint_for_log(endpoint):
+
+    if not endpoint:
+        return 'sin-endpoint'
+
+    if len(endpoint) <= 24:
+        return endpoint
+
+    return f'{endpoint[:16]}...{endpoint[-8:]}'
+
+
+def vapid_status():
+
+    subject = settings.WEBPUSH_VAPID_SUBJECT
+
+    return {
+        'has_public_key': bool(settings.WEBPUSH_VAPID_PUBLIC_KEY),
+        'has_private_key': bool(settings.WEBPUSH_VAPID_PRIVATE_KEY),
+        'has_subject': bool(subject),
+        'subject_is_mailto': subject.startswith('mailto:'),
+        'subject_is_expected': subject == EXPECTED_VAPID_SUBJECT,
+    }
 
 
 def webpush_configured():
@@ -21,21 +46,44 @@ def webpush_configured():
 def send_push_to_user(user, payload):
 
     if not webpush_configured():
-        logger.info('Web Push no configurado: faltan credenciales VAPID.')
+        logger.warning(
+            'Web Push no configurado. status=%s usuario_destino=%s',
+            vapid_status(),
+            user.id
+        )
         return
 
     try:
         from pywebpush import WebPushException, webpush
     except ImportError:
-        logger.exception('pywebpush no esta instalado.')
+        logger.exception('pywebpush no esta instalado. usuario_destino=%s', user.id)
         return
 
     subscriptions = PushSubscription.objects.filter(
         user=user,
         is_active=True
     )
+    subscription_count = subscriptions.count()
+
+    logger.info(
+        'Web Push envio iniciado. usuario_destino=%s suscripciones_activas=%s '
+        'tag=%s status_vapid=%s',
+        user.id,
+        subscription_count,
+        payload.get('tag'),
+        vapid_status()
+    )
+
+    if subscription_count == 0:
+        logger.warning(
+            'Web Push sin suscripciones activas. usuario_destino=%s tag=%s',
+            user.id,
+            payload.get('tag')
+        )
+        return
 
     for subscription in subscriptions:
+        endpoint_log = endpoint_for_log(subscription.endpoint)
         subscription_info = {
             'endpoint': subscription.endpoint,
             'keys': {
@@ -45,6 +93,13 @@ def send_push_to_user(user, payload):
         }
 
         try:
+            logger.info(
+                'Web Push llamando pywebpush. usuario_destino=%s '
+                'subscription_id=%s endpoint=%s',
+                user.id,
+                subscription.id,
+                endpoint_log
+            )
             webpush(
                 subscription_info=subscription_info,
                 data=json.dumps(payload),
@@ -52,27 +107,60 @@ def send_push_to_user(user, payload):
                 vapid_claims={'sub': settings.WEBPUSH_VAPID_SUBJECT},
                 ttl=3600,
             )
+            if subscription.last_error:
+                subscription.last_error = ''
+                subscription.save(update_fields=['last_error', 'updated_at'])
+            logger.info(
+                'Web Push enviado correctamente. usuario_destino=%s '
+                'subscription_id=%s endpoint=%s',
+                user.id,
+                subscription.id,
+                endpoint_log
+            )
         except WebPushException as exc:
             status_code = getattr(getattr(exc, 'response', None), 'status_code', None)
-            logger.warning(
-                'Error enviando Web Push a usuario %s: %s',
+            error_text = str(exc)[:500]
+            logger.exception(
+                'Error pywebpush. usuario_destino=%s subscription_id=%s '
+                'endpoint=%s status_code=%s exception=%s',
                 user.id,
-                exc
+                subscription.id,
+                endpoint_log,
+                status_code,
+                error_text
             )
+            subscription.last_error = (
+                f'pywebpush status={status_code or "sin-status"} '
+                f'error={error_text}'
+            )[:1000]
+            update_fields = ['last_error', 'updated_at']
 
             if status_code in {404, 410}:
                 subscription.is_active = False
-                subscription.save(update_fields=['is_active', 'updated_at'])
-        except Exception:
+                update_fields.append('is_active')
+
+            subscription.save(update_fields=update_fields)
+        except Exception as exc:
+            error_text = str(exc)[:500]
             logger.exception(
-                'Error inesperado enviando Web Push a usuario %s.',
-                user.id
+                'Error inesperado enviando Web Push. usuario_destino=%s '
+                'subscription_id=%s endpoint=%s exception=%s',
+                user.id,
+                subscription.id,
+                endpoint_log,
+                error_text
             )
+            subscription.last_error = f'inesperado error={error_text}'[:1000]
+            subscription.save(update_fields=['last_error', 'updated_at'])
 
 
 def send_order_assignment_push(pedido, previous_repartidor=None):
 
     if not pedido.repartidor:
+        logger.info(
+            'Web Push omitido: pedido sin repartidor. pedido_id=%s',
+            pedido.id
+        )
         return
 
     if previous_repartidor and previous_repartidor.id != pedido.repartidor_id:
@@ -82,6 +170,14 @@ def send_order_assignment_push(pedido, previous_repartidor=None):
         title = 'Pedido asignado'
         body = f'Pedido #{pedido.id} asignado a tu reparto.'
 
+    logger.info(
+        'Web Push preparando notificacion de pedido. pedido_id=%s '
+        'repartidor_destino=%s repartidor_anterior=%s titulo=%s',
+        pedido.id,
+        pedido.repartidor_id,
+        previous_repartidor.id if previous_repartidor else None,
+        title
+    )
     send_push_to_user(
         pedido.repartidor,
         {
