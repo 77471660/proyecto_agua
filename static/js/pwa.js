@@ -1,5 +1,8 @@
 (function () {
+  console.log('pwa.js ejecutándose');
+
   if (!('serviceWorker' in navigator)) {
+    console.log('Service worker no disponible');
     return;
   }
 
@@ -9,6 +12,12 @@
 
     if (parts.length === 2) {
       return parts.pop().split(';').shift();
+    }
+
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+
+    if (csrfInput) {
+      return csrfInput.value;
     }
 
     return '';
@@ -30,12 +39,15 @@
   }
 
   function postJson(url, data) {
+    const csrfToken = getCookie('csrftoken');
+    console.log(`CSRF token disponible: ${Boolean(csrfToken)}`);
+
     return fetch(url, {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken'),
+        'X-CSRFToken': csrfToken,
       },
       body: JSON.stringify(data),
     });
@@ -56,11 +68,13 @@
     const button = buttons[0];
 
     if (!('PushManager' in window) || !('Notification' in window)) {
+      console.log('Permiso notificaciones: no-disponible');
       updateButtons(buttons, 'Notificaciones no disponibles', true);
       return;
     }
 
     if (Notification.permission === 'denied') {
+      console.log('Permiso notificaciones: denied');
       updateButtons(buttons, 'Notificaciones bloqueadas', true);
       return;
     }
@@ -68,6 +82,7 @@
     const permission = Notification.permission === 'granted'
       ? 'granted'
       : await Notification.requestPermission();
+    console.log(`Permiso notificaciones: ${permission}`);
 
     if (permission !== 'granted') {
       updateButtons(buttons, 'Activar notificaciones', false);
@@ -79,6 +94,7 @@
     const publicKeyResponse = await fetch(button.dataset.publicKeyUrl, {
       credentials: 'same-origin',
     });
+    console.log(`Respuesta public-key: ${publicKeyResponse.status}`);
     const publicKeyData = await publicKeyResponse.json();
 
     if (!publicKeyData.publicKey) {
@@ -98,19 +114,23 @@
     );
 
     if (!subscribeResponse.ok) {
+      console.log(`Error enviando PushSubscription al backend: ${subscribeResponse.status}`);
       updateButtons(buttons, 'Activar notificaciones', false);
       return;
     }
 
+    console.log('PushSubscription enviada al backend');
     updateButtons(buttons, 'Notificaciones activas', true);
   }
 
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/service-worker.js')
       .then(async function (registration) {
+        console.log('Service worker activo');
         const buttons = Array.from(document.querySelectorAll('[data-webpush-toggle]'));
 
         if (!buttons.length) {
+          console.log('Botón activar notificaciones no encontrado');
           return;
         }
 
@@ -128,6 +148,7 @@
 
         buttons.forEach(function (button) {
           button.addEventListener('click', function () {
+            console.log('Botón activar notificaciones clickeado');
             subscribeToPush(registration, buttons).catch(function () {
               updateButtons(buttons, 'Activar notificaciones', false);
             });

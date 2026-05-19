@@ -46,6 +46,16 @@ class WebPushTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['publicKey'], 'clave-publica')
 
+    def test_pantalla_repartidor_muestra_boton_y_carga_pwa_js(self):
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(reverse('pedidos_repartidor'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-webpush-toggle')
+        self.assertContains(response, 'Activar notificaciones')
+        self.assertContains(response, 'js/pwa.js')
+
     def test_repartidor_registra_y_desactiva_suscripcion(self):
         self.client.force_login(self.repartidor)
         payload = {
@@ -56,13 +66,20 @@ class WebPushTests(TestCase):
             },
         }
 
-        response = self.client.post(
-            reverse('webpush_subscribe'),
-            payload,
-            content_type='application/json'
-        )
+        with self.assertLogs('core.views', level='INFO') as logs:
+            response = self.client.post(
+                reverse('webpush_subscribe'),
+                payload,
+                content_type='application/json'
+            )
 
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            any(
+                f'PushSubscription guardada usuario={self.repartidor.id}' in line
+                for line in logs.output
+            )
+        )
         subscription = PushSubscription.objects.get(
             endpoint=payload['endpoint']
         )

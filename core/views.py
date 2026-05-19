@@ -242,6 +242,10 @@ def webpush_subscribe(request):
     ).count()
 
     logger.info(
+        'PushSubscription guardada usuario=%s',
+        request.user.id
+    )
+    logger.info(
         'Web Push subscribe guardado. usuario=%s subscription_id=%s '
         'created=%s endpoint=%s suscripciones_activas_usuario=%s',
         request.user.id,
