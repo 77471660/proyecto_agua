@@ -1,6 +1,8 @@
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import TestCase, override_settings
@@ -65,6 +67,20 @@ class WebPushTests(TestCase):
         self.assertContains(response, 'navbar-actions-mobile')
         self.assertContains(response, 'data-webpush-toggle')
         self.assertContains(response, 'Activar notificaciones')
+
+    def test_pwa_js_sincroniza_suscripcion_real_con_backend(self):
+        pwa_js = (
+            Path(settings.BASE_DIR)
+            / 'static'
+            / 'js'
+            / 'pwa.js'
+        ).read_text(encoding='utf-8')
+
+        self.assertIn('navigator.serviceWorker.ready', pwa_js)
+        self.assertIn('registration.pushManager.subscribe', pwa_js)
+        self.assertIn('sendSubscriptionToBackend', pwa_js)
+        self.assertIn('Push subscription existente detectada; sincronizando backend', pwa_js)
+        self.assertIn("button.dataset.webpushActive === 'true'", pwa_js)
 
     def test_repartidor_registra_y_desactiva_suscripcion(self):
         self.client.force_login(self.repartidor)

@@ -59,6 +59,7 @@
     webpushButtons().forEach(function (button) {
       button.textContent = text;
       button.disabled = Boolean(disabled);
+      button.dataset.webpushActive = text === 'Notificaciones activas' ? 'true' : 'false';
     });
   }
 
@@ -76,18 +77,54 @@
       throw new Error('Service worker no disponible');
     }
 
-    serviceWorkerRegistration = await navigator.serviceWorker.register('/service-worker.js');
+    await navigator.serviceWorker.register('/service-worker.js');
+    serviceWorkerRegistration = await navigator.serviceWorker.ready;
     console.log('Service worker activo');
     return serviceWorkerRegistration;
   }
 
-  async function subscribeToPush(button) {
+  async function sendSubscriptionToBackend(button, subscription) {
+    console.log('Enviando PushSubscription al backend');
+    const subscribeResponse = await postJson(
+      button.dataset.subscribeUrl,
+      subscription.toJSON()
+    );
+    console.log(`Respuesta subscribe: ${subscribeResponse.status}`);
+
+    if (!subscribeResponse.ok) {
+      throw new Error(`Subscribe backend fallo con status ${subscribeResponse.status}`);
+    }
+
+    console.log('PushSubscription enviada al backend');
+    return subscribeResponse;
+  }
+
+  async function createPushSubscription(registration, publicKeyData, forceRenew) {
+    const existingSubscription = await registration.pushManager.getSubscription();
+    console.log(`Existe push subscription: ${Boolean(existingSubscription)}`);
+
+    if (existingSubscription && forceRenew) {
+      console.log('Renovando PushSubscription existente');
+      await existingSubscription.unsubscribe();
+    } else if (existingSubscription) {
+      return existingSubscription;
+    }
+
+    console.log('Ejecutando pushManager.subscribe');
+    return registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKeyData.publicKey),
+    });
+  }
+
+  async function subscribeToPush(button, options) {
     if (subscriptionInProgress) {
       return;
     }
 
+    const forceRenew = Boolean(options && options.forceRenew);
     subscriptionInProgress = true;
-    updateButtons('Activando...', true);
+    updateButtons(forceRenew ? 'Renovando...' : 'Activando...', true);
 
     try {
       if (!('PushManager' in window) || !('Notification' in window)) {
@@ -128,28 +165,18 @@
         return;
       }
 
-      const existingSubscription = await registration.pushManager.getSubscription();
-      const subscription = existingSubscription || await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKeyData.publicKey),
-      });
-
-      console.log('Enviando PushSubscription al backend');
-      const subscribeResponse = await postJson(
-        button.dataset.subscribeUrl,
-        subscription.toJSON()
+      const subscription = await createPushSubscription(
+        registration,
+        publicKeyData,
+        forceRenew
       );
-      console.log(`Respuesta subscribe: ${subscribeResponse.status}`);
-
-      if (!subscribeResponse.ok) {
-        updateButtons('Activar notificaciones', false);
-        showTemporaryAlert('Error al activar notificaciones.');
-        return;
-      }
-
-      console.log('PushSubscription enviada al backend');
-      updateButtons('Notificaciones activas', true);
-      showTemporaryAlert('Notificaciones activadas correctamente');
+      await sendSubscriptionToBackend(button, subscription);
+      updateButtons('Notificaciones activas', false);
+      showTemporaryAlert(
+        forceRenew
+          ? 'Notificaciones renovadas correctamente'
+          : 'Notificaciones activadas correctamente'
+      );
     } catch (error) {
       console.log('Error activando notificaciones', error);
       updateButtons('Activar notificaciones', false);
@@ -170,7 +197,9 @@
     event.stopPropagation();
     console.log('click activar notificaciones');
     console.log('Boton activar notificaciones clickeado');
-    subscribeToPush(button);
+    subscribeToPush(button, {
+      forceRenew: button.dataset.webpushActive === 'true',
+    });
   });
 
   window.addEventListener('load', function () {
@@ -191,7 +220,19 @@
         const subscription = await registration.pushManager.getSubscription();
 
         if (subscription && Notification.permission === 'granted') {
-          updateButtons('Notificaciones activas', true);
+          console.log('Push subscription existente detectada; sincronizando backend');
+
+          try {
+            await sendSubscriptionToBackend(buttons[0], subscription);
+            updateButtons('Notificaciones activas', false);
+          } catch (error) {
+            console.log('No se pudo sincronizar PushSubscription existente', error);
+            updateButtons('Activar notificaciones', false);
+          }
+        } else {
+          console.log(`Existe push subscription al cargar: ${Boolean(subscription)}`);
+          console.log(`Permiso notificaciones al cargar: ${Notification.permission}`);
+          updateButtons('Activar notificaciones', false);
         }
       })
       .catch(function (error) {
