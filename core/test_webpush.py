@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from pywebpush import WebPushException
 
-from .models import Cliente, Pedido, PushSubscription
+from .models import Cliente, FCMToken, Pedido, PushSubscription
 from .push_notifications import send_order_assignment_push, send_push_to_user
 
 
@@ -68,6 +68,15 @@ class WebPushTests(TestCase):
         self.assertContains(response, 'navbar-actions-mobile')
         self.assertContains(response, 'data-webpush-toggle')
         self.assertContains(response, 'Activar notificaciones')
+
+    def test_base_carga_js_fcm_capacitor_sin_reemplazar_webpush(self):
+        self.client.force_login(self.jefe)
+
+        response = self.client.get(reverse('panel_jefe_repartidores'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'js/pwa.js')
+        self.assertContains(response, 'js/capacitor_push.js')
 
     def test_pwa_js_sincroniza_suscripcion_real_con_backend(self):
         pwa_js = (
@@ -140,6 +149,71 @@ class WebPushTests(TestCase):
         self.assertEqual(response.status_code, 200)
         subscription.refresh_from_db()
         self.assertFalse(subscription.is_active)
+
+    def test_usuario_autenticado_registra_token_fcm(self):
+        self.client.force_login(self.repartidor)
+        payload = {
+            'token': 'fcm-token-abc-123',
+            'platform': 'android',
+            'deviceId': 'device-1',
+        }
+
+        with self.assertLogs('core.views', level='INFO') as logs:
+            response = self.client.post(
+                reverse('fcm_register_token'),
+                payload,
+                content_type='application/json'
+            )
+
+        self.assertEqual(response.status_code, 200)
+        token = FCMToken.objects.get(token=payload['token'])
+        self.assertEqual(token.user, self.repartidor)
+        self.assertEqual(token.platform, 'android')
+        self.assertEqual(token.device_id, 'device-1')
+        self.assertTrue(token.is_active)
+        self.assertEqual(token.last_error, '')
+        self.assertTrue(
+            any('FCM token guardado' in line for line in logs.output)
+        )
+
+    def test_token_fcm_duplicado_se_actualiza_sin_crear_otro(self):
+        FCMToken.objects.create(
+            user=self.jefe,
+            token='fcm-token-duplicado',
+            platform='android',
+            device_id='old-device',
+            is_active=False,
+            last_error='token viejo'
+        )
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse('fcm_register_token'),
+            {
+                'token': 'fcm-token-duplicado',
+                'platform': 'android',
+                'deviceId': 'new-device',
+            },
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(FCMToken.objects.count(), 1)
+        token = FCMToken.objects.get(token='fcm-token-duplicado')
+        self.assertEqual(token.user, self.repartidor)
+        self.assertEqual(token.device_id, 'new-device')
+        self.assertTrue(token.is_active)
+        self.assertEqual(token.last_error, '')
+
+    def test_registro_fcm_requiere_login(self):
+        response = self.client.post(
+            reverse('fcm_register_token'),
+            {'token': 'fcm-token-anonimo'},
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(FCMToken.objects.exists())
 
     def test_secretaria_no_puede_registrar_suscripcion(self):
         User = get_user_model()

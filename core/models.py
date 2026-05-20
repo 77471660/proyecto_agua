@@ -163,3 +163,25 @@ class PushSubscription(models.Model):
 
     def __str__(self):
         return f"Push subscription {self.id} - {self.user}"
+
+
+class FCMToken(models.Model):
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='fcm_tokens'
+    )
+    token = models.TextField(unique=True)
+    platform = models.CharField(max_length=30, default='android')
+    device_id = models.CharField(max_length=120, blank=True)
+    is_active = models.BooleanField(default=True)
+    last_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at', '-id']
+
+    def __str__(self):
+        return f"FCM token {self.id} - {self.user}"

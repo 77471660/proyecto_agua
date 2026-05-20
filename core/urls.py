@@ -35,6 +35,12 @@ urlpatterns = [
     ),
 
     path(
+        'fcm/register-token/',
+        views.fcm_register_token,
+        name='fcm_register_token'
+    ),
+
+    path(
         'login/',
         views.login_usuario,
         name='login'

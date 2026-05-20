@@ -147,3 +147,6 @@ WEBPUSH_VAPID_SUBJECT = os.environ.get(
     'WEBPUSH_VAPID_SUBJECT',
     'mailto:admin@example.com'
 )
+
+FIREBASE_CREDENTIALS_JSON = os.environ.get('FIREBASE_CREDENTIALS_JSON', '')
+FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH', '')

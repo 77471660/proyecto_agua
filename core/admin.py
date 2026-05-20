@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cliente, Pedido, PedidoHistorial, PushSubscription
+from .models import Cliente, FCMToken, Pedido, PedidoHistorial, PushSubscription
 
 
 @admin.register(Cliente)
@@ -38,4 +38,20 @@ class PushSubscriptionAdmin(admin.ModelAdmin):
     )
     search_fields = ('user__username', 'endpoint')
     list_filter = ('is_active', 'created_at', 'updated_at')
+    ordering = ('-updated_at', '-id')
+
+
+@admin.register(FCMToken)
+class FCMTokenAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'platform',
+        'is_active',
+        'device_id',
+        'created_at',
+        'updated_at',
+        'last_error',
+    )
+    search_fields = ('user__username', 'token', 'device_id')
+    list_filter = ('platform', 'is_active', 'created_at', 'updated_at')
     ordering = ('-updated_at', '-id')

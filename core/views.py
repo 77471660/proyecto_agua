@@ -43,7 +43,8 @@ from .auth_utils import (
     REPARTIDOR_GROUP_NAMES,
     JEFE_REPARTIDORES_GROUP,
 )
-from .models import Cliente, Pedido, PedidoHistorial, PushSubscription
+from .fcm_notifications import token_for_log
+from .models import Cliente, FCMToken, Pedido, PedidoHistorial, PushSubscription
 from .push_notifications import (
     endpoint_for_log,
     send_order_assignment_push,
@@ -302,6 +303,67 @@ def webpush_unsubscribe(request):
         request.user.id,
         endpoint_for_log(endpoint),
         updated
+    )
+
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_POST
+def fcm_register_token(request):
+
+    logger.info(
+        'POST /fcm/register-token/ recibido. usuario=%s',
+        request.user.id
+    )
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning(
+            'FCM register-token con JSON invalido. usuario=%s',
+            request.user.id
+        )
+        return JsonResponse({'error': 'JSON invalido.'}, status=400)
+
+    token = data.get('token', '').strip()
+    platform = data.get('platform', 'android').strip() or 'android'
+    device_id = data.get('deviceId', '').strip()
+
+    if not token:
+        logger.warning('FCM register-token sin token. usuario=%s', request.user.id)
+        return JsonResponse({'error': 'Token requerido.'}, status=400)
+
+    if len(platform) > 30:
+        platform = platform[:30]
+
+    if len(device_id) > 120:
+        device_id = device_id[:120]
+
+    fcm_token, created = FCMToken.objects.update_or_create(
+        token=token,
+        defaults={
+            'user': request.user,
+            'platform': platform,
+            'device_id': device_id,
+            'is_active': True,
+            'last_error': '',
+        }
+    )
+    active_count = FCMToken.objects.filter(
+        user=request.user,
+        is_active=True
+    ).count()
+
+    logger.info(
+        'FCM token guardado. usuario=%s token_id=%s created=%s '
+        'token=%s platform=%s tokens_activos_usuario=%s',
+        request.user.id,
+        fcm_token.id,
+        created,
+        token_for_log(token),
+        platform,
+        active_count
     )
 
     return JsonResponse({'ok': True})

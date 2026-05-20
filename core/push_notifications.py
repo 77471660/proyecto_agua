@@ -236,3 +236,16 @@ def send_order_assignment_push(pedido, previous_repartidor=None):
         payload_for_log(payload)
     )
     send_push_to_user(pedido.repartidor, payload)
+
+    try:
+        from .fcm_notifications import send_fcm_to_user
+
+        send_fcm_to_user(pedido.repartidor, payload)
+    except Exception as exc:
+        logger.exception(
+            'Error inesperado preparando FCM. pedido_id=%s '
+            'repartidor_destino=%s exception=%s',
+            pedido.id,
+            pedido.repartidor_id,
+            str(exc)[:500]
+        )
