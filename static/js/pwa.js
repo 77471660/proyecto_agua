@@ -3,6 +3,9 @@
 
   let serviceWorkerRegistration = null;
   let subscriptionInProgress = false;
+  const ACTIVE_PUSH_TEXT = '\u{1F514} Notificaciones activas';
+  const INACTIVE_PUSH_TEXT = '\u26A0\uFE0F Activar notificaciones';
+  const RENEW_PUSH_TEXT = '\u{1F504} Renovar notificaciones';
 
   function webpushButtons() {
     return Array.from(document.querySelectorAll('[data-webpush-toggle]'));
@@ -55,16 +58,31 @@
     });
   }
 
-  function updateButtons(text, disabled) {
+  function updateButtons(text, disabled, state) {
     webpushButtons().forEach(function (button) {
       button.textContent = text;
       button.disabled = Boolean(disabled);
-      button.dataset.webpushActive = text === 'Notificaciones activas' ? 'true' : 'false';
+      button.dataset.webpushState = state || 'inactive';
+      button.dataset.webpushActive = state === 'active' ? 'true' : 'false';
     });
   }
 
-  function showTemporaryAlert(message) {
-    window.alert(message);
+  function setInactivePushState() {
+    updateButtons(INACTIVE_PUSH_TEXT, false, 'inactive');
+  }
+
+  function setActivePushState() {
+    updateButtons(ACTIVE_PUSH_TEXT, true, 'active');
+  }
+
+  function setRenewPushState() {
+    updateButtons(RENEW_PUSH_TEXT, false, 'renew');
+  }
+
+  function showTemporaryAlert(message, silent) {
+    if (!silent) {
+      window.alert(message);
+    }
   }
 
   async function ensureServiceWorkerRegistration() {
@@ -123,21 +141,22 @@
     }
 
     const forceRenew = Boolean(options && options.forceRenew);
+    const silent = Boolean(options && options.silent);
     subscriptionInProgress = true;
-    updateButtons(forceRenew ? 'Renovando...' : 'Activando...', true);
+    updateButtons(forceRenew ? 'Renovando...' : 'Activando...', true, 'loading');
 
     try {
       if (!('PushManager' in window) || !('Notification' in window)) {
         console.log('Permiso notificaciones: no-disponible');
-        updateButtons('Notificaciones no disponibles', true);
-        showTemporaryAlert('Notificaciones no disponibles en este navegador.');
+        updateButtons('Notificaciones no disponibles', true, 'unsupported');
+        showTemporaryAlert('Notificaciones no disponibles en este navegador.', silent);
         return;
       }
 
       if (Notification.permission === 'denied') {
         console.log('Permiso notificaciones: denied');
-        updateButtons('Notificaciones bloqueadas', true);
-        showTemporaryAlert('Las notificaciones estan bloqueadas en este navegador.');
+        updateButtons('Notificaciones bloqueadas', true, 'blocked');
+        showTemporaryAlert('Las notificaciones estan bloqueadas en este navegador.', silent);
         return;
       }
 
@@ -147,8 +166,8 @@
       console.log(`Permiso notificaciones: ${permission}`);
 
       if (permission !== 'granted') {
-        updateButtons('Activar notificaciones', false);
-        showTemporaryAlert('No se concedio permiso para notificaciones.');
+        setInactivePushState();
+        showTemporaryAlert('No se concedio permiso para notificaciones.', silent);
         return;
       }
 
@@ -160,8 +179,8 @@
       const publicKeyData = await publicKeyResponse.json();
 
       if (!publicKeyResponse.ok || !publicKeyData.publicKey) {
-        updateButtons('Push no configurado', true);
-        showTemporaryAlert('No se pudo activar notificaciones: push no configurado.');
+        updateButtons('Push no configurado', true, 'unconfigured');
+        showTemporaryAlert('No se pudo activar notificaciones: push no configurado.', silent);
         return;
       }
 
@@ -171,16 +190,28 @@
         forceRenew
       );
       await sendSubscriptionToBackend(button, subscription);
-      updateButtons('Notificaciones activas', false);
+
+      if (forceRenew) {
+        console.log('Suscripcion renovada');
+      }
+
+      setActivePushState();
       showTemporaryAlert(
         forceRenew
           ? 'Notificaciones renovadas correctamente'
-          : 'Notificaciones activadas correctamente'
+          : 'Notificaciones activadas correctamente',
+        silent
       );
     } catch (error) {
       console.log('Error activando notificaciones', error);
-      updateButtons('Activar notificaciones', false);
-      showTemporaryAlert('Error al activar notificaciones.');
+
+      if (forceRenew) {
+        setRenewPushState();
+      } else {
+        setInactivePushState();
+      }
+
+      showTemporaryAlert('Error al activar notificaciones.', silent);
     } finally {
       subscriptionInProgress = false;
     }
@@ -195,10 +226,15 @@
 
     event.preventDefault();
     event.stopPropagation();
+
+    if (button.disabled) {
+      return;
+    }
+
     console.log('click activar notificaciones');
     console.log('Boton activar notificaciones clickeado');
     subscribeToPush(button, {
-      forceRenew: button.dataset.webpushActive === 'true',
+      forceRenew: button.dataset.webpushState === 'renew',
     });
   });
 
@@ -213,26 +249,29 @@
         }
 
         if (!('PushManager' in window) || !('Notification' in window)) {
-          updateButtons('Notificaciones no disponibles', true);
+          updateButtons('Notificaciones no disponibles', true, 'unsupported');
           return;
         }
 
         const subscription = await registration.pushManager.getSubscription();
+        console.log(`Existe push subscription al cargar: ${Boolean(subscription)}`);
+        console.log(`Permiso notificaciones al cargar: ${Notification.permission}`);
 
         if (subscription && Notification.permission === 'granted') {
           console.log('Push subscription existente detectada; sincronizando backend');
 
           try {
             await sendSubscriptionToBackend(buttons[0], subscription);
-            updateButtons('Notificaciones activas', false);
+            setActivePushState();
           } catch (error) {
             console.log('No se pudo sincronizar PushSubscription existente', error);
-            updateButtons('Activar notificaciones', false);
+            setRenewPushState();
           }
+        } else if (!subscription && Notification.permission === 'granted') {
+          console.log('Permiso granted sin push subscription; recreando suscripcion');
+          await subscribeToPush(buttons[0], { silent: true });
         } else {
-          console.log(`Existe push subscription al cargar: ${Boolean(subscription)}`);
-          console.log(`Permiso notificaciones al cargar: ${Notification.permission}`);
-          updateButtons('Activar notificaciones', false);
+          setInactivePushState();
         }
       })
       .catch(function (error) {

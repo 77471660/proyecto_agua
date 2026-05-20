@@ -418,7 +418,7 @@
                     <a
                         href="/repartidor/jefe/"
                         class="btn btn-sm {% if request.path == '/repartidor/jefe/' %}btn-light{% else %}btn-outline-light{% endif %}"
-                    >Panel jefe reparto</a>
+                    >Gestión de repartos</a>
                 {% endif %}
 
                 <form method="post" action="{% url 'logout' %}" class="mb-0">
@@ -462,7 +462,7 @@
 
                     {% if menu_es_jefe_repartidores %}
                         <li>
-                            <a class="dropdown-item" href="/repartidor/jefe/">Panel jefe reparto</a>
+                            <a class="dropdown-item" href="/repartidor/jefe/">Gestión de repartos</a>
                         </li>
                     {% endif %}
 
@@ -475,7 +475,7 @@
                                 data-public-key-url="{% url 'webpush_public_key' %}"
                                 data-subscribe-url="{% url 'webpush_subscribe' %}"
                                 data-unsubscribe-url="{% url 'webpush_unsubscribe' %}"
-                            >Activar notificaciones</button>
+                            >&#9888;&#65039; Activar notificaciones</button>
                         </li>
                     {% endif %}
 

@@ -288,6 +288,14 @@
             min-width: 0;
         }
 
+        .orders-section-title {
+            color: #64748b;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            margin: 18px 0 10px;
+        }
+
         @media (max-width: 575.98px) {
             .top-bar {
                 margin-bottom: 0.75rem !important;
@@ -396,6 +404,10 @@
             .history-details {
                 margin-top: 1rem;
             }
+
+            .orders-section-title {
+                margin: 18px 0 10px !important;
+            }
         }
     </style>
 </head>
@@ -436,7 +448,7 @@
 
                 {% if menu_es_jefe_repartidores %}
                     <a href="/repartidor/jefe/" class="btn btn-outline-light btn-sm">
-                        Panel jefe reparto
+                        Gestión de repartos
                     </a>
                 {% endif %}
 
@@ -476,7 +488,7 @@
                     </li>
                     {% if menu_es_jefe_repartidores %}
                         <li>
-                            <a class="dropdown-item" href="/repartidor/jefe/">Panel jefe reparto</a>
+                            <a class="dropdown-item" href="/repartidor/jefe/">Gestión de repartos</a>
                         </li>
                     {% endif %}
                     {% if menu_puede_crm_operativo %}
@@ -493,7 +505,7 @@
                                 data-public-key-url="{% url 'webpush_public_key' %}"
                                 data-subscribe-url="{% url 'webpush_subscribe' %}"
                                 data-unsubscribe-url="{% url 'webpush_unsubscribe' %}"
-                            >Activar notificaciones</button>
+                            >&#9888;&#65039; Activar notificaciones</button>
                         </li>
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
@@ -549,7 +561,7 @@
         </div>
     </section>
 
-    <h2 class="h6 mb-3">Pedidos para hoy / atrasados</h2>
+    <h2 class="orders-section-title">Pedidos pendientes</h2>
 
     {% for pedido in pedidos_hoy %}
         {% include 'core/includes/pedido_repartidor_card.html' %}

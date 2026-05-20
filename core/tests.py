@@ -353,7 +353,7 @@ class PermisosRolesTests(TestCase):
             list(response.context['pedidos_hoy'])[:2],
             [pedido_atrasado, pedido_hoy]
         )
-        self.assertContains(response, 'Pedidos para hoy / atrasados')
+        self.assertContains(response, 'Pedidos pendientes')
         self.assertContains(response, 'Ver pedidos programados (1)')
 
     def test_panel_jefe_separa_pedidos_prioritarios_y_programados(self):
