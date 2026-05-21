@@ -29,7 +29,14 @@
 
     <style>
     body {
+        --app-safe-area-top: env(safe-area-inset-top, 0px);
+        --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
         color: #1f2937;
+    }
+
+    .capacitor-android body {
+        --app-safe-area-top: max(env(safe-area-inset-top, 0px), 24px);
+        --app-safe-area-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
     }
 
     .navbar {
@@ -259,8 +266,13 @@
     }
 
     @media (max-width: 575.98px) {
+        body {
+            padding-bottom: var(--app-safe-area-bottom);
+        }
+
         .navbar {
             margin-bottom: 1rem !important;
+            padding-top: calc(0.5rem + var(--app-safe-area-top));
         }
 
         .navbar .container {
@@ -315,6 +327,10 @@
 
         .card-body {
             padding: 1rem;
+        }
+
+        .container.pb-5 {
+            padding-bottom: calc(3rem + var(--app-safe-area-bottom)) !important;
         }
     }
 

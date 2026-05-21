@@ -285,6 +285,10 @@ class WebPushTests(TestCase):
         self.assertEqual(payload['url'], f'/pedidos/repartidor/#pedido-{pedido.id}')
         self.assertFalse(payload['renotify'])
         self.assertFalse(payload['requireInteraction'])
+        self.assertIn(f'Cliente: {self.cliente.nombre}', payload['body'])
+        self.assertIn('2 bidones', payload['body'])
+        self.assertIn(f'Entrega en {self.cliente.direccion}', payload['body'])
+        self.assertNotIn(f'Pedido #{pedido.id}', payload['body'])
         self.assertIn('android-chrome-192x192.png', payload['icon'])
         self.assertIn('notification-bidon.png', payload['badge'])
         self.assertIn('timestamp', payload)
@@ -329,8 +333,39 @@ class WebPushTests(TestCase):
         payload = send_push.call_args.args[1]
         self.assertEqual(payload['title'], 'Pedido reasignado')
         self.assertEqual(payload['tag'], f'pedido-{pedido.id}-reasignado')
+        self.assertIn(f'Cliente: {self.cliente.nombre}', payload['body'])
+        self.assertIn(f'Entrega en {self.cliente.direccion}', payload['body'])
+        self.assertNotIn(f'Pedido #{pedido.id}', payload['body'])
         self.assertTrue(payload['renotify'])
         self.assertTrue(payload['requireInteraction'])
+
+    def test_sesion_y_safe_area_estan_configurados_para_apk(self):
+        base_template = (
+            Path(settings.BASE_DIR)
+            / 'templates'
+            / 'base.html'
+        ).read_text(encoding='utf-8')
+        repartidor_template = (
+            Path(settings.BASE_DIR)
+            / 'templates'
+            / 'core'
+            / 'pedidos_repartidor.html'
+        ).read_text(encoding='utf-8')
+        capacitor_js = (
+            Path(settings.BASE_DIR)
+            / 'static'
+            / 'js'
+            / 'capacitor_push.js'
+        ).read_text(encoding='utf-8')
+
+        self.assertGreaterEqual(settings.SESSION_COOKIE_AGE, 60 * 60 * 24 * 30)
+        self.assertFalse(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)
+        self.assertTrue(settings.SESSION_SAVE_EVERY_REQUEST)
+        self.assertIn('safe-area-inset-top', base_template)
+        self.assertIn('safe-area-inset-bottom', base_template)
+        self.assertIn('safe-area-inset-top', repartidor_template)
+        self.assertIn('safe-area-inset-bottom', repartidor_template)
+        self.assertIn("classList.add('capacitor-android')", capacitor_js)
 
     @override_settings(
         WEBPUSH_VAPID_PUBLIC_KEY='clave-publica',

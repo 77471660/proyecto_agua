@@ -62,6 +62,20 @@ def webpush_configured():
     )
 
 
+def order_notification_body(pedido):
+
+    cantidad = pedido.cantidad_bidones
+    unidad = 'bidón' if cantidad == 1 else 'bidones'
+    cliente = pedido.cliente.nombre if pedido.cliente else 'Cliente'
+    direccion = pedido.cliente.direccion if pedido.cliente else ''
+    linea_cliente = f'Cliente: {cliente} - {cantidad} {unidad}'
+
+    if direccion:
+        return f'{linea_cliente}\nEntrega en {direccion}'
+
+    return linea_cliente
+
+
 def send_push_to_user(user, payload):
 
     if not webpush_configured():
@@ -203,19 +217,17 @@ def send_order_assignment_push(pedido, previous_repartidor=None):
 
     if is_reassignment:
         title = 'Pedido reasignado'
-        body = f'Pedido #{pedido.id} fue reasignado a tu reparto.'
         tag_suffix = 'reasignado'
         renotify = True
     else:
         title = 'Pedido asignado'
-        body = f'Pedido #{pedido.id} fue asignado a tu reparto.'
         tag_suffix = 'asignado'
         renotify = False
 
     url = f'/pedidos/repartidor/#pedido-{pedido.id}'
     payload = {
         'title': title,
-        'body': body,
+        'body': order_notification_body(pedido),
         'icon': PUSH_ICON_URL,
         'badge': PUSH_BADGE_URL,
         'url': url,

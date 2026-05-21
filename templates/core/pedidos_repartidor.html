@@ -14,8 +14,15 @@
 
     <style>
         body {
+            --app-safe-area-top: env(safe-area-inset-top, 0px);
+            --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
             background: #f8fafc;
             color: #1f2937;
+        }
+
+        .capacitor-android body {
+            --app-safe-area-top: max(env(safe-area-inset-top, 0px), 24px);
+            --app-safe-area-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
         }
 
         .top-bar {
@@ -297,10 +304,14 @@
         }
 
         @media (max-width: 575.98px) {
+            body {
+                padding-bottom: var(--app-safe-area-bottom);
+            }
+
             .top-bar {
                 margin-bottom: 0.75rem !important;
                 padding-bottom: 0.55rem !important;
-                padding-top: 0.55rem !important;
+                padding-top: calc(0.55rem + var(--app-safe-area-top)) !important;
             }
 
             .top-bar .container {
@@ -333,6 +344,7 @@
             }
 
             main.container {
+                padding-bottom: calc(1.5rem + var(--app-safe-area-bottom)) !important;
                 padding-left: 0.75rem;
                 padding-right: 0.75rem;
             }

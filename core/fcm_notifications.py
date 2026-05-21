@@ -128,6 +128,8 @@ def send_fcm_to_user(user, payload):
                 'url': payload.get('url') or '/pedidos/repartidor/',
                 'tag': payload.get('tag') or 'aquasmart-fcm',
                 'type': 'order_assignment',
+                'title': payload.get('title') or 'AquaSmart',
+                'body': payload.get('body') or 'Tienes una nueva actualizacion.',
             },
             android=messaging.AndroidConfig(
                 priority='high',

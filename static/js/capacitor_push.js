@@ -20,6 +20,20 @@
     );
   }
 
+  function markNativeShell() {
+    if (!isNativeCapacitor()) {
+      return false;
+    }
+
+    document.documentElement.classList.add('capacitor-native');
+
+    if (capacitor.getPlatform?.() === 'android') {
+      document.documentElement.classList.add('capacitor-android');
+    }
+
+    return true;
+  }
+
   function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -136,8 +150,11 @@
   }
 
   window.addEventListener('load', function () {
+    markNativeShell();
     registerPushNotifications().catch(function (error) {
       log('Error inicializando FCM APK', error);
     });
   });
+
+  markNativeShell();
 })();
