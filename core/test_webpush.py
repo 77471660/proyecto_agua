@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
@@ -363,9 +364,32 @@ class WebPushTests(TestCase):
         self.assertTrue(settings.SESSION_SAVE_EVERY_REQUEST)
         self.assertIn('safe-area-inset-top', base_template)
         self.assertIn('safe-area-inset-bottom', base_template)
+        self.assertIn('viewport-fit=cover', base_template)
+        self.assertIn('apple-mobile-web-app-capable', base_template)
+        self.assertIn('apple-touch-icon', base_template)
         self.assertIn('safe-area-inset-top', repartidor_template)
         self.assertIn('safe-area-inset-bottom', repartidor_template)
+        self.assertIn('viewport-fit=cover', repartidor_template)
+        self.assertIn('apple-mobile-web-app-capable', repartidor_template)
+        self.assertIn('apple-touch-icon', repartidor_template)
         self.assertIn("classList.add('capacitor-android')", capacitor_js)
+
+    def test_manifest_configurado_para_pwa_instalada(self):
+        manifest_path = Path(settings.BASE_DIR) / 'static' / 'manifest.json'
+        manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+
+        self.assertEqual(manifest['display'], 'standalone')
+        self.assertEqual(manifest['start_url'], '/login/')
+        self.assertEqual(manifest['scope'], '/')
+        self.assertEqual(manifest['theme_color'], '#0d6efd')
+        self.assertEqual(manifest['short_name'], 'AquaSmart')
+        self.assertIn('standalone', manifest['display_override'])
+        self.assertTrue(
+            any(
+                icon['src'] == '/static/img/icons/apple-touch-icon.png'
+                for icon in manifest['icons']
+            )
+        )
 
     @override_settings(
         WEBPUSH_VAPID_PUBLIC_KEY='clave-publica',

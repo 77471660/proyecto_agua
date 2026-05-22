@@ -8,11 +8,12 @@
         {% block title %}AquaSmart CRM{% endblock %}
     </title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0d6efd">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="EcoAgua">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AquaSmart">
 
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="{% static 'img/icons/favicon.ico' %}">
@@ -32,6 +33,9 @@
         --app-safe-area-top: env(safe-area-inset-top, 0px);
         --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
         color: #1f2937;
+        min-height: 100vh;
+        min-height: 100dvh;
+        -webkit-text-size-adjust: 100%;
     }
 
     .capacitor-android body {
@@ -351,6 +355,20 @@
 
         .card-body {
             padding: 1rem;
+        }
+
+        .container.pb-5 {
+            padding-bottom: calc(3rem + var(--app-safe-area-bottom)) !important;
+        }
+    }
+
+    @media (display-mode: standalone) {
+        body {
+            overscroll-behavior-y: contain;
+        }
+
+        .navbar {
+            padding-top: calc(0.5rem + var(--app-safe-area-top));
         }
 
         .container.pb-5 {
