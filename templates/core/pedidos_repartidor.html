@@ -102,6 +102,19 @@
             font-weight: 700;
         }
 
+        .location-open-button,
+        .location-copy-button,
+        .location-fields .btn {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .location-copy-status {
+            display: block;
+            margin-top: 0.25rem;
+            text-align: center;
+        }
+
         .action-stack {
             display: grid;
             gap: 0.55rem;
@@ -729,6 +742,7 @@
 </script>
 <script src="{% static 'js/pwa.js' %}"></script>
 <script src="{% static 'js/capacitor_push.js' %}"></script>
+<script src="{% static 'js/location_actions.js' %}"></script>
 
 </body>
 </html>

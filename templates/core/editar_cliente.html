@@ -75,6 +75,8 @@ Editar cliente
                                   rows="3">{{ cliente.referencia }}</textarea>
                     </div>
 
+                    {% include 'core/includes/cliente_ubicacion_fields.html' %}
+
                     <div class="form-actions d-flex justify-content-between flex-wrap gap-2">
 
                         <a href="{% url 'detalle_cliente' cliente.id %}"

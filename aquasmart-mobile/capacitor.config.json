@@ -1,0 +1,9 @@
+{
+  "appId": "com.aquasmart.crm",
+  "appName": "AquaSmart",
+  "webDir": "www",
+  "server": {
+    "url": "https://proyecto-agua-bkco.onrender.com/",
+    "cleartext": false
+  }
+}

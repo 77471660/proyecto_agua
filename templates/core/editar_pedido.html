@@ -14,6 +14,9 @@ Editar pedido
                 <small class="text-muted">
                     {{ pedido.cliente.nombre }} - {{ pedido.cliente.telefono }}
                 </small>
+                <div class="mt-2">
+                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
+                </div>
             </div>
 
             {% if origen == 'panel_jefe' %}

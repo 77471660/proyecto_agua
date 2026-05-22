@@ -86,6 +86,15 @@ Detalle del cliente
                 </p>
 
                 <p>
+                    <strong>Referencia de ubicaci&oacute;n:</strong><br>
+                    {{ cliente.referencia_ubicacion|default:"No registrada" }}
+                </p>
+
+                <div class="mb-3">
+                    {% include 'core/includes/location_button.html' with cliente=cliente button_class='btn-outline-primary w-100' %}
+                </div>
+
+                <p>
                     <strong>Estado:</strong><br>
 
                     {% if cliente.estado == 'ACTIVO' %}

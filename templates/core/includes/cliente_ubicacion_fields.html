@@ -1,0 +1,56 @@
+{% load static %}
+
+<div class="location-fields" data-geolocation-form>
+    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+        <label class="form-label mb-0">Ubicaci&oacute;n GPS</label>
+        <button
+            type="button"
+            class="btn btn-outline-primary btn-sm"
+            data-geolocation-button
+        >
+            &#128225; Usar ubicaci&oacute;n actual
+        </button>
+    </div>
+
+    <div class="row g-2">
+        <div class="col-sm-6">
+            <input
+                type="text"
+                name="latitud"
+                class="form-control"
+                inputmode="decimal"
+                placeholder="Latitud"
+                value="{{ cliente.latitud|default_if_none:'' }}"
+                data-geolocation-latitude
+            >
+        </div>
+
+        <div class="col-sm-6">
+            <input
+                type="text"
+                name="longitud"
+                class="form-control"
+                inputmode="decimal"
+                placeholder="Longitud"
+                value="{{ cliente.longitud|default_if_none:'' }}"
+                data-geolocation-longitude
+            >
+        </div>
+    </div>
+
+    <div class="form-text" data-geolocation-status>
+        Se usar&aacute;n coordenadas si est&aacute;n disponibles; si no, Google Maps abrir&aacute; la direcci&oacute;n.
+    </div>
+</div>
+
+<div class="mb-3 mt-3">
+    <label class="form-label">Referencia de ubicaci&oacute;n</label>
+    <textarea
+        name="referencia_ubicacion"
+        class="form-control"
+        rows="2"
+        placeholder="Ejemplo: port&oacute;n negro, frente al parque, segundo piso"
+    >{{ cliente.referencia_ubicacion|default_if_none:'' }}</textarea>
+</div>
+
+<script src="{% static 'js/geolocation_form.js' %}" defer></script>

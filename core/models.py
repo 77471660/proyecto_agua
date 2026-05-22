@@ -1,5 +1,12 @@
-from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+import logging
+import re
+from urllib.parse import quote_plus
+
+logger = logging.getLogger(__name__)
 
 
 class Cliente(models.Model):
@@ -16,8 +23,27 @@ class Cliente(models.Model):
     direccion = models.CharField(max_length=255)
     referencia = models.CharField(max_length=255, blank=True, null=True)
 
-    latitud = models.FloatField(blank=True, null=True)
-    longitud = models.FloatField(blank=True, null=True)
+    latitud = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        validators=[
+            MinValueValidator(-90, message='La latitud debe estar entre -90 y 90.'),
+            MaxValueValidator(90, message='La latitud debe estar entre -90 y 90.'),
+        ]
+    )
+    longitud = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        validators=[
+            MinValueValidator(-180, message='La longitud debe estar entre -180 y 180.'),
+            MaxValueValidator(180, message='La longitud debe estar entre -180 y 180.'),
+        ]
+    )
+    referencia_ubicacion = models.TextField(blank=True, null=True)
 
     estado = models.CharField(
         max_length=20,
@@ -31,6 +57,63 @@ class Cliente(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    def clean(self):
+        super().clean()
+
+        if (self.latitud is None) != (self.longitud is None):
+            logger.warning(
+                'Coordenadas incompletas para cliente. cliente_id=%s latitud=%s longitud=%s',
+                self.pk,
+                self.latitud,
+                self.longitud
+            )
+            raise ValidationError({
+                'latitud': 'Latitud y longitud deben registrarse juntas.',
+                'longitud': 'Latitud y longitud deben registrarse juntas.',
+            })
+
+    def tiene_coordenadas(self):
+        return self.latitud is not None and self.longitud is not None
+
+    @property
+    def direccion_normalizada(self):
+        return re.sub(r'\s+', ' ', (self.direccion or '').strip())
+
+    @property
+    def maps_label(self):
+        if self.tiene_coordenadas():
+            return 'Coordenadas GPS'
+
+        if self.direccion_normalizada:
+            return 'Dirección textual'
+
+        return 'Sin ubicación'
+
+    def obtener_ubicacion_copiable(self):
+        if self.tiene_coordenadas():
+            return f'{self.latitud},{self.longitud}'
+
+        return self.direccion_normalizada
+
+    def obtener_maps_url(self):
+        try:
+            query = self.obtener_ubicacion_copiable()
+
+            if not query:
+                return ''
+
+            return (
+                'https://www.google.com/maps/search/?api=1&query='
+                f'{quote_plus(query, safe=",")}'
+            )
+        except Exception:
+            logger.exception(
+                'No se pudo generar URL de Google Maps. cliente_id=%s',
+                self.pk
+            )
+
+        return ''
 
 
 class Pedido(models.Model):

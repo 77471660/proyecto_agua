@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import (
     Sum,
@@ -57,6 +58,70 @@ CLIENTES_POR_PAGINA = 15
 PANEL_JEFE_LIMITE_PEDIDOS = 15
 HISTORIAL_CLIENTE_LIMITE = 10
 logger = logging.getLogger(__name__)
+
+
+def leer_ubicacion_cliente_post(post_data):
+
+    latitud_texto = post_data.get('latitud', '').strip()
+    longitud_texto = post_data.get('longitud', '').strip()
+    referencia_ubicacion = post_data.get(
+        'referencia_ubicacion',
+        ''
+    ).strip()
+
+    if not latitud_texto and not longitud_texto:
+        return None, None, referencia_ubicacion, ''
+
+    if not latitud_texto or not longitud_texto:
+        logger.warning(
+            'Coordenadas incompletas recibidas. latitud=%s longitud=%s',
+            latitud_texto,
+            longitud_texto
+        )
+        return None, None, referencia_ubicacion, (
+            'Latitud y longitud deben registrarse juntas.'
+        )
+
+    try:
+        latitud = Decimal(latitud_texto)
+        longitud = Decimal(longitud_texto)
+    except InvalidOperation:
+        logger.warning(
+            'Coordenadas invalidas recibidas. latitud=%s longitud=%s',
+            latitud_texto,
+            longitud_texto
+        )
+        return None, None, referencia_ubicacion, (
+            'Las coordenadas de ubicación no son válidas.'
+        )
+
+    if latitud < Decimal('-90') or latitud > Decimal('90'):
+        logger.warning('Latitud fuera de rango recibida. latitud=%s', latitud)
+        return None, None, referencia_ubicacion, (
+            'La latitud debe estar entre -90 y 90.'
+        )
+
+    if longitud < Decimal('-180') or longitud > Decimal('180'):
+        logger.warning('Longitud fuera de rango recibida. longitud=%s', longitud)
+        return None, None, referencia_ubicacion, (
+            'La longitud debe estar entre -180 y 180.'
+        )
+
+    return latitud, longitud, referencia_ubicacion, ''
+
+
+def mensaje_validacion_modelo(error):
+
+    if hasattr(error, 'message_dict'):
+        mensajes = []
+
+        for lista_mensajes in error.message_dict.values():
+            mensajes.extend(lista_mensajes)
+
+        if mensajes:
+            return ' '.join(mensajes)
+
+    return 'Revisa los datos ingresados.'
 
 
 def nombre_usuario_historial(usuario):
@@ -1060,6 +1125,7 @@ def buscar_clientes(request):
             | Q(telefono__icontains=busqueda)
             | Q(direccion__icontains=busqueda)
             | Q(referencia__icontains=busqueda)
+            | Q(referencia_ubicacion__icontains=busqueda)
         )
     else:
         clientes = clientes.none()
@@ -1088,6 +1154,7 @@ def buscar_clientes(request):
             'telefono': cliente.telefono,
             'direccion': cliente.direccion,
             'referencia': cliente.referencia or '',
+            'referencia_ubicacion': cliente.referencia_ubicacion or '',
             'estado': cliente.estado,
             'pedidos_entregados': cliente.pedidos_entregados,
             'total_gastado': str(cliente.total_gastado or '0.00'),
@@ -1281,6 +1348,16 @@ def editar_cliente(request, cliente_id):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
+        latitud, longitud, referencia_ubicacion, error_ubicacion = (
+            leer_ubicacion_cliente_post(request.POST)
+        )
+
+        if error_ubicacion:
+            messages.error(request, error_ubicacion)
+            return redirect(
+                'editar_cliente',
+                cliente_id=cliente.id
+            )
 
         if not nombre or not telefono or not direccion:
             messages.error(
@@ -1326,8 +1403,24 @@ def editar_cliente(request, cliente_id):
         cliente.telefono = telefono
         cliente.direccion = direccion
         cliente.referencia = referencia
+        cliente.latitud = latitud
+        cliente.longitud = longitud
+        cliente.referencia_ubicacion = referencia_ubicacion
 
-        cliente.save()
+        try:
+            cliente.full_clean()
+            cliente.save()
+        except ValidationError as error:
+            logger.warning(
+                'Validacion de cliente fallida al editar. cliente_id=%s error=%s',
+                cliente.id,
+                error
+            )
+            messages.error(request, mensaje_validacion_modelo(error))
+            return redirect(
+                'editar_cliente',
+                cliente_id=cliente.id
+            )
 
         messages.success(
             request,
@@ -1358,6 +1451,13 @@ def registrar_cliente(request):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
+        latitud, longitud, referencia_ubicacion, error_ubicacion = (
+            leer_ubicacion_cliente_post(request.POST)
+        )
+
+        if error_ubicacion:
+            messages.error(request, error_ubicacion)
+            return redirect('registrar_cliente')
 
         if not nombre or not telefono or not direccion:
             messages.error(request, 'Nombre, teléfono y dirección son obligatorios.')
@@ -1375,12 +1475,26 @@ def registrar_cliente(request):
             messages.error(request, 'Ya existe un cliente con ese teléfono.')
             return redirect('registrar_cliente')
 
-        Cliente.objects.create(
+        cliente = Cliente(
             nombre=nombre,
             telefono=telefono,
             direccion=direccion,
-            referencia=referencia
+            referencia=referencia,
+            latitud=latitud,
+            longitud=longitud,
+            referencia_ubicacion=referencia_ubicacion
         )
+
+        try:
+            cliente.full_clean()
+            cliente.save()
+        except ValidationError as error:
+            logger.warning(
+                'Validacion de cliente fallida al registrar. error=%s',
+                error
+            )
+            messages.error(request, mensaje_validacion_modelo(error))
+            return redirect('registrar_cliente')
 
         messages.success(request, 'Cliente registrado correctamente.')
         return redirect('lista_clientes')
@@ -2402,6 +2516,13 @@ def nuevo_cliente_repartidor(request):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
+        latitud, longitud, referencia_ubicacion, error_ubicacion = (
+            leer_ubicacion_cliente_post(request.POST)
+        )
+
+        if error_ubicacion:
+            messages.error(request, error_ubicacion)
+            return redirect('nuevo_cliente_repartidor')
 
         if not nombre or not telefono or not direccion:
             messages.error(
@@ -2431,12 +2552,26 @@ def nuevo_cliente_repartidor(request):
             )
             return redirect('nuevo_cliente_repartidor')
 
-        Cliente.objects.create(
+        cliente = Cliente(
             nombre=nombre,
             telefono=telefono,
             direccion=direccion,
-            referencia=referencia
+            referencia=referencia,
+            latitud=latitud,
+            longitud=longitud,
+            referencia_ubicacion=referencia_ubicacion
         )
+
+        try:
+            cliente.full_clean()
+            cliente.save()
+        except ValidationError as error:
+            logger.warning(
+                'Validacion de cliente repartidor fallida. error=%s',
+                error
+            )
+            messages.error(request, mensaje_validacion_modelo(error))
+            return redirect('nuevo_cliente_repartidor')
 
         messages.success(
             request,

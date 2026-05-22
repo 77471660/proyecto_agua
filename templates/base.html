@@ -218,6 +218,30 @@
         min-width: 6.25rem;
     }
 
+    .location-open-button,
+    .location-copy-button {
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .location-copy-status {
+        display: inline-block;
+        margin-left: 0.35rem;
+        margin-top: 0.25rem;
+    }
+
+    .location-fields .btn {
+        font-weight: 700;
+    }
+
+    .location-fields .form-text {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+        padding: 0.55rem 0.7rem;
+    }
+
     .orders-table th,
     .orders-table td {
         padding-top: 0.55rem;
@@ -537,6 +561,7 @@
 </script>
 <script src="{% static 'js/pwa.js' %}"></script>
 <script src="{% static 'js/capacitor_push.js' %}"></script>
+<script src="{% static 'js/location_actions.js' %}"></script>
 
 </body>
 </html>

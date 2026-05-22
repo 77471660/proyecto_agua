@@ -1,0 +1,28 @@
+{% with maps_url=cliente.obtener_maps_url copy_value=cliente.obtener_ubicacion_copiable %}
+    {% if maps_url %}
+        <a
+            href="{{ maps_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn {{ button_class|default:'btn-outline-primary btn-sm' }} location-open-button"
+        >
+            &#128205; Abrir ubicaci&oacute;n
+        </a>
+        {% if copy_value %}
+            <button
+                type="button"
+                class="btn {{ copy_button_class|default:button_class|default:'btn-outline-secondary btn-sm' }} location-copy-button"
+                data-copy-location="{{ copy_value }}"
+            >
+                &#128203; Copiar ubicaci&oacute;n
+            </button>
+            <span
+                class="location-copy-status small text-muted"
+                data-copy-location-status
+                aria-live="polite"
+            ></span>
+        {% endif %}
+    {% else %}
+        <span class="text-muted small">Ubicaci&oacute;n no registrada</span>
+    {% endif %}
+{% endwith %}

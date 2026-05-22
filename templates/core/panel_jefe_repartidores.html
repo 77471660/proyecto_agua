@@ -149,7 +149,12 @@ Gestión de repartos - AquaSmart CRM
                     {% for pedido in pedidos_sin_asignar %}
                         <tr>
                             <td>{{ pedido.cliente.nombre }}</td>
-                            <td>{{ pedido.cliente.direccion }}</td>
+                            <td>
+                                <div>{{ pedido.cliente.direccion }}</div>
+                                <div class="mt-1">
+                                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
+                                </div>
+                            </td>
                             <td>{{ pedido.cliente.referencia|default:"-" }}</td>
                             <td>{{ pedido.cantidad_bidones }}</td>
                             <td class="fw-semibold text-success">
@@ -252,7 +257,12 @@ Gestión de repartos - AquaSmart CRM
                                     {{ pedido.repartidor.username }}
                                 {% endif %}
                             </td>
-                            <td>{{ pedido.cliente.direccion }}</td>
+                            <td>
+                                <div>{{ pedido.cliente.direccion }}</div>
+                                <div class="mt-1">
+                                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
+                                </div>
+                            </td>
                             <td>{{ pedido.cantidad_bidones }}</td>
                             <td class="fw-semibold text-success">
                                 S/ {{ pedido.total|floatformat:2 }}
@@ -362,7 +372,12 @@ Gestión de repartos - AquaSmart CRM
                                     </span>
                                 {% endif %}
                             </td>
-                            <td>{{ pedido.cliente.direccion }}</td>
+                            <td>
+                                <div>{{ pedido.cliente.direccion }}</div>
+                                <div class="mt-1">
+                                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
+                                </div>
+                            </td>
                             <td>{{ pedido.cantidad_bidones }}</td>
                             <td class="fw-semibold text-success">
                                 S/ {{ pedido.total|floatformat:2 }}

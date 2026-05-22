@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -69,6 +70,88 @@ class PermisosRolesTests(TestCase):
             total=Decimal('14.00'),
             fecha_programada=fecha_programada or timezone.localdate()
         )
+
+    def test_cliente_maps_url_prioriza_coordenadas(self):
+        self.cliente.latitud = Decimal('-12.046374')
+        self.cliente.longitud = Decimal('-77.042793')
+
+        self.assertTrue(self.cliente.tiene_coordenadas())
+        self.assertEqual(
+            self.cliente.obtener_maps_url(),
+            (
+                'https://www.google.com/maps/search/?api=1&query='
+                '-12.046374,-77.042793'
+            )
+        )
+
+    def test_cliente_maps_url_usa_direccion_sin_coordenadas(self):
+        self.assertFalse(self.cliente.tiene_coordenadas())
+        self.assertEqual(
+            self.cliente.obtener_maps_url(),
+            'https://www.google.com/maps/search/?api=1&query=Av.+Agua+123'
+        )
+
+    def test_cliente_maps_url_normaliza_direccion(self):
+        self.cliente.direccion = '  Av.   Agua  123 / Lima, Peru  '
+
+        self.assertEqual(self.cliente.maps_label, 'Dirección textual')
+        self.assertEqual(self.cliente.direccion_normalizada, 'Av. Agua 123 / Lima, Peru')
+        self.assertEqual(
+            self.cliente.obtener_maps_url(),
+            'https://www.google.com/maps/search/?api=1&query=Av.+Agua+123+%2F+Lima,+Peru'
+        )
+
+    def test_cliente_maps_label_sin_ubicacion(self):
+        self.cliente.direccion = '  '
+
+        self.assertEqual(self.cliente.maps_label, 'Sin ubicación')
+        self.assertEqual(self.cliente.obtener_maps_url(), '')
+
+    def test_cliente_valida_rango_de_coordenadas(self):
+        self.cliente.latitud = Decimal('91.000000')
+        self.cliente.longitud = Decimal('-77.042793')
+
+        with self.assertRaises(ValidationError):
+            self.cliente.full_clean()
+
+    def test_cliente_valida_coordenadas_incompletas(self):
+        self.cliente.latitud = Decimal('-12.046374')
+        self.cliente.longitud = None
+
+        with self.assertRaises(ValidationError):
+            self.cliente.full_clean()
+
+    def test_registrar_cliente_guarda_ubicacion_actual(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente GPS',
+                'telefono': '999888777',
+                'direccion': 'Jr. Rio 456',
+                'referencia': 'Casa azul',
+                'latitud': '-12.046374',
+                'longitud': '-77.042793',
+                'referencia_ubicacion': 'Frente al parque',
+            }
+        )
+
+        self.assertEqual(response.status_code, 302)
+        cliente = Cliente.objects.get(telefono='999888777')
+        self.assertEqual(cliente.latitud, Decimal('-12.046374'))
+        self.assertEqual(cliente.longitud, Decimal('-77.042793'))
+        self.assertEqual(cliente.referencia_ubicacion, 'Frente al parque')
+
+    def test_lista_pedidos_muestra_boton_abrir_ubicacion(self):
+        self.crear_pedido(self.repartidor)
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('lista_pedidos'))
+
+        self.assertContains(response, 'Abrir ubicaci&oacute;n')
+        self.assertContains(response, 'Copiar ubicaci&oacute;n')
+        self.assertContains(response, 'query=Av.+Agua+123')
 
     def test_repartidor_no_entra_al_crm_operativo(self):
         self.client.force_login(self.repartidor)

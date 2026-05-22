@@ -4,8 +4,23 @@ from .models import Cliente, FCMToken, Pedido, PedidoHistorial, PushSubscription
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'telefono', 'direccion', 'estado', 'activo', 'fecha_registro')
-    search_fields = ('nombre', 'telefono', 'direccion')
+    list_display = (
+        'nombre',
+        'telefono',
+        'direccion',
+        'latitud',
+        'longitud',
+        'estado',
+        'activo',
+        'fecha_registro',
+    )
+    search_fields = (
+        'nombre',
+        'telefono',
+        'direccion',
+        'referencia',
+        'referencia_ubicacion',
+    )
     list_filter = ('estado', 'activo')
     ordering = ('nombre',)
 

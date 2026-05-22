@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AquaSmart</string>
+    <string name="title_activity_main">AquaSmart</string>
+    <string name="package_name">com.aquasmart.crm</string>
+    <string name="custom_url_scheme">com.aquasmart.crm</string>
+</resources>

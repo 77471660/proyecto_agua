@@ -51,6 +51,13 @@
                 </div>
             </div>
 
+            {% if pedido.cliente.referencia_ubicacion %}
+                <div class="col-12">
+                    <div class="order-label">Referencia de ubicaci&oacute;n</div>
+                    <div class="order-value">{{ pedido.cliente.referencia_ubicacion }}</div>
+                </div>
+            {% endif %}
+
             <div class="col-6">
                 <div class="order-label">Bidones</div>
                 <div class="order-value">{{ pedido.cantidad_bidones }}</div>
@@ -99,6 +106,8 @@
                 >
                     WhatsApp
                 </a>
+
+                {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary w-100 action-button' %}
 
                 <form
                     method="post"
