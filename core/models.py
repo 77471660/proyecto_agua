@@ -2,6 +2,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 import logging
 import re
 from urllib.parse import quote_plus
@@ -119,13 +120,26 @@ class Cliente(models.Model):
 class Pedido(models.Model):
 
     PENDIENTE = 'PENDIENTE'
+    ASIGNADO = 'ASIGNADO'
+    EN_RUTA = 'EN_RUTA'
     ENTREGADO = 'ENTREGADO'
     CANCELADO = 'CANCELADO'
+    REPROGRAMADO = 'REPROGRAMADO'
 
     ESTADOS_PEDIDO = [
         (PENDIENTE, 'Pendiente'),
+        (ASIGNADO, 'Asignado'),
+        (EN_RUTA, 'En ruta'),
         (ENTREGADO, 'Entregado'),
         (CANCELADO, 'Cancelado'),
+        (REPROGRAMADO, 'Reprogramado'),
+    ]
+
+    ESTADOS_ACTIVOS = [
+        PENDIENTE,
+        ASIGNADO,
+        EN_RUTA,
+        REPROGRAMADO,
     ]
 
     cliente = models.ForeignKey(
@@ -141,6 +155,39 @@ class Pedido(models.Model):
     )
 
     fecha_pedido = models.DateTimeField(auto_now_add=True)
+    fecha_pendiente = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    usuario_pendiente = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pedidos_pendientes_registrados'
+    )
+    fecha_asignado = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    usuario_asignado = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pedidos_asignados_estado'
+    )
+    fecha_en_ruta = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    usuario_en_ruta = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pedidos_en_ruta_estado'
+    )
     fecha_programada = models.DateField(
     null=True,
     blank=True
@@ -152,6 +199,42 @@ class Pedido(models.Model):
     fecha_cancelacion = models.DateTimeField(
         null=True,
         blank=True
+    )
+    usuario_entrega = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pedidos_entregados_estado'
+    )
+    usuario_cancelacion = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pedidos_cancelados_estado'
+    )
+    fecha_reprogramado = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    usuario_reprogramado = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pedidos_reprogramados_estado'
+    )
+    fecha_estado_actualizado = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    usuario_estado_actualizado = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pedidos_estado_actualizado'
     )
 
     cantidad_bidones = models.IntegerField()
@@ -180,21 +263,68 @@ class Pedido(models.Model):
     def __str__(self):
         return f"Pedido #{self.id} - {self.cliente.nombre}"
 
+    def esta_activo(self):
+        return self.estado in self.ESTADOS_ACTIVOS
+
+    def registrar_estado(self, nuevo_estado, usuario=None, momento=None):
+        momento = momento or timezone.now()
+        self.estado = nuevo_estado
+        self.fecha_estado_actualizado = momento
+        self.usuario_estado_actualizado = (
+            usuario if usuario and getattr(usuario, 'is_authenticated', False) else None
+        )
+
+        if nuevo_estado == self.PENDIENTE:
+            self.fecha_pendiente = momento
+            self.usuario_pendiente = self.usuario_estado_actualizado
+        elif nuevo_estado == self.ASIGNADO:
+            self.fecha_asignado = momento
+            self.usuario_asignado = self.usuario_estado_actualizado
+        elif nuevo_estado == self.EN_RUTA:
+            self.fecha_en_ruta = momento
+            self.usuario_en_ruta = self.usuario_estado_actualizado
+        elif nuevo_estado == self.ENTREGADO:
+            self.fecha_entrega = momento
+            self.usuario_entrega = self.usuario_estado_actualizado
+        elif nuevo_estado == self.CANCELADO:
+            self.fecha_cancelacion = momento
+            self.usuario_cancelacion = self.usuario_estado_actualizado
+        elif nuevo_estado == self.REPROGRAMADO:
+            self.fecha_reprogramado = momento
+            self.usuario_reprogramado = self.usuario_estado_actualizado
+
+    @property
+    def badge_estado_clase(self):
+        return {
+            self.PENDIENTE: 'badge-pendiente',
+            self.ASIGNADO: 'badge-asignado',
+            self.EN_RUTA: 'badge-en-ruta',
+            self.ENTREGADO: 'badge-entregado',
+            self.CANCELADO: 'badge-cancelado',
+            self.REPROGRAMADO: 'badge-reprogramado',
+        }.get(self.estado, 'badge-muted')
+
 
 class PedidoHistorial(models.Model):
 
     CREADO = 'creado'
     EDITADO = 'editado'
+    ASIGNADO = 'asignado'
+    EN_RUTA = 'en_ruta'
     ENTREGADO = 'entregado'
     CANCELADO = 'cancelado'
+    REPROGRAMADO = 'reprogramado'
     REASIGNADO = 'reasignado'
     REVERTIDO = 'revertido'
 
     TIPOS_ACCION = [
         (CREADO, 'Creado'),
         (EDITADO, 'Editado'),
+        (ASIGNADO, 'Asignado'),
+        (EN_RUTA, 'En ruta'),
         (ENTREGADO, 'Entregado'),
         (CANCELADO, 'Cancelado'),
+        (REPROGRAMADO, 'Reprogramado'),
         (REASIGNADO, 'Reasignado'),
         (REVERTIDO, 'Revertido'),
     ]

@@ -27,9 +27,20 @@ class ClienteAdmin(admin.ModelAdmin):
 
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'cliente', 'repartidor', 'fecha_pedido', 'cantidad_bidones', 'precio_unitario', 'total', 'estado')
+    list_display = (
+        'id',
+        'cliente',
+        'repartidor',
+        'fecha_pedido',
+        'cantidad_bidones',
+        'precio_unitario',
+        'total',
+        'estado',
+        'fecha_estado_actualizado',
+        'usuario_estado_actualizado',
+    )
     search_fields = ('cliente__nombre', 'repartidor__username')
-    list_filter = ('estado', 'repartidor', 'fecha_pedido')
+    list_filter = ('estado', 'repartidor', 'fecha_pedido', 'fecha_estado_actualizado')
     ordering = ('-fecha_pedido',)
 
 

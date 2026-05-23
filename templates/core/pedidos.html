@@ -44,12 +44,24 @@ Pedidos - AquaSmart CRM
                         Pendiente
                     </option>
 
+                    <option value="ASIGNADO" {% if estado_actual == 'ASIGNADO' %}selected{% endif %}>
+                        Asignado
+                    </option>
+
+                    <option value="EN_RUTA" {% if estado_actual == 'EN_RUTA' %}selected{% endif %}>
+                        En ruta
+                    </option>
+
                     <option value="ENTREGADO" {% if estado_actual == 'ENTREGADO' %}selected{% endif %}>
                         Entregado
                     </option>
 
                     <option value="CANCELADO" {% if estado_actual == 'CANCELADO' %}selected{% endif %}>
                         Cancelado
+                    </option>
+
+                    <option value="REPROGRAMADO" {% if estado_actual == 'REPROGRAMADO' %}selected{% endif %}>
+                        Reprogramado
                     </option>
                 </select>
             </div>
@@ -131,9 +143,6 @@ Pedidos - AquaSmart CRM
 
                             <td>
                                 <div class="fw-semibold">{{ pedido.cliente.nombre }}</div>
-                                <div class="mt-1">
-                                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
-                                </div>
                             </td>
 
                             <td>
@@ -177,23 +186,9 @@ Pedidos - AquaSmart CRM
                             </td>
 
                             <td>
-                                {% if pedido.estado == 'ENTREGADO' %}
-                                    <span class="badge-estado badge-entregado">
-                                        Entregado
-                                    </span>
-                                {% elif pedido.estado == 'PENDIENTE' %}
-                                    <span class="badge-estado badge-pendiente">
-                                        Pendiente
-                                    </span>
-                                {% elif pedido.estado == 'CANCELADO' %}
-                                    <span class="badge-estado badge-cancelado">
-                                        Cancelado
-                                    </span>
-                                {% else %}
-                                    <span class="badge-estado badge-muted">
-                                        {{ pedido.estado }}
-                                    </span>
-                                {% endif %}
+                                <span class="badge-estado {{ pedido.badge_estado_clase }}">
+                                    {{ pedido.get_estado_display }}
+                                </span>
                             </td>
 
                             <td>
@@ -201,9 +196,24 @@ Pedidos - AquaSmart CRM
                             </td>
 
                             <td>
-                                {% if pedido.estado == 'PENDIENTE' %}
+                                {% if pedido.esta_activo %}
 
                                     <div class="action-group table-action-group d-flex gap-2 flex-nowrap">
+                                        {% if pedido.estado != 'EN_RUTA' %}
+                                            <form
+                                                method="POST"
+                                                action="{% url 'cambiar_estado_pedido' pedido.id 'EN_RUTA' %}"
+                                            >
+                                                {% csrf_token %}
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                >
+                                                    En ruta
+                                                </button>
+                                            </form>
+                                        {% endif %}
+
                                         <form
                                             method="POST"
                                             action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}"

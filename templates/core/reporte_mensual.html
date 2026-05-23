@@ -355,23 +355,9 @@ Reporte Mensual
                                     </td>
 
                                     <td>
-                                        {% if pedido.estado == 'ENTREGADO' %}
-                                            <span class="badge-estado badge-entregado">
-                                                Entregado
-                                            </span>
-                                        {% elif pedido.estado == 'PENDIENTE' %}
-                                            <span class="badge-estado badge-pendiente">
-                                                Pendiente
-                                            </span>
-                                        {% elif pedido.estado == 'CANCELADO' %}
-                                            <span class="badge-estado badge-cancelado">
-                                                Cancelado
-                                            </span>
-                                        {% else %}
-                                            <span class="badge-estado badge-muted">
-                                                {{ pedido.estado }}
-                                            </span>
-                                        {% endif %}
+                                        <span class="badge-estado {{ pedido.badge_estado_clase }}">
+                                            {{ pedido.get_estado_display }}
+                                        </span>
                                     </td>
                                 </tr>
                             {% endfor %}

@@ -36,6 +36,12 @@
                     </span>
                 </div>
             {% endif %}
+
+            <div class="order-card-badges">
+                <span class="badge-estado {{ pedido.badge_estado_clase }}">
+                    {{ pedido.get_estado_display }}
+                </span>
+            </div>
         </div>
 
         <div class="row g-3">
@@ -107,7 +113,20 @@
                     WhatsApp
                 </a>
 
-                {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary w-100 action-button' %}
+                {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary w-100 action-button' hide_copy_button='1' %}
+
+                {% if pedido.estado != 'EN_RUTA' %}
+                    <form
+                        method="post"
+                        action="{% url 'marcar_pedido_en_ruta_repartidor' pedido.id %}"
+                        class="mb-0"
+                    >
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary w-100 action-button">
+                            Marcar en ruta
+                        </button>
+                    </form>
+                {% endif %}
 
                 <form
                     method="post"
@@ -120,18 +139,16 @@
                     </button>
                 </form>
 
-                {% if pedido.estado == 'PENDIENTE' %}
-                    <form
-                        method="post"
-                        action="{% url 'cancelar_pedido_repartidor' pedido.id %}"
-                        class="mb-0"
-                    >
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-danger w-100 action-button">
-                            Cancelar pedido
-                        </button>
-                    </form>
-                {% endif %}
+                <form
+                    method="post"
+                    action="{% url 'cancelar_pedido_repartidor' pedido.id %}"
+                    class="mb-0"
+                >
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger w-100 action-button">
+                        Cancelar pedido
+                    </button>
+                </form>
             </div>
         </details>
     </div>

@@ -178,6 +178,54 @@ def registrar_historial_pedido(
     )
 
 
+def campos_estado_pedido():
+
+    return [
+        'estado',
+        'fecha_pendiente',
+        'usuario_pendiente',
+        'fecha_asignado',
+        'usuario_asignado',
+        'fecha_en_ruta',
+        'usuario_en_ruta',
+        'fecha_entrega',
+        'usuario_entrega',
+        'fecha_cancelacion',
+        'usuario_cancelacion',
+        'fecha_reprogramado',
+        'usuario_reprogramado',
+        'fecha_estado_actualizado',
+        'usuario_estado_actualizado',
+    ]
+
+
+def tipo_historial_estado(nuevo_estado):
+
+    return {
+        Pedido.PENDIENTE: PedidoHistorial.REVERTIDO,
+        Pedido.ASIGNADO: PedidoHistorial.ASIGNADO,
+        Pedido.EN_RUTA: PedidoHistorial.EN_RUTA,
+        Pedido.ENTREGADO: PedidoHistorial.ENTREGADO,
+        Pedido.CANCELADO: PedidoHistorial.CANCELADO,
+        Pedido.REPROGRAMADO: PedidoHistorial.REPROGRAMADO,
+    }.get(nuevo_estado, PedidoHistorial.EDITADO)
+
+
+def cambiar_estado_operativo(pedido, nuevo_estado, usuario, descripcion):
+
+    estado_anterior = pedido.estado
+    pedido.registrar_estado(nuevo_estado, usuario)
+    pedido.save(update_fields=campos_estado_pedido())
+    registrar_historial_pedido(
+        pedido,
+        usuario,
+        tipo_historial_estado(nuevo_estado),
+        descripcion,
+        valor_anterior=estado_anterior,
+        valor_nuevo=nuevo_estado
+    )
+
+
 def cambios_edicion_pedido(pedido, nuevos_valores):
 
     campos = [
@@ -491,16 +539,7 @@ def login_usuario(request):
 
 def estados_activos_repartidor():
 
-    estados = [Pedido.PENDIENTE]
-    estados_modelo = [
-        valor
-        for valor, _etiqueta in Pedido.ESTADOS_PEDIDO
-    ]
-
-    if 'URGENTE' in estados_modelo:
-        estados.append('URGENTE')
-
-    return estados
+    return Pedido.ESTADOS_ACTIVOS
 
 
 def limpiar_telefono(telefono):
@@ -620,7 +659,7 @@ def preparar_pedido_lista(pedido):
     pedido.programacion_clase = 'badge-muted'
     pedido.fila_prioridad_clase = ''
 
-    if pedido.estado == Pedido.PENDIENTE:
+    if pedido.esta_activo():
         pedido.programacion_texto = texto_programacion_pedido(pedido)
         pedido.programacion_clase = clase_badge_programacion_pedido(pedido)
 
@@ -762,7 +801,7 @@ def actualizar_estados_clientes():
         pedidos_pendientes_vencidos=Count(
             'pedido',
             filter=Q(
-                pedido__estado=Pedido.PENDIENTE,
+                pedido__estado__in=Pedido.ESTADOS_ACTIVOS,
                 pedido__fecha_programada__lte=hoy
             )
         ),
@@ -825,7 +864,7 @@ def dashboard(request):
     ).count()
 
     pedidos_pendientes = Pedido.objects.filter(
-        estado=Pedido.PENDIENTE
+        estado__in=Pedido.ESTADOS_ACTIVOS
     ).count()
 
     pedidos_cancelados = Pedido.objects.filter(
@@ -867,7 +906,7 @@ def dashboard(request):
     limite_2_horas = ahora - timedelta(hours=2)
 
     pedidos_urgentes_queryset = Pedido.objects.filter(
-        estado=Pedido.PENDIENTE,
+        estado__in=Pedido.ESTADOS_ACTIVOS,
         fecha_programada__lte=hoy
     ).select_related(
         'cliente'
@@ -1542,8 +1581,10 @@ def registrar_pedido(request):
 
         estados_validos = [
             Pedido.PENDIENTE,
+            Pedido.ASIGNADO,
             Pedido.ENTREGADO,
             Pedido.CANCELADO,
+            Pedido.REPROGRAMADO,
         ]
 
         if not cliente_id:
@@ -1631,26 +1672,30 @@ def registrar_pedido(request):
                 return redirect('registrar_pedido')
 
         total = cantidad_bidones * precio_unitario
-        fecha_entrega = None
-        fecha_cancelacion = None
+        estado_inicial = estado
 
-        if estado == Pedido.ENTREGADO:
-            fecha_entrega = timezone.now()
-        elif estado == Pedido.CANCELADO:
-            fecha_cancelacion = timezone.now()
+        if estado == Pedido.PENDIENTE and repartidor:
+            estado_inicial = Pedido.ASIGNADO
 
-        pedido = Pedido.objects.create(
+        if estado == Pedido.ASIGNADO and not repartidor:
+            messages.error(request, 'Un pedido asignado debe tener repartidor.')
+            return redirect('registrar_pedido')
+
+        if estado == Pedido.REPROGRAMADO and fecha_programada_valor <= timezone.localdate():
+            messages.error(request, 'Un pedido reprogramado debe tener fecha futura.')
+            return redirect('registrar_pedido')
+
+        pedido = Pedido(
             cliente=cliente,
             repartidor=repartidor,
             cantidad_bidones=cantidad_bidones,
             precio_unitario=precio_unitario,
             total=total,
-            estado=estado,
             observacion=observacion,
             fecha_programada=fecha_programada_valor,
-            fecha_entrega=fecha_entrega,
-            fecha_cancelacion=fecha_cancelacion,
         )
+        pedido.registrar_estado(estado_inicial, request.user)
+        pedido.save()
         registrar_historial_pedido(
             pedido,
             request.user,
@@ -1697,10 +1742,10 @@ def editar_pedido(request, pedido_id):
     )
     repartidores = repartidores_disponibles()
 
-    if pedido.estado != Pedido.PENDIENTE:
+    if not pedido.esta_activo():
         messages.error(
             request,
-            'Solo se pueden editar pedidos pendientes.'
+            'Solo se pueden editar pedidos activos.'
         )
         return redireccion_edicion_pedido(origen, pedido)
 
@@ -1796,10 +1841,12 @@ def editar_pedido(request, pedido_id):
             'observacion': observacion,
         }
         cambios = cambios_edicion_pedido(pedido, nuevos_valores)
+        fecha_programada_anterior = pedido.fecha_programada
         repartidor_anterior = pedido.repartidor
         repartidor_cambio = pedido.repartidor_id != (
             repartidor.id if repartidor else None
         )
+        fecha_reprogramada = fecha_programada_anterior != fecha_programada_valor
 
         pedido.cantidad_bidones = cantidad_bidones
         pedido.precio_unitario = precio_unitario
@@ -1807,6 +1854,12 @@ def editar_pedido(request, pedido_id):
         pedido.fecha_programada = fecha_programada_valor
         pedido.observacion = observacion
         pedido.repartidor = repartidor
+        estado_anterior_edicion = pedido.estado
+
+        if fecha_reprogramada:
+            pedido.registrar_estado(Pedido.REPROGRAMADO, request.user)
+        elif repartidor and repartidor_cambio:
+            pedido.registrar_estado(Pedido.ASIGNADO, request.user)
         pedido.save(
             update_fields=[
                 'cantidad_bidones',
@@ -1815,6 +1868,7 @@ def editar_pedido(request, pedido_id):
                 'fecha_programada',
                 'observacion',
                 'repartidor',
+                *campos_estado_pedido(),
             ]
         )
 
@@ -1864,6 +1918,16 @@ def editar_pedido(request, pedido_id):
                 previous_repartidor=repartidor_anterior
             )
 
+        if fecha_reprogramada:
+            registrar_historial_pedido(
+                pedido,
+                request.user,
+                PedidoHistorial.REPROGRAMADO,
+                'Pedido reprogramado por cambio de fecha.',
+                valor_anterior=estado_anterior_edicion,
+                valor_nuevo=Pedido.REPROGRAMADO
+            )
+
         messages.success(
             request,
             'Pedido actualizado correctamente.'
@@ -1897,51 +1961,55 @@ def lista_pedidos(request):
     ).annotate(
         prioridad_operativa=Case(
             When(
-                estado=Pedido.PENDIENTE,
+                estado__in=Pedido.ESTADOS_ACTIVOS,
                 fecha_programada__lt=hoy,
                 then=Value(1)
             ),
             When(
-                estado=Pedido.PENDIENTE,
+                estado=Pedido.EN_RUTA,
+                then=Value(2)
+            ),
+            When(
+                estado__in=Pedido.ESTADOS_ACTIVOS,
                 fecha_programada=hoy,
-                then=Value(2)
-            ),
-            When(
-                estado=Pedido.PENDIENTE,
-                fecha_programada__isnull=True,
-                then=Value(2)
-            ),
-            When(
-                estado=Pedido.PENDIENTE,
-                fecha_programada=manana,
                 then=Value(3)
             ),
             When(
-                estado=Pedido.PENDIENTE,
-                fecha_programada__gt=manana,
+                estado__in=Pedido.ESTADOS_ACTIVOS,
+                fecha_programada__isnull=True,
+                then=Value(3)
+            ),
+            When(
+                estado__in=Pedido.ESTADOS_ACTIVOS,
+                fecha_programada=manana,
                 then=Value(4)
             ),
             When(
-                estado=Pedido.ENTREGADO,
+                estado__in=Pedido.ESTADOS_ACTIVOS,
+                fecha_programada__gt=manana,
                 then=Value(5)
             ),
             When(
-                estado=Pedido.CANCELADO,
+                estado=Pedido.ENTREGADO,
                 then=Value(6)
             ),
-            default=Value(7),
+            When(
+                estado=Pedido.CANCELADO,
+                then=Value(7)
+            ),
+            default=Value(8),
             output_field=IntegerField()
         ),
         fecha_programada_orden=Case(
             When(
-                estado=Pedido.PENDIENTE,
+                estado__in=Pedido.ESTADOS_ACTIVOS,
                 then=F('fecha_programada')
             ),
             output_field=DateField()
         ),
         fecha_pedido_pendiente_orden=Case(
             When(
-                estado=Pedido.PENDIENTE,
+                estado__in=Pedido.ESTADOS_ACTIVOS,
                 then=F('fecha_pedido')
             ),
             output_field=DateTimeField()
@@ -1969,9 +2037,7 @@ def lista_pedidos(request):
 
     if estado:
         estados_validos = [
-            Pedido.PENDIENTE,
-            Pedido.ENTREGADO,
-            Pedido.CANCELADO,
+            valor for valor, _etiqueta in Pedido.ESTADOS_PEDIDO
         ]
 
         if estado in estados_validos:
@@ -1993,19 +2059,19 @@ def lista_pedidos(request):
     if filtro:
         if filtro == 'hoy':
             pedidos = pedidos.filter(
-                estado=Pedido.PENDIENTE
+                estado__in=Pedido.ESTADOS_ACTIVOS
             ).filter(
                 Q(fecha_programada=hoy)
                 | Q(fecha_programada__isnull=True)
             )
         elif filtro == 'atrasados':
             pedidos = pedidos.filter(
-                estado=Pedido.PENDIENTE,
+                estado__in=Pedido.ESTADOS_ACTIVOS,
                 fecha_programada__lt=hoy
             )
         elif filtro == 'programados':
             pedidos = pedidos.filter(
-                estado=Pedido.PENDIENTE,
+                estado__in=Pedido.ESTADOS_ACTIVOS,
                 fecha_programada__gt=hoy
             )
         elif filtro == 'entregados':
@@ -2056,7 +2122,7 @@ def pedidos_repartidor(request):
     hoy = timezone.localdate()
 
     pedidos_base = Pedido.objects.filter(
-        estado=Pedido.PENDIENTE,
+        estado__in=estados_activos_repartidor(),
         repartidor=request.user
     ).select_related(
         'cliente'
@@ -2181,7 +2247,12 @@ def panel_jefe_repartidores(request):
     )
 
     pedidos_asignados_queryset = Pedido.objects.filter(
-        estado=Pedido.PENDIENTE,
+        estado__in=[
+            Pedido.PENDIENTE,
+            Pedido.ASIGNADO,
+            Pedido.EN_RUTA,
+            Pedido.REPROGRAMADO,
+        ],
         repartidor__isnull=False,
     ).filter(
         Q(fecha_programada__lte=hoy)
@@ -2201,7 +2272,7 @@ def panel_jefe_repartidores(request):
     )
 
     pedidos_programados_queryset = Pedido.objects.filter(
-        estado=Pedido.PENDIENTE,
+        estado__in=Pedido.ESTADOS_ACTIVOS,
         fecha_programada__gt=hoy
     ).select_related(
         'cliente',
@@ -2230,7 +2301,7 @@ def panel_jefe_repartidores(request):
 
     for repartidor in repartidores:
         pendientes_asignados = Pedido.objects.filter(
-            estado=Pedido.PENDIENTE,
+            estado__in=Pedido.ESTADOS_ACTIVOS,
             repartidor=repartidor
         ).count()
 
@@ -2302,12 +2373,13 @@ def asignar_pedido_repartidor(request, pedido_id):
     pedido = get_object_or_404(
         Pedido,
         id=pedido_id,
-        estado=Pedido.PENDIENTE
+        estado__in=Pedido.ESTADOS_ACTIVOS
     )
 
     repartidor_anterior = pedido.repartidor
     pedido.repartidor = repartidor
-    pedido.save(update_fields=['repartidor'])
+    pedido.registrar_estado(Pedido.ASIGNADO, request.user)
+    pedido.save(update_fields=['repartidor', *campos_estado_pedido()])
     logger.info(
         'Web Push diagnostico: asignacion desde panel jefe. pedido_id=%s '
         'repartidor_anterior=%s repartidor_destino=%s',
@@ -2318,7 +2390,11 @@ def asignar_pedido_repartidor(request, pedido_id):
     registrar_historial_pedido(
         pedido,
         request.user,
-        PedidoHistorial.REASIGNADO,
+        (
+            PedidoHistorial.REASIGNADO
+            if repartidor_anterior
+            else PedidoHistorial.ASIGNADO
+        ),
         (
             'Repartidor asignado: '
             f'{nombre_repartidor_historial(repartidor_anterior)} -> '
@@ -2348,15 +2424,14 @@ def marcar_pedido_entregado_repartidor(request, pedido_id):
     pedido = get_object_or_404(
         Pedido,
         id=pedido_id,
-        estado=Pedido.PENDIENTE,
+        estado__in=estados_activos_repartidor(),
         repartidor=request.user
     )
 
-    estado_anterior = pedido.estado
-    pedido.estado = Pedido.ENTREGADO
     pedido.repartidor = request.user
-    pedido.fecha_entrega = timezone.now()
-    pedido.save(update_fields=['estado', 'repartidor', 'fecha_entrega'])
+    estado_anterior = pedido.estado
+    pedido.registrar_estado(Pedido.ENTREGADO, request.user)
+    pedido.save(update_fields=['repartidor', *campos_estado_pedido()])
     registrar_historial_pedido(
         pedido,
         request.user,
@@ -2371,6 +2446,37 @@ def marcar_pedido_entregado_repartidor(request, pedido_id):
     messages.success(
         request,
         'Pedido entregado correctamente.'
+    )
+
+    return redirect('pedidos_repartidor')
+
+
+@login_required
+@repartidor_required
+@require_POST
+def marcar_pedido_en_ruta_repartidor(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        estado__in=[
+            Pedido.ASIGNADO,
+            Pedido.REPROGRAMADO,
+            Pedido.PENDIENTE,
+        ],
+        repartidor=request.user
+    )
+
+    cambiar_estado_operativo(
+        pedido,
+        Pedido.EN_RUTA,
+        request.user,
+        'Pedido marcado en ruta por repartidor.'
+    )
+
+    messages.success(
+        request,
+        'Pedido marcado como en ruta.'
     )
 
     return redirect('pedidos_repartidor')
@@ -2452,20 +2558,19 @@ def nuevo_pedido_repartidor(request):
             return redirect('nuevo_pedido_repartidor')
 
         total = cantidad_bidones * precio_unitario
-        estado = Pedido.ENTREGADO if entregar_ahora else Pedido.PENDIENTE
-        fecha_entrega = timezone.now() if entregar_ahora else None
+        estado = Pedido.ENTREGADO if entregar_ahora else Pedido.ASIGNADO
 
-        pedido = Pedido.objects.create(
+        pedido = Pedido(
             cliente=cliente,
             repartidor=request.user,
             cantidad_bidones=cantidad_bidones,
             precio_unitario=precio_unitario,
             total=total,
-            estado=estado,
             observacion=observacion,
             fecha_programada=fecha_programada_valor,
-            fecha_entrega=fecha_entrega,
         )
+        pedido.registrar_estado(estado, request.user)
+        pedido.save()
         registrar_historial_pedido(
             pedido,
             request.user,
@@ -2487,7 +2592,7 @@ def nuevo_pedido_repartidor(request):
         else:
             messages.success(
                 request,
-                'Pedido rápido registrado como pendiente.'
+                'Pedido rápido registrado como asignado.'
             )
 
         return redirect('pedidos_repartidor')
@@ -2593,15 +2698,14 @@ def cancelar_pedido_repartidor(request, pedido_id):
     pedido = get_object_or_404(
         Pedido,
         id=pedido_id,
-        estado=Pedido.PENDIENTE,
+        estado__in=estados_activos_repartidor(),
         repartidor=request.user
     )
 
     estado_anterior = pedido.estado
-    pedido.estado = Pedido.CANCELADO
     pedido.repartidor = request.user
-    pedido.fecha_cancelacion = timezone.now()
-    pedido.save(update_fields=['estado', 'repartidor', 'fecha_cancelacion'])
+    pedido.registrar_estado(Pedido.CANCELADO, request.user)
+    pedido.save(update_fields=['repartidor', *campos_estado_pedido()])
     registrar_historial_pedido(
         pedido,
         request.user,
@@ -2651,39 +2755,74 @@ def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
     )
 
     estados_validos = [
+        Pedido.ASIGNADO,
+        Pedido.EN_RUTA,
         Pedido.ENTREGADO,
         Pedido.CANCELADO,
+        Pedido.REPROGRAMADO,
     ]
 
     if nuevo_estado not in estados_validos:
         messages.error(request, 'Estado inválido.')
         return redirect('lista_pedidos')
 
-    if pedido.estado != Pedido.PENDIENTE:
-        messages.error(request, 'Solo se pueden modificar pedidos pendientes desde esta acción.')
+    if not pedido.esta_activo():
+        messages.error(request, 'Solo se pueden modificar pedidos activos desde esta acción.')
         return redirect('lista_pedidos')
 
     if pedido.estado == nuevo_estado:
         messages.error(request, 'El pedido ya tiene ese estado.')
         return redirect('lista_pedidos')
 
+    update_fields = campos_estado_pedido()
+
+    if nuevo_estado in [Pedido.ASIGNADO, Pedido.EN_RUTA] and not pedido.repartidor_id:
+        messages.error(
+            request,
+            'Debes asignar un repartidor antes de usar este estado.'
+        )
+        return redirect('lista_pedidos')
+
+    if nuevo_estado == Pedido.REPROGRAMADO:
+        fecha_programada = request.POST.get('fecha_programada', '').strip()
+
+        if not fecha_programada:
+            messages.error(
+                request,
+                'Debes indicar una nueva fecha para reprogramar el pedido.'
+            )
+            return redirect('lista_pedidos')
+
+        try:
+            nueva_fecha_programada = datetime.strptime(
+                fecha_programada,
+                '%Y-%m-%d'
+            ).date()
+        except ValueError:
+            messages.error(request, 'Fecha programada inválida.')
+            return redirect('lista_pedidos')
+
+        if nueva_fecha_programada <= timezone.localdate():
+            messages.error(
+                request,
+                'La nueva fecha de reprogramación debe ser futura.'
+            )
+            return redirect('lista_pedidos')
+
+        if nueva_fecha_programada == pedido.fecha_programada:
+            messages.error(
+                request,
+                'La nueva fecha debe ser diferente a la fecha actual.'
+            )
+            return redirect('lista_pedidos')
+
+        pedido.fecha_programada = nueva_fecha_programada
+        update_fields = ['fecha_programada', *update_fields]
+
     estado_anterior = pedido.estado
-    pedido.estado = nuevo_estado
-    update_fields = ['estado']
-
-    if nuevo_estado == Pedido.ENTREGADO:
-        pedido.fecha_entrega = timezone.now()
-        update_fields.append('fecha_entrega')
-    elif nuevo_estado == Pedido.CANCELADO:
-        pedido.fecha_cancelacion = timezone.now()
-        update_fields.append('fecha_cancelacion')
-
+    pedido.registrar_estado(nuevo_estado, request.user)
     pedido.save(update_fields=update_fields)
-    tipo_historial = (
-        PedidoHistorial.ENTREGADO
-        if nuevo_estado == Pedido.ENTREGADO
-        else PedidoHistorial.CANCELADO
-    )
+    tipo_historial = tipo_historial_estado(nuevo_estado)
     registrar_historial_pedido(
         pedido,
         request.user,
@@ -2705,6 +2844,24 @@ def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
         messages.success(
             request,
             'Pedido cancelado correctamente.'
+        )
+
+    elif nuevo_estado == Pedido.ASIGNADO:
+        messages.success(
+            request,
+            'Pedido marcado como ASIGNADO correctamente.'
+        )
+
+    elif nuevo_estado == Pedido.EN_RUTA:
+        messages.success(
+            request,
+            'Pedido marcado como EN RUTA correctamente.'
+        )
+
+    elif nuevo_estado == Pedido.REPROGRAMADO:
+        messages.success(
+            request,
+            'Pedido marcado como REPROGRAMADO correctamente.'
         )
 
     else:
@@ -2734,9 +2891,14 @@ def revertir_entrega(request, pedido_id):
         return redirect('lista_pedidos')
 
     estado_anterior = pedido.estado
-    pedido.estado = Pedido.PENDIENTE
     pedido.fecha_entrega = None
-    pedido.save(update_fields=['estado', 'fecha_entrega'])
+    pedido.usuario_entrega = None
+    pedido.registrar_estado(Pedido.PENDIENTE, request.user)
+    pedido.save(update_fields=[
+        'fecha_entrega',
+        'usuario_entrega',
+        *campos_estado_pedido(),
+    ])
     registrar_historial_pedido(
         pedido,
         request.user,
@@ -2806,7 +2968,7 @@ def reporte_mensual(request):
     ).distinct().count()
 
     pendientes = pedidos_mes.filter(
-        estado=Pedido.PENDIENTE
+        estado__in=Pedido.ESTADOS_ACTIVOS
     ).count()
 
     cancelados = pedidos_mes.filter(

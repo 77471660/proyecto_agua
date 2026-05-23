@@ -6,6 +6,73 @@ Detalle del cliente
 
 {% block content %}
 
+<style>
+    .client-detail-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+
+    .client-detail-actions-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .client-secondary-actions {
+        border-top: 1px solid rgba(15, 23, 42, 0.12);
+        padding-top: 0.55rem;
+    }
+
+    .client-location-panel {
+        border-top: 1px solid rgba(15, 23, 42, 0.12);
+        margin-top: 1rem;
+        padding-top: 1rem;
+    }
+
+    .client-location-panel h6 {
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.55rem;
+        text-transform: uppercase;
+    }
+
+    .client-location-actions {
+        display: grid;
+        gap: 0.45rem;
+    }
+
+    .client-order-actions {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .client-history-description {
+        max-width: 24rem;
+        min-width: 16rem;
+    }
+
+    .client-history-values {
+        display: block;
+        line-height: 1.45;
+        margin-top: 0.25rem;
+    }
+
+    @media (max-width: 575.98px) {
+        .client-detail-actions,
+        .client-detail-actions-row,
+        .client-detail-actions-row .btn,
+        .client-detail-actions-row form,
+        .client-order-actions .btn,
+        .client-order-actions form {
+            width: 100%;
+        }
+    }
+</style>
+
 <div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3">
 
     <div>
@@ -18,32 +85,11 @@ Detalle del cliente
         </small>
     </div>
 
-    <div class="d-flex gap-2 flex-wrap">
+    <div class="client-detail-actions">
+        <div class="client-detail-actions-row">
         <a href="/clientes/" class="btn btn-outline-secondary">
             Volver
         </a>
-
-        {% if menu_puede_crm_operativo %}
-            <a href="{% url 'editar_cliente' cliente.id %}"
-             class="btn btn-warning">
-
-             Editar cliente
-
-            </a>
-
-            <form method="POST"
-                  action="{% url 'eliminar_cliente' cliente.id %}"
-                  class="d-inline">
-
-                {% csrf_token %}
-
-                <button type="submit"
-                        class="btn btn-outline-danger"
-                        onclick="return confirm('¿Seguro que deseas eliminar este cliente?');">
-                    Eliminar cliente
-                </button>
-            </form>
-        {% endif %}
 
         {% if menu_puede_crm_operativo %}
             <a href="{% url 'registrar_pedido' %}?cliente={{ cliente.id }}" class="btn btn-success">
@@ -53,6 +99,27 @@ Detalle del cliente
             <a href="{% url 'nuevo_pedido_repartidor' %}?cliente={{ cliente.id }}" class="btn btn-success">
                 Nuevo pedido para este cliente
             </a>
+        {% endif %}
+        </div>
+
+        {% if menu_puede_crm_operativo %}
+            <div class="client-detail-actions-row client-secondary-actions">
+                <a href="{% url 'editar_cliente' cliente.id %}" class="btn btn-outline-warning">
+                    Editar cliente
+                </a>
+
+                <form method="POST"
+                      action="{% url 'eliminar_cliente' cliente.id %}">
+
+                    {% csrf_token %}
+
+                    <button type="submit"
+                            class="btn btn-outline-danger"
+                            onclick="return confirm('\u00bfSeguro que deseas eliminar este cliente?');">
+                        Eliminar cliente
+                    </button>
+                </form>
+            </div>
         {% endif %}
     </div>
 
@@ -90,8 +157,11 @@ Detalle del cliente
                     {{ cliente.referencia_ubicacion|default:"No registrada" }}
                 </p>
 
-                <div class="mb-3">
-                    {% include 'core/includes/location_button.html' with cliente=cliente button_class='btn-outline-primary w-100' %}
+                <div class="client-location-panel">
+                    <h6 class="text-muted">Ubicaci&oacute;n</h6>
+                    <div class="client-location-actions">
+                        {% include 'core/includes/location_button.html' with cliente=cliente button_class='btn-outline-primary btn-sm' copy_button_class='btn-outline-secondary btn-sm' %}
+                    </div>
                 </div>
 
                 <p>
@@ -205,34 +275,18 @@ Detalle del cliente
 
                 <td>
 
-                    {% if pedido.estado == 'ENTREGADO' %}
-
-                        <span class="badge-estado badge-entregado">
-                            Entregado
-                        </span>
-
-                    {% elif pedido.estado == 'PENDIENTE' %}
-
-                        <span class="badge-estado badge-pendiente">
-                            Pendiente
-                        </span>
-
-                    {% else %}
-
-                        <span class="badge-estado badge-cancelado">
-                            Cancelado
-                        </span>
-
-                    {% endif %}
+                    <span class="badge-estado {{ pedido.badge_estado_clase }}">
+                        {{ pedido.get_estado_display }}
+                    </span>
 
                 </td>
 
                 <td>
 
-                    {% if pedido.estado == 'PENDIENTE' %}
+                    {% if pedido.esta_activo %}
 
                         {% if menu_puede_crm_operativo or menu_es_jefe_repartidores %}
-                            <div class="action-group d-flex gap-2 flex-wrap">
+                            <div class="action-group client-order-actions">
 
                                 <a
                                     href="{% url 'editar_pedido' pedido.id %}?origen=cliente"
@@ -242,6 +296,21 @@ Detalle del cliente
                                 </a>
 
                                 {% if menu_puede_crm_operativo %}
+                                    {% if pedido.estado != 'EN_RUTA' %}
+                                        <form
+                                            method="POST"
+                                            action="{% url 'cambiar_estado_pedido' pedido.id 'EN_RUTA' %}"
+                                        >
+                                            {% csrf_token %}
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-primary"
+                                            >
+                                                En ruta
+                                            </button>
+                                        </form>
+                                    {% endif %}
+
                                     <form
                                         method="POST"
                                         action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}"
@@ -263,7 +332,7 @@ Detalle del cliente
                                         <button
                                             type="submit"
                                             class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('¿Seguro que deseas cancelar este pedido?')"
+                                            onclick="return confirm('\u00bfSeguro que deseas cancelar este pedido?')"
                                         >
                                             Cancelar
                                         </button>
@@ -288,7 +357,7 @@ Detalle del cliente
                                 <button
                                     type="submit"
                                     class="btn btn-sm btn-outline-warning"
-                                    onclick="return confirm('¿Seguro que deseas revertir esta entrega a pendiente?')"
+                                    onclick="return confirm('\u00bfSeguro que deseas revertir esta entrega a pendiente?')"
                                 >
                                     Revertir entrega
                                 </button>
@@ -390,10 +459,10 @@ Detalle del cliente
                                                 Sistema
                                             {% endif %}
                                         </td>
-                                        <td>
+                                        <td class="client-history-description">
                                             <div>{{ item.descripcion }}</div>
                                             {% if item.valor_anterior or item.valor_nuevo %}
-                                                <small class="text-muted">
+                                                <small class="text-muted client-history-values">
                                                     Antes: {{ item.valor_anterior|default:"-" }}<br>
                                                     Ahora: {{ item.valor_nuevo|default:"-" }}
                                                 </small>

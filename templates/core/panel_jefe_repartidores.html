@@ -52,6 +52,22 @@ Gestión de repartos - AquaSmart CRM
             min-width: 7.75rem !important;
         }
     }
+
+    .dispatch-panel .location-details summary {
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .dispatch-panel .location-details summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .dispatch-panel .location-details-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.45rem;
+    }
 </style>
 
 <div class="dispatch-panel">
@@ -152,7 +168,7 @@ Gestión de repartos - AquaSmart CRM
                             <td>
                                 <div>{{ pedido.cliente.direccion }}</div>
                                 <div class="mt-1">
-                                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
+                                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' hide_copy_button='1' %}
                                 </div>
                             </td>
                             <td>{{ pedido.cliente.referencia|default:"-" }}</td>
@@ -259,9 +275,14 @@ Gestión de repartos - AquaSmart CRM
                             </td>
                             <td>
                                 <div>{{ pedido.cliente.direccion }}</div>
-                                <div class="mt-1">
-                                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
-                                </div>
+                                <details class="location-details mt-1">
+                                    <summary class="btn btn-sm btn-outline-secondary">
+                                        Detalles
+                                    </summary>
+                                    <div class="location-details-actions">
+                                        {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
+                                    </div>
+                                </details>
                             </td>
                             <td>{{ pedido.cantidad_bidones }}</td>
                             <td class="fw-semibold text-success">
@@ -375,7 +396,7 @@ Gestión de repartos - AquaSmart CRM
                             <td>
                                 <div>{{ pedido.cliente.direccion }}</div>
                                 <div class="mt-1">
-                                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
+                                    {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' hide_copy_button='1' %}
                                 </div>
                             </td>
                             <td>{{ pedido.cantidad_bidones }}</td>

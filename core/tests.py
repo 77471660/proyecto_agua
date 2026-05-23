@@ -476,6 +476,59 @@ class PermisosRolesTests(TestCase):
         )
         self.assertContains(response, 'Pedidos programados futuros')
 
+    def test_asignar_pedido_cambia_estado_y_registra_timestamp(self):
+        pedido = self.crear_pedido(None)
+        self.client.force_login(self.jefe_reparto)
+
+        response = self.client.post(
+            reverse(
+                'asignar_pedido_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {'repartidor': str(self.repartidor.id)}
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('panel_jefe_repartidores'),
+            fetch_redirect_response=False
+        )
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.estado, Pedido.ASIGNADO)
+        self.assertEqual(pedido.repartidor, self.repartidor)
+        self.assertIsNotNone(pedido.fecha_asignado)
+        self.assertEqual(pedido.usuario_asignado, self.jefe_reparto)
+        self.assertEqual(pedido.usuario_estado_actualizado, self.jefe_reparto)
+
+    def test_repartidor_marca_pedido_en_ruta(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(estado=Pedido.ASIGNADO)
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse(
+                'marcar_pedido_en_ruta_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('pedidos_repartidor'),
+            fetch_redirect_response=False
+        )
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.estado, Pedido.EN_RUTA)
+        self.assertIsNotNone(pedido.fecha_en_ruta)
+        self.assertEqual(pedido.usuario_en_ruta, self.repartidor)
+        self.assertTrue(
+            PedidoHistorial.objects.filter(
+                pedido=pedido,
+                tipo_accion=PedidoHistorial.EN_RUTA,
+                valor_nuevo=Pedido.EN_RUTA
+            ).exists()
+        )
+
     def test_jefe_repartidores_accede_a_mi_reparto_y_filtra_sus_pedidos(self):
         pedido_asignado = self.crear_pedido(self.jefe_reparto)
         cliente_otro = Cliente.objects.create(
@@ -639,6 +692,105 @@ class PermisosRolesTests(TestCase):
             'Cliente corrigió cantidad al recibir.'
         )
 
+    def test_editar_pedido_reprograma_si_cambia_fecha(self):
+        pedido = self.crear_pedido(self.repartidor)
+        nueva_fecha = timezone.localdate() + timedelta(days=1)
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse(
+                'editar_pedido',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {
+                'origen': 'cliente',
+                'cantidad_bidones': '2',
+                'precio_unitario': '7.00',
+                'fecha_programada': nueva_fecha.strftime('%Y-%m-%d'),
+                'observacion': 'Cliente pidio entrega manana.',
+                'repartidor': str(self.repartidor.id),
+            }
+        )
+
+        pedido.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse(
+                'detalle_cliente',
+                kwargs={'cliente_id': self.cliente.id}
+            ),
+            fetch_redirect_response=False
+        )
+        self.assertEqual(pedido.fecha_programada, nueva_fecha)
+        self.assertEqual(pedido.estado, Pedido.REPROGRAMADO)
+        self.assertIsNotNone(pedido.fecha_reprogramado)
+        self.assertEqual(pedido.usuario_reprogramado, self.secretaria)
+        self.assertTrue(
+            PedidoHistorial.objects.filter(
+                pedido=pedido,
+                tipo_accion=PedidoHistorial.REPROGRAMADO,
+                valor_nuevo=Pedido.REPROGRAMADO
+            ).exists()
+        )
+
+    def test_cambiar_estado_no_permita_asignado_sin_repartidor(self):
+        pedido = self.crear_pedido(None)
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse(
+                'cambiar_estado_pedido',
+                kwargs={
+                    'pedido_id': pedido.id,
+                    'nuevo_estado': Pedido.ASIGNADO,
+                }
+            )
+        )
+
+        pedido.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse('lista_pedidos'),
+            fetch_redirect_response=False
+        )
+        self.assertEqual(pedido.estado, Pedido.PENDIENTE)
+        self.assertIsNone(pedido.fecha_asignado)
+        self.assertFalse(
+            PedidoHistorial.objects.filter(
+                pedido=pedido,
+                tipo_accion=PedidoHistorial.ASIGNADO
+            ).exists()
+        )
+
+    def test_cambiar_estado_no_permita_en_ruta_sin_repartidor(self):
+        pedido = self.crear_pedido(None)
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse(
+                'cambiar_estado_pedido',
+                kwargs={
+                    'pedido_id': pedido.id,
+                    'nuevo_estado': Pedido.EN_RUTA,
+                }
+            )
+        )
+
+        pedido.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse('lista_pedidos'),
+            fetch_redirect_response=False
+        )
+        self.assertEqual(pedido.estado, Pedido.PENDIENTE)
+        self.assertIsNone(pedido.fecha_en_ruta)
+        self.assertFalse(
+            PedidoHistorial.objects.filter(
+                pedido=pedido,
+                tipo_accion=PedidoHistorial.EN_RUTA
+            ).exists()
+        )
+
     def test_historial_registra_creacion_y_entrega_de_pedido(self):
         self.client.force_login(self.secretaria)
 
@@ -684,7 +836,7 @@ class PermisosRolesTests(TestCase):
                 pedido=pedido,
                 usuario=self.secretaria,
                 tipo_accion=PedidoHistorial.ENTREGADO,
-                valor_anterior=Pedido.PENDIENTE,
+                valor_anterior=Pedido.ASIGNADO,
                 valor_nuevo=Pedido.ENTREGADO
             ).exists()
         )

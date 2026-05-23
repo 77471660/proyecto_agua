@@ -8,7 +8,7 @@
         >
             &#128205; Abrir ubicaci&oacute;n
         </a>
-        {% if copy_value %}
+        {% if copy_value and not hide_copy_button %}
             <button
                 type="button"
                 class="btn {{ copy_button_class|default:button_class|default:'btn-outline-secondary btn-sm' }} location-copy-button"

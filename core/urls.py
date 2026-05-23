@@ -131,6 +131,12 @@ urlpatterns = [
     ),
 
     path(
+        'pedidos/repartidor/<int:pedido_id>/en-ruta/',
+        views.marcar_pedido_en_ruta_repartidor,
+        name='marcar_pedido_en_ruta_repartidor'
+    ),
+
+    path(
         'pedidos/repartidor/<int:pedido_id>/cancelado/',
         views.cancelar_pedido_repartidor,
         name='cancelar_pedido_repartidor'
