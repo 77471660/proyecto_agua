@@ -6,6 +6,103 @@ Pedidos - AquaSmart CRM
 
 {% block content %}
 
+<style>
+    .orders-table .col-order-id {
+        width: 4.25rem;
+    }
+
+    .orders-table .col-order-qty {
+        width: 5.5rem;
+    }
+
+    .orders-table .col-order-total {
+        width: 6.5rem;
+    }
+
+    .orders-table .col-order-notes {
+        width: 7rem;
+    }
+
+    .orders-table .col-order-actions {
+        width: 8rem;
+    }
+
+    .orders-table th,
+    .orders-table td {
+        vertical-align: middle;
+    }
+
+    .order-note-compact {
+        color: #64748b;
+        display: inline-block;
+        font-size: 0.78rem;
+        max-width: 7rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .order-note-empty {
+        color: #94a3b8;
+        font-size: 0.78rem;
+        white-space: nowrap;
+    }
+
+    .order-actions-menu {
+        display: inline-block;
+        min-width: 7.25rem;
+    }
+
+    .order-actions-menu summary {
+        cursor: pointer;
+        list-style: none;
+        white-space: nowrap;
+    }
+
+    .order-actions-menu summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .order-actions-panel {
+        background: #fff;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        border-radius: 0.45rem;
+        box-shadow: 0 0.45rem 1.2rem rgba(15, 23, 42, 0.08);
+        display: grid;
+        gap: 0.4rem;
+        margin-top: 0.45rem;
+        padding: 0.5rem;
+    }
+
+    .order-actions-panel form,
+    .order-actions-panel .btn {
+        width: 100%;
+    }
+
+    .order-actions-panel .btn {
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 1199.98px) {
+        .orders-table {
+            font-size: 0.88rem;
+        }
+
+        .orders-table th,
+        .orders-table td {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+
+        .orders-table .badge,
+        .orders-table .badge-estado {
+            font-size: 0.72rem;
+        }
+    }
+</style>
+
 <div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3">
     <div>
         <h2>Lista de pedidos</h2>
@@ -124,15 +221,15 @@ Pedidos - AquaSmart CRM
             <table class="table table-hover align-middle mb-0 orders-table">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
+                        <th class="col-order-id">ID</th>
                         <th>Cliente</th>
                         <th>Repartidor</th>
                         <th>Fecha / prioridad</th>
-                        <th class="text-center">Cantidad</th>
-                        <th class="text-end">Total</th>
+                        <th class="text-center col-order-qty">Cantidad</th>
+                        <th class="text-end col-order-total">Total</th>
                         <th>Estado</th>
-                        <th>Observación</th>
-                        <th>Acciones</th>
+                        <th class="col-order-notes">Observaci&oacute;n</th>
+                        <th class="col-order-actions">Acciones</th>
                     </tr>
                 </thead>
 
@@ -191,14 +288,25 @@ Pedidos - AquaSmart CRM
                                 </span>
                             </td>
 
-                            <td>
-                                {{ pedido.observacion|default:"-" }}
+                            <td class="col-order-notes">
+                                {% if pedido.observacion %}
+                                    <span class="order-note-compact" title="{{ pedido.observacion }}">
+                                        {{ pedido.observacion }}
+                                    </span>
+                                {% else %}
+                                    <span class="order-note-empty">Sin obs.</span>
+                                {% endif %}
                             </td>
 
-                            <td>
+                            <td class="col-order-actions">
                                 {% if pedido.esta_activo %}
 
-                                    <div class="action-group table-action-group d-flex gap-2 flex-nowrap">
+                                    <details class="order-actions-menu">
+                                        <summary class="btn btn-sm btn-outline-secondary">
+                                            Acciones &#9662;
+                                        </summary>
+
+                                        <div class="order-actions-panel">
                                         {% if pedido.estado != 'EN_RUTA' %}
                                             <form
                                                 method="POST"
@@ -240,7 +348,8 @@ Pedidos - AquaSmart CRM
                                                 Cancelar
                                             </button>
                                         </form>
-                                    </div>
+                                        </div>
+                                    </details>
 
                                 {% else %}
 
