@@ -155,6 +155,12 @@ urlpatterns = [
     ),
 
     path(
+        'repartidor/clientes/<int:cliente_id>/referencia/',
+        views.actualizar_referencia_cliente_repartidor,
+        name='actualizar_referencia_cliente_repartidor'
+    ),
+
+    path(
         'repartidor/logout/',
         views.cerrar_sesion_repartidor,
         name='cerrar_sesion_repartidor'

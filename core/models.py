@@ -51,6 +51,17 @@ class Cliente(models.Model):
         blank=True,
         null=True
     )
+    foto_referencia_actualizada_en = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    foto_referencia_actualizada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='clientes_foto_referencia_actualizadas'
+    )
 
     estado = models.CharField(
         max_length=20,

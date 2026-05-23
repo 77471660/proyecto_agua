@@ -4,7 +4,7 @@ import logging
 import cloudinary
 import cloudinary.uploader
 from django.conf import settings
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 
 logger = logging.getLogger(__name__)
@@ -64,6 +64,7 @@ def compress_client_photo(uploaded_file):
         image.verify()
         uploaded_file.seek(0)
         image = Image.open(uploaded_file)
+        image = ImageOps.exif_transpose(image)
     except (UnidentifiedImageError, OSError) as error:
         logger.warning('Foto de referencia invalida. error=%s', error)
         raise ClientPhotoError('La foto seleccionada no es una imagen válida.')

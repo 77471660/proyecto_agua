@@ -130,7 +130,19 @@ def mensaje_validacion_modelo(error):
     return 'Revisa los datos ingresados.'
 
 
-def aplicar_foto_referencia_cliente(cliente, uploaded_file):
+def puede_repartidor_actualizar_foto_cliente(cliente):
+
+    if not cliente.foto_referencia_public_id:
+        return True
+
+    if not cliente.foto_referencia_actualizada_en:
+        return True
+
+    limite = timezone.now() - timedelta(hours=24)
+    return cliente.foto_referencia_actualizada_en >= limite
+
+
+def aplicar_foto_referencia_cliente(cliente, uploaded_file, usuario=None):
 
     if not uploaded_file:
         return ''
@@ -139,6 +151,20 @@ def aplicar_foto_referencia_cliente(cliente, uploaded_file):
     resultado = upload_client_reference_photo(uploaded_file)
     cliente.foto_referencia_url = resultado['secure_url']
     cliente.foto_referencia_public_id = resultado['public_id']
+    cliente.foto_referencia_actualizada_en = timezone.now()
+    cliente.foto_referencia_actualizada_por = (
+        usuario if usuario and usuario.is_authenticated else None
+    )
+    return public_id_anterior
+
+
+def limpiar_foto_referencia_cliente(cliente):
+
+    public_id_anterior = cliente.foto_referencia_public_id
+    cliente.foto_referencia_url = ''
+    cliente.foto_referencia_public_id = ''
+    cliente.foto_referencia_actualizada_en = None
+    cliente.foto_referencia_actualizada_por = None
     return public_id_anterior
 
 
@@ -1406,6 +1432,9 @@ def editar_cliente(request, cliente_id):
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
         foto_referencia = request.FILES.get('foto_referencia')
+        eliminar_foto_referencia = (
+            request.POST.get('eliminar_foto_referencia') == '1'
+        )
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
             leer_ubicacion_cliente_post(request.POST)
         )
@@ -1480,8 +1509,11 @@ def editar_cliente(request, cliente_id):
             cliente.full_clean()
             public_id_anterior = aplicar_foto_referencia_cliente(
                 cliente,
-                foto_referencia
+                foto_referencia,
+                request.user
             )
+            if eliminar_foto_referencia and not foto_referencia:
+                public_id_anterior = limpiar_foto_referencia_cliente(cliente)
             cliente.save()
             if (
                 public_id_anterior
@@ -1580,7 +1612,7 @@ def registrar_cliente(request):
 
         try:
             cliente.full_clean()
-            aplicar_foto_referencia_cliente(cliente, foto_referencia)
+            aplicar_foto_referencia_cliente(cliente, foto_referencia, request.user)
             cliente.save()
         except ValidationError as error:
             logger.warning(
@@ -2688,6 +2720,13 @@ def nuevo_cliente_repartidor(request):
             messages.error(request, error_ubicacion)
             return redirect('nuevo_cliente_repartidor')
 
+        if foto_referencia and (latitud is None or longitud is None):
+            messages.error(
+                request,
+                'Para guardar una foto de referencia debes capturar también la ubicación GPS.'
+            )
+            return redirect('nuevo_cliente_repartidor')
+
         if not nombre or not telefono or not direccion:
             messages.error(
                 request,
@@ -2736,7 +2775,7 @@ def nuevo_cliente_repartidor(request):
 
         try:
             cliente.full_clean()
-            aplicar_foto_referencia_cliente(cliente, foto_referencia)
+            aplicar_foto_referencia_cliente(cliente, foto_referencia, request.user)
             cliente.save()
         except ValidationError as error:
             logger.warning(
@@ -2758,6 +2797,112 @@ def nuevo_cliente_repartidor(request):
     return render(
         request,
         'core/nuevo_cliente_repartidor.html'
+    )
+
+
+@login_required
+@repartidor_required
+def actualizar_referencia_cliente_repartidor(request, cliente_id):
+
+    cliente = get_object_or_404(
+        Cliente.objects.filter(
+            id=cliente_id,
+            pedido__repartidor=request.user
+        ).distinct()
+    )
+    puede_cambiar_foto = puede_repartidor_actualizar_foto_cliente(cliente)
+
+    if request.method == 'POST':
+        foto_referencia = request.FILES.get('foto_referencia')
+        latitud, longitud, referencia_ubicacion, error_ubicacion = (
+            leer_ubicacion_cliente_post(request.POST)
+        )
+
+        if error_ubicacion:
+            messages.error(request, error_ubicacion)
+            return redirect(
+                'actualizar_referencia_cliente_repartidor',
+                cliente_id=cliente.id
+            )
+
+        if foto_referencia and (latitud is None or longitud is None):
+            messages.error(
+                request,
+                'Para guardar una foto de referencia debes capturar también la ubicación GPS.'
+            )
+            return redirect(
+                'actualizar_referencia_cliente_repartidor',
+                cliente_id=cliente.id
+            )
+
+        if foto_referencia and not puede_cambiar_foto:
+            messages.error(
+                request,
+                'La foto de referencia solo puede cambiarse durante las primeras 24 horas.'
+            )
+            return redirect(
+                'actualizar_referencia_cliente_repartidor',
+                cliente_id=cliente.id
+            )
+
+        if foto_referencia:
+            try:
+                validate_client_photo(foto_referencia)
+                foto_referencia.seek(0)
+            except ClientPhotoError as error:
+                messages.error(request, str(error))
+                return redirect(
+                    'actualizar_referencia_cliente_repartidor',
+                    cliente_id=cliente.id
+                )
+
+        cliente.latitud = latitud
+        cliente.longitud = longitud
+        cliente.referencia_ubicacion = referencia_ubicacion
+
+        try:
+            cliente.full_clean()
+            public_id_anterior = aplicar_foto_referencia_cliente(
+                cliente,
+                foto_referencia,
+                request.user
+            )
+            cliente.save()
+            if (
+                public_id_anterior
+                and public_id_anterior != cliente.foto_referencia_public_id
+            ):
+                delete_client_reference_photo(public_id_anterior)
+        except ValidationError as error:
+            logger.warning(
+                'Validacion de referencia de casa fallida. cliente_id=%s error=%s',
+                cliente.id,
+                error
+            )
+            messages.error(request, mensaje_validacion_modelo(error))
+            return redirect(
+                'actualizar_referencia_cliente_repartidor',
+                cliente_id=cliente.id
+            )
+        except ClientPhotoError as error:
+            messages.error(request, str(error))
+            return redirect(
+                'actualizar_referencia_cliente_repartidor',
+                cliente_id=cliente.id
+            )
+
+        messages.success(request, 'Referencia de casa actualizada correctamente.')
+        return redirect('pedidos_repartidor')
+
+    context = {
+        'cliente': cliente,
+        'puede_cambiar_foto': puede_cambiar_foto,
+    }
+
+    return render(
+        request,
+        'core/actualizar_referencia_cliente_repartidor.html',
+        context
     )
 
 

@@ -160,6 +160,29 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(cliente.longitud, Decimal('-77.042793'))
         self.assertEqual(cliente.referencia_ubicacion, 'Frente al parque')
 
+    def test_repartidor_puede_crear_cliente_sin_gps_ni_foto(self):
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse('nuevo_cliente_repartidor'),
+            {
+                'nombre': 'Cliente Rapido',
+                'telefono': '999666333',
+                'direccion': 'Jr. Rapido 123',
+                'referencia': 'Puerta lateral',
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('pedidos_repartidor'),
+            fetch_redirect_response=False
+        )
+        cliente = Cliente.objects.get(telefono='999666333')
+        self.assertIsNone(cliente.latitud)
+        self.assertIsNone(cliente.longitud)
+        self.assertFalse(cliente.foto_referencia_url)
+
     def test_lista_pedidos_no_muestra_botones_ubicacion_directos(self):
         self.crear_pedido(self.repartidor)
         self.client.force_login(self.secretaria)
@@ -241,6 +264,167 @@ class PermisosRolesTests(TestCase):
             Cliente.objects.filter(telefono='999777444').exists()
         )
 
+    def test_repartidor_no_puede_guardar_foto_sin_gps(self):
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse('nuevo_cliente_repartidor'),
+            {
+                'nombre': 'Cliente Sin GPS',
+                'telefono': '999777333',
+                'direccion': 'Av. Sin GPS 123',
+                'referencia': '',
+                'foto_referencia': self.crear_foto_prueba(),
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('nuevo_cliente_repartidor'),
+            fetch_redirect_response=False
+        )
+        self.assertFalse(
+            Cliente.objects.filter(telefono='999777333').exists()
+        )
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.upload')
+    def test_repartidor_guarda_foto_y_gps_desde_referencia(self, upload_mock):
+        upload_mock.return_value = {
+            'secure_url': 'https://res.cloudinary.com/demo/clientes/ref.jpg',
+            'public_id': 'aquasmart/clientes/ref',
+        }
+        self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            ),
+            {
+                'latitud': '-12.050000',
+                'longitud': '-77.030000',
+                'referencia_ubicacion': 'Casa con porton negro',
+                'foto_referencia': self.crear_foto_prueba(),
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('pedidos_repartidor'),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertEqual(self.cliente.latitud, Decimal('-12.050000'))
+        self.assertEqual(self.cliente.longitud, Decimal('-77.030000'))
+        self.assertEqual(
+            self.cliente.foto_referencia_public_id,
+            'aquasmart/clientes/ref'
+        )
+        self.assertEqual(self.cliente.foto_referencia_actualizada_por, self.repartidor)
+        self.assertIsNotNone(self.cliente.foto_referencia_actualizada_en)
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    @patch('core.cloudinary_images.cloudinary.uploader.upload')
+    def test_repartidor_puede_cambiar_foto_antes_de_24h(
+        self,
+        upload_mock,
+        destroy_mock
+    ):
+        self.cliente.foto_referencia_url = 'https://old.example/foto.jpg'
+        self.cliente.foto_referencia_public_id = 'aquasmart/clientes/old'
+        self.cliente.foto_referencia_actualizada_en = (
+            timezone.now() - timedelta(hours=2)
+        )
+        self.cliente.foto_referencia_actualizada_por = self.repartidor
+        self.cliente.save()
+        upload_mock.return_value = {
+            'secure_url': 'https://res.cloudinary.com/demo/clientes/new.jpg',
+            'public_id': 'aquasmart/clientes/new',
+        }
+        self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            ),
+            {
+                'latitud': '-12.050000',
+                'longitud': '-77.030000',
+                'referencia_ubicacion': 'Nueva referencia',
+                'foto_referencia': self.crear_foto_prueba('nueva.jpg'),
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('pedidos_repartidor'),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertEqual(
+            self.cliente.foto_referencia_public_id,
+            'aquasmart/clientes/new'
+        )
+        destroy_mock.assert_called_once()
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.upload')
+    def test_repartidor_no_puede_cambiar_foto_despues_de_24h(self, upload_mock):
+        self.cliente.foto_referencia_url = 'https://old.example/foto.jpg'
+        self.cliente.foto_referencia_public_id = 'aquasmart/clientes/old'
+        self.cliente.foto_referencia_actualizada_en = (
+            timezone.now() - timedelta(hours=25)
+        )
+        self.cliente.foto_referencia_actualizada_por = self.repartidor
+        self.cliente.save()
+        self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            ),
+            {
+                'latitud': '-12.050000',
+                'longitud': '-77.030000',
+                'referencia_ubicacion': 'Nueva referencia',
+                'foto_referencia': self.crear_foto_prueba('bloqueada.jpg'),
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            ),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertEqual(
+            self.cliente.foto_referencia_public_id,
+            'aquasmart/clientes/old'
+        )
+        upload_mock.assert_not_called()
+
     @override_settings(
         CLOUDINARY_CLOUD_NAME='demo',
         CLOUDINARY_API_KEY='key',
@@ -255,6 +439,10 @@ class PermisosRolesTests(TestCase):
     ):
         self.cliente.foto_referencia_url = 'https://old.example/foto.jpg'
         self.cliente.foto_referencia_public_id = 'aquasmart/clientes/old'
+        self.cliente.foto_referencia_actualizada_en = (
+            timezone.now() - timedelta(days=5)
+        )
+        self.cliente.foto_referencia_actualizada_por = self.repartidor
         self.cliente.save()
         upload_mock.return_value = {
             'secure_url': 'https://res.cloudinary.com/demo/clientes/new.jpg',
@@ -288,6 +476,44 @@ class PermisosRolesTests(TestCase):
             destroy_mock.call_args.args[0],
             'aquasmart/clientes/old'
         )
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    def test_admin_elimina_foto_sin_limite_de_tiempo(self, destroy_mock):
+        self.cliente.foto_referencia_url = 'https://old.example/foto.jpg'
+        self.cliente.foto_referencia_public_id = 'aquasmart/clientes/old'
+        self.cliente.foto_referencia_actualizada_en = (
+            timezone.now() - timedelta(days=5)
+        )
+        self.cliente.foto_referencia_actualizada_por = self.repartidor
+        self.cliente.save()
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('editar_cliente', kwargs={'cliente_id': self.cliente.id}),
+            {
+                'nombre': self.cliente.nombre,
+                'telefono': self.cliente.telefono,
+                'direccion': self.cliente.direccion,
+                'referencia': self.cliente.referencia or '',
+                'eliminar_foto_referencia': '1',
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('detalle_cliente', kwargs={'cliente_id': self.cliente.id}),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertFalse(self.cliente.foto_referencia_url)
+        self.assertFalse(self.cliente.foto_referencia_public_id)
+        self.assertIsNone(self.cliente.foto_referencia_actualizada_en)
+        destroy_mock.assert_called_once()
 
     def test_repartidor_no_entra_al_crm_operativo(self):
         self.client.force_login(self.repartidor)

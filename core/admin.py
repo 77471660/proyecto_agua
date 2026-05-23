@@ -11,6 +11,7 @@ class ClienteAdmin(admin.ModelAdmin):
         'latitud',
         'longitud',
         'foto_referencia_url',
+        'foto_referencia_actualizada_en',
         'estado',
         'activo',
         'fecha_registro',
