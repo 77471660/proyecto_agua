@@ -138,7 +138,30 @@ class PermisosRolesTests(TestCase):
         with self.assertRaises(ValidationError):
             self.cliente.full_clean()
 
-    def test_registrar_cliente_guarda_ubicacion_actual(self):
+    def test_registrar_cliente_sin_gps_ni_foto_ok(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente Simple',
+                'telefono': '999888776',
+                'direccion': 'Jr. Simple 456',
+                'referencia': 'Sin referencia real',
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('lista_clientes'),
+            fetch_redirect_response=False
+        )
+        cliente = Cliente.objects.get(telefono='999888776')
+        self.assertIsNone(cliente.latitud)
+        self.assertIsNone(cliente.longitud)
+        self.assertFalse(cliente.foto_referencia_url)
+
+    def test_registrar_cliente_bloquea_gps_sin_foto(self):
         self.client.force_login(self.secretaria)
 
         response = self.client.post(
@@ -154,11 +177,37 @@ class PermisosRolesTests(TestCase):
             }
         )
 
-        self.assertEqual(response.status_code, 302)
-        cliente = Cliente.objects.get(telefono='999888777')
-        self.assertEqual(cliente.latitud, Decimal('-12.046374'))
-        self.assertEqual(cliente.longitud, Decimal('-77.042793'))
-        self.assertEqual(cliente.referencia_ubicacion, 'Frente al parque')
+        self.assertRedirects(
+            response,
+            reverse('registrar_cliente'),
+            fetch_redirect_response=False
+        )
+        self.assertFalse(
+            Cliente.objects.filter(telefono='999888777').exists()
+        )
+
+    def test_registrar_cliente_bloquea_foto_sin_gps(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente Foto Sin GPS',
+                'telefono': '999888778',
+                'direccion': 'Jr. Rio 789',
+                'referencia': 'Casa azul',
+                'foto_referencia': self.crear_foto_prueba(),
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('registrar_cliente'),
+            fetch_redirect_response=False
+        )
+        self.assertFalse(
+            Cliente.objects.filter(telefono='999888778').exists()
+        )
 
     def test_repartidor_puede_crear_cliente_sin_gps_ni_foto(self):
         self.client.force_login(self.repartidor)
@@ -213,6 +262,9 @@ class PermisosRolesTests(TestCase):
                 'telefono': '999777555',
                 'direccion': 'Av. Foto 123',
                 'referencia': 'Fachada blanca',
+                'latitud': '-12.046374',
+                'longitud': '-77.042793',
+                'referencia_ubicacion': 'Frente al parque',
                 'foto_referencia': self.crear_foto_prueba(),
             }
         )
@@ -223,6 +275,8 @@ class PermisosRolesTests(TestCase):
             fetch_redirect_response=False
         )
         cliente = Cliente.objects.get(telefono='999777555')
+        self.assertEqual(cliente.latitud, Decimal('-12.046374'))
+        self.assertEqual(cliente.longitud, Decimal('-77.042793'))
         self.assertEqual(
             cliente.foto_referencia_url,
             'https://res.cloudinary.com/demo/clientes/foto.jpg'
@@ -247,6 +301,9 @@ class PermisosRolesTests(TestCase):
                 'telefono': '999777444',
                 'direccion': 'Av. Archivo 123',
                 'referencia': '',
+                'latitud': '-12.046374',
+                'longitud': '-77.042793',
+                'referencia_ubicacion': 'Frente al parque',
                 'foto_referencia': SimpleUploadedFile(
                     'archivo.txt',
                     b'no es imagen',
@@ -286,6 +343,34 @@ class PermisosRolesTests(TestCase):
         self.assertFalse(
             Cliente.objects.filter(telefono='999777333').exists()
         )
+
+    def test_actualizar_referencia_bloquea_gps_sin_foto(self):
+        self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            ),
+            {
+                'latitud': '-12.050000',
+                'longitud': '-77.030000',
+                'referencia_ubicacion': 'Casa con porton negro',
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            ),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertIsNone(self.cliente.latitud)
+        self.assertIsNone(self.cliente.longitud)
 
     @override_settings(
         CLOUDINARY_CLOUD_NAME='demo',

@@ -96,7 +96,7 @@
 
     <section class="card form-card">
         <div class="card-body">
-            <form method="post" enctype="multipart/form-data">
+            <form method="post" enctype="multipart/form-data" data-reference-house-form>
                 {% csrf_token %}
 
                 {% include 'core/includes/cliente_ubicacion_fields.html' %}
@@ -142,6 +142,10 @@
                         <div class="form-text">
                             Para guardar una foto debes capturar tambi&eacute;n la ubicaci&oacute;n GPS.
                         </div>
+                        <div
+                            class="form-text text-danger d-none"
+                            data-reference-house-status
+                        ></div>
                     {% else %}
                         <div class="alert alert-secondary mb-0">
                             La foto de referencia ya no puede cambiarse desde el panel repartidor.
@@ -197,6 +201,7 @@
 </script>
 <script src="{% static 'js/pwa.js' %}"></script>
 <script src="{% static 'js/capacitor_push.js' %}"></script>
+<script src="{% static 'js/reference_house_form.js' %}" defer></script>
 
 </body>
 </html>

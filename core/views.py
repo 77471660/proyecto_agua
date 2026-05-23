@@ -64,6 +64,9 @@ CLIENTES_POR_PAGINA = 15
 PANEL_JEFE_LIMITE_PEDIDOS = 15
 HISTORIAL_CLIENTE_LIMITE = 10
 logger = logging.getLogger(__name__)
+REFERENCIA_CASA_INCOMPLETA_MENSAJE = (
+    'Para guardar referencia de casa debes capturar ubicación GPS y tomar foto.'
+)
 
 
 def leer_ubicacion_cliente_post(post_data):
@@ -114,6 +117,21 @@ def leer_ubicacion_cliente_post(post_data):
         )
 
     return latitud, longitud, referencia_ubicacion, ''
+
+
+def validar_referencia_casa_completa(latitud, longitud, foto_referencia):
+
+    tiene_gps = latitud is not None and longitud is not None
+    tiene_foto = bool(
+        foto_referencia
+        and getattr(foto_referencia, 'name', '')
+        and getattr(foto_referencia, 'size', 0) > 0
+    )
+
+    if tiene_gps != tiene_foto:
+        return REFERENCIA_CASA_INCOMPLETA_MENSAJE
+
+    return ''
 
 
 def mensaje_validacion_modelo(error):
@@ -1576,6 +1594,16 @@ def registrar_cliente(request):
             messages.error(request, error_ubicacion)
             return redirect('registrar_cliente')
 
+        error_referencia_casa = validar_referencia_casa_completa(
+            latitud,
+            longitud,
+            foto_referencia
+        )
+
+        if error_referencia_casa:
+            messages.error(request, error_referencia_casa)
+            return redirect('registrar_cliente')
+
         if not nombre or not telefono or not direccion:
             messages.error(request, 'Nombre, teléfono y dirección son obligatorios.')
             return redirect('registrar_cliente')
@@ -2720,11 +2748,14 @@ def nuevo_cliente_repartidor(request):
             messages.error(request, error_ubicacion)
             return redirect('nuevo_cliente_repartidor')
 
-        if foto_referencia and (latitud is None or longitud is None):
-            messages.error(
-                request,
-                'Para guardar una foto de referencia debes capturar también la ubicación GPS.'
-            )
+        error_referencia_casa = validar_referencia_casa_completa(
+            latitud,
+            longitud,
+            foto_referencia
+        )
+
+        if error_referencia_casa:
+            messages.error(request, error_referencia_casa)
             return redirect('nuevo_cliente_repartidor')
 
         if not nombre or not telefono or not direccion:
@@ -2825,11 +2856,14 @@ def actualizar_referencia_cliente_repartidor(request, cliente_id):
                 cliente_id=cliente.id
             )
 
-        if foto_referencia and (latitud is None or longitud is None):
-            messages.error(
-                request,
-                'Para guardar una foto de referencia debes capturar también la ubicación GPS.'
-            )
+        error_referencia_casa = validar_referencia_casa_completa(
+            latitud,
+            longitud,
+            foto_referencia
+        )
+
+        if error_referencia_casa:
+            messages.error(request, error_referencia_casa)
             return redirect(
                 'actualizar_referencia_cliente_repartidor',
                 cliente_id=cliente.id
