@@ -115,6 +115,17 @@
 
                 {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary w-100 action-button' hide_copy_button='1' %}
 
+                {% if pedido.cliente.foto_referencia_url %}
+                    <a
+                        href="{{ pedido.cliente.foto_referencia_url }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="btn btn-outline-secondary w-100 action-button"
+                    >
+                        Ver foto
+                    </a>
+                {% endif %}
+
                 {% if pedido.estado != 'EN_RUTA' %}
                     <form
                         method="post"

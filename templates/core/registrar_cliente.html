@@ -16,7 +16,7 @@ Registrar cliente - AquaSmart CRM
 
     <div class="card-body">
 
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
 
             {% csrf_token %}
 
@@ -65,6 +65,20 @@ Registrar cliente - AquaSmart CRM
             </div>
 
             {% include 'core/includes/cliente_ubicacion_fields.html' %}
+
+            <div class="mb-3">
+                <label class="form-label">Foto de referencia</label>
+                <input
+                    type="file"
+                    name="foto_referencia"
+                    class="form-control"
+                    accept="image/*"
+                    capture="environment"
+                >
+                <small class="form-text text-muted">
+                    Opcional. Foto ligera de la casa o fachada del cliente.
+                </small>
+            </div>
 
             <div class="form-actions d-flex gap-2 flex-wrap">
                 <button type="submit" class="btn btn-success">

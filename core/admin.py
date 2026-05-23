@@ -10,6 +10,7 @@ class ClienteAdmin(admin.ModelAdmin):
         'direccion',
         'latitud',
         'longitud',
+        'foto_referencia_url',
         'estado',
         'activo',
         'fecha_registro',
@@ -20,6 +21,7 @@ class ClienteAdmin(admin.ModelAdmin):
         'direccion',
         'referencia',
         'referencia_ubicacion',
+        'foto_referencia_public_id',
     )
     list_filter = ('estado', 'activo')
     ordering = ('nombre',)

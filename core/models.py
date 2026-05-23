@@ -45,6 +45,12 @@ class Cliente(models.Model):
         ]
     )
     referencia_ubicacion = models.TextField(blank=True, null=True)
+    foto_referencia_url = models.URLField(blank=True, null=True)
+    foto_referencia_public_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
 
     estado = models.CharField(
         max_length=20,

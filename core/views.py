@@ -45,6 +45,12 @@ from .auth_utils import (
     JEFE_REPARTIDORES_GROUP,
 )
 from .fcm_notifications import token_for_log
+from .cloudinary_images import (
+    ClientPhotoError,
+    delete_client_reference_photo,
+    upload_client_reference_photo,
+    validate_client_photo,
+)
 from .models import Cliente, FCMToken, Pedido, PedidoHistorial, PushSubscription
 from .push_notifications import (
     endpoint_for_log,
@@ -122,6 +128,18 @@ def mensaje_validacion_modelo(error):
             return ' '.join(mensajes)
 
     return 'Revisa los datos ingresados.'
+
+
+def aplicar_foto_referencia_cliente(cliente, uploaded_file):
+
+    if not uploaded_file:
+        return ''
+
+    public_id_anterior = cliente.foto_referencia_public_id
+    resultado = upload_client_reference_photo(uploaded_file)
+    cliente.foto_referencia_url = resultado['secure_url']
+    cliente.foto_referencia_public_id = resultado['public_id']
+    return public_id_anterior
 
 
 def nombre_usuario_historial(usuario):
@@ -1387,6 +1405,7 @@ def editar_cliente(request, cliente_id):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
+        foto_referencia = request.FILES.get('foto_referencia')
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
             leer_ubicacion_cliente_post(request.POST)
         )
@@ -1438,6 +1457,17 @@ def editar_cliente(request, cliente_id):
                 cliente_id=cliente.id
             )
 
+        if foto_referencia:
+            try:
+                validate_client_photo(foto_referencia)
+                foto_referencia.seek(0)
+            except ClientPhotoError as error:
+                messages.error(request, str(error))
+                return redirect(
+                    'editar_cliente',
+                    cliente_id=cliente.id
+                )
+
         cliente.nombre = nombre
         cliente.telefono = telefono
         cliente.direccion = direccion
@@ -1448,7 +1478,16 @@ def editar_cliente(request, cliente_id):
 
         try:
             cliente.full_clean()
+            public_id_anterior = aplicar_foto_referencia_cliente(
+                cliente,
+                foto_referencia
+            )
             cliente.save()
+            if (
+                public_id_anterior
+                and public_id_anterior != cliente.foto_referencia_public_id
+            ):
+                delete_client_reference_photo(public_id_anterior)
         except ValidationError as error:
             logger.warning(
                 'Validacion de cliente fallida al editar. cliente_id=%s error=%s',
@@ -1456,6 +1495,12 @@ def editar_cliente(request, cliente_id):
                 error
             )
             messages.error(request, mensaje_validacion_modelo(error))
+            return redirect(
+                'editar_cliente',
+                cliente_id=cliente.id
+            )
+        except ClientPhotoError as error:
+            messages.error(request, str(error))
             return redirect(
                 'editar_cliente',
                 cliente_id=cliente.id
@@ -1490,6 +1535,7 @@ def registrar_cliente(request):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
+        foto_referencia = request.FILES.get('foto_referencia')
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
             leer_ubicacion_cliente_post(request.POST)
         )
@@ -1514,6 +1560,14 @@ def registrar_cliente(request):
             messages.error(request, 'Ya existe un cliente con ese teléfono.')
             return redirect('registrar_cliente')
 
+        if foto_referencia:
+            try:
+                validate_client_photo(foto_referencia)
+                foto_referencia.seek(0)
+            except ClientPhotoError as error:
+                messages.error(request, str(error))
+                return redirect('registrar_cliente')
+
         cliente = Cliente(
             nombre=nombre,
             telefono=telefono,
@@ -1526,6 +1580,7 @@ def registrar_cliente(request):
 
         try:
             cliente.full_clean()
+            aplicar_foto_referencia_cliente(cliente, foto_referencia)
             cliente.save()
         except ValidationError as error:
             logger.warning(
@@ -1533,6 +1588,9 @@ def registrar_cliente(request):
                 error
             )
             messages.error(request, mensaje_validacion_modelo(error))
+            return redirect('registrar_cliente')
+        except ClientPhotoError as error:
+            messages.error(request, str(error))
             return redirect('registrar_cliente')
 
         messages.success(request, 'Cliente registrado correctamente.')
@@ -2621,6 +2679,7 @@ def nuevo_cliente_repartidor(request):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
+        foto_referencia = request.FILES.get('foto_referencia')
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
             leer_ubicacion_cliente_post(request.POST)
         )
@@ -2657,6 +2716,14 @@ def nuevo_cliente_repartidor(request):
             )
             return redirect('nuevo_cliente_repartidor')
 
+        if foto_referencia:
+            try:
+                validate_client_photo(foto_referencia)
+                foto_referencia.seek(0)
+            except ClientPhotoError as error:
+                messages.error(request, str(error))
+                return redirect('nuevo_cliente_repartidor')
+
         cliente = Cliente(
             nombre=nombre,
             telefono=telefono,
@@ -2669,6 +2736,7 @@ def nuevo_cliente_repartidor(request):
 
         try:
             cliente.full_clean()
+            aplicar_foto_referencia_cliente(cliente, foto_referencia)
             cliente.save()
         except ValidationError as error:
             logger.warning(
@@ -2676,6 +2744,9 @@ def nuevo_cliente_repartidor(request):
                 error
             )
             messages.error(request, mensaje_validacion_modelo(error))
+            return redirect('nuevo_cliente_repartidor')
+        except ClientPhotoError as error:
+            messages.error(request, str(error))
             return redirect('nuevo_cliente_repartidor')
 
         messages.success(

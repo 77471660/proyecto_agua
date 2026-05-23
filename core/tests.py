@@ -1,12 +1,16 @@
 from datetime import timedelta
 from decimal import Decimal
+from io import BytesIO
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from .models import Cliente, Pedido, PedidoHistorial
 from .views import repartidores_disponibles
@@ -69,6 +73,19 @@ class PermisosRolesTests(TestCase):
             precio_unitario=Decimal('7.00'),
             total=Decimal('14.00'),
             fecha_programada=fecha_programada or timezone.localdate()
+        )
+
+    def crear_foto_prueba(self, name='referencia.jpg', content_type='image/jpeg'):
+        archivo = BytesIO()
+        Image.new('RGB', (1200, 800), color=(31, 120, 180)).save(
+            archivo,
+            format='JPEG'
+        )
+        archivo.seek(0)
+        return SimpleUploadedFile(
+            name,
+            archivo.read(),
+            content_type=content_type
         )
 
     def test_cliente_maps_url_prioriza_coordenadas(self):
@@ -143,15 +160,134 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(cliente.longitud, Decimal('-77.042793'))
         self.assertEqual(cliente.referencia_ubicacion, 'Frente al parque')
 
-    def test_lista_pedidos_muestra_boton_abrir_ubicacion(self):
+    def test_lista_pedidos_no_muestra_botones_ubicacion_directos(self):
         self.crear_pedido(self.repartidor)
         self.client.force_login(self.secretaria)
 
         response = self.client.get(reverse('lista_pedidos'))
 
-        self.assertContains(response, 'Abrir ubicaci&oacute;n')
-        self.assertContains(response, 'Copiar ubicaci&oacute;n')
-        self.assertContains(response, 'query=Av.+Agua+123')
+        self.assertNotContains(response, 'Abrir ubicaci&oacute;n')
+        self.assertNotContains(response, 'Copiar ubicaci&oacute;n')
+        self.assertNotContains(response, 'query=Av.+Agua+123')
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.upload')
+    def test_registrar_cliente_sube_foto_referencia_cloudinary(self, upload_mock):
+        upload_mock.return_value = {
+            'secure_url': 'https://res.cloudinary.com/demo/clientes/foto.jpg',
+            'public_id': 'aquasmart/clientes/foto',
+        }
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente Foto',
+                'telefono': '999777555',
+                'direccion': 'Av. Foto 123',
+                'referencia': 'Fachada blanca',
+                'foto_referencia': self.crear_foto_prueba(),
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('lista_clientes'),
+            fetch_redirect_response=False
+        )
+        cliente = Cliente.objects.get(telefono='999777555')
+        self.assertEqual(
+            cliente.foto_referencia_url,
+            'https://res.cloudinary.com/demo/clientes/foto.jpg'
+        )
+        self.assertEqual(
+            cliente.foto_referencia_public_id,
+            'aquasmart/clientes/foto'
+        )
+        upload_mock.assert_called_once()
+        self.assertEqual(
+            upload_mock.call_args.kwargs['folder'],
+            'aquasmart/clientes'
+        )
+
+    def test_registrar_cliente_rechaza_foto_no_permitida(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente Archivo',
+                'telefono': '999777444',
+                'direccion': 'Av. Archivo 123',
+                'referencia': '',
+                'foto_referencia': SimpleUploadedFile(
+                    'archivo.txt',
+                    b'no es imagen',
+                    content_type='text/plain'
+                ),
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('registrar_cliente'),
+            fetch_redirect_response=False
+        )
+        self.assertFalse(
+            Cliente.objects.filter(telefono='999777444').exists()
+        )
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    @patch('core.cloudinary_images.cloudinary.uploader.upload')
+    def test_editar_cliente_reemplaza_foto_anterior(
+        self,
+        upload_mock,
+        destroy_mock
+    ):
+        self.cliente.foto_referencia_url = 'https://old.example/foto.jpg'
+        self.cliente.foto_referencia_public_id = 'aquasmart/clientes/old'
+        self.cliente.save()
+        upload_mock.return_value = {
+            'secure_url': 'https://res.cloudinary.com/demo/clientes/new.jpg',
+            'public_id': 'aquasmart/clientes/new',
+        }
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('editar_cliente', kwargs={'cliente_id': self.cliente.id}),
+            {
+                'nombre': self.cliente.nombre,
+                'telefono': self.cliente.telefono,
+                'direccion': self.cliente.direccion,
+                'referencia': self.cliente.referencia or '',
+                'foto_referencia': self.crear_foto_prueba('nueva.jpg'),
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('detalle_cliente', kwargs={'cliente_id': self.cliente.id}),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertEqual(
+            self.cliente.foto_referencia_public_id,
+            'aquasmart/clientes/new'
+        )
+        destroy_mock.assert_called_once()
+        self.assertEqual(
+            destroy_mock.call_args.args[0],
+            'aquasmart/clientes/old'
+        )
 
     def test_repartidor_no_entra_al_crm_operativo(self):
         self.client.force_login(self.repartidor)
@@ -527,6 +663,22 @@ class PermisosRolesTests(TestCase):
                 tipo_accion=PedidoHistorial.EN_RUTA,
                 valor_nuevo=Pedido.EN_RUTA
             ).exists()
+        )
+
+    def test_repartidor_ve_boton_foto_referencia_cliente(self):
+        self.cliente.foto_referencia_url = 'https://res.cloudinary.com/demo/foto.jpg'
+        self.cliente.foto_referencia_public_id = 'aquasmart/clientes/foto'
+        self.cliente.save()
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(estado=Pedido.ASIGNADO)
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(reverse('pedidos_repartidor'))
+
+        self.assertContains(response, 'Ver foto')
+        self.assertContains(
+            response,
+            'https://res.cloudinary.com/demo/foto.jpg'
         )
 
     def test_jefe_repartidores_accede_a_mi_reparto_y_filtra_sus_pedidos(self):

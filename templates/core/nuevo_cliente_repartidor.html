@@ -81,7 +81,7 @@
 
     <section class="card form-card">
         <div class="card-body">
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
 
                 <div class="mb-3">
@@ -131,6 +131,23 @@
                 </div>
 
                 {% include 'core/includes/cliente_ubicacion_fields.html' %}
+
+                <div class="mb-4">
+                    <label class="form-label" for="foto_referencia">
+                        Foto de referencia
+                    </label>
+                    <input
+                        type="file"
+                        id="foto_referencia"
+                        name="foto_referencia"
+                        class="form-control"
+                        accept="image/*"
+                        capture="environment"
+                    >
+                    <div class="form-text">
+                        Opcional. Foto de la fachada o punto de referencia del cliente.
+                    </div>
+                </div>
 
                 <button type="submit" class="btn btn-success w-100 action-button">
                     Guardar cliente

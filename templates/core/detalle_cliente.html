@@ -43,6 +43,14 @@ Detalle del cliente
         gap: 0.45rem;
     }
 
+    .client-reference-photo {
+        aspect-ratio: 4 / 3;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        border-radius: 0.45rem;
+        object-fit: cover;
+        width: 100%;
+    }
+
     .client-order-actions {
         align-items: center;
         display: flex;
@@ -163,6 +171,23 @@ Detalle del cliente
                         {% include 'core/includes/location_button.html' with cliente=cliente button_class='btn-outline-primary btn-sm' copy_button_class='btn-outline-secondary btn-sm' %}
                     </div>
                 </div>
+
+                {% if cliente.foto_referencia_url %}
+                    <div class="client-location-panel">
+                        <h6 class="text-muted">Foto de referencia</h6>
+                        <a
+                            href="{{ cliente.foto_referencia_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <img
+                                src="{{ cliente.foto_referencia_url }}"
+                                alt="Foto de referencia de {{ cliente.nombre }}"
+                                class="client-reference-photo"
+                            >
+                        </a>
+                    </div>
+                {% endif %}
 
                 <p>
                     <strong>Estado:</strong><br>

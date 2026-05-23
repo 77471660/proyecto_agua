@@ -20,7 +20,7 @@ Editar cliente
 
             <div class="card-body">
 
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
 
                     {% csrf_token %}
 
@@ -76,6 +76,34 @@ Editar cliente
                     </div>
 
                     {% include 'core/includes/cliente_ubicacion_fields.html' %}
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Foto de referencia
+                        </label>
+
+                        {% if cliente.foto_referencia_url %}
+                            <div class="mb-2">
+                                <img
+                                    src="{{ cliente.foto_referencia_url }}"
+                                    alt="Foto de referencia de {{ cliente.nombre }}"
+                                    class="img-fluid rounded border"
+                                    style="max-height: 180px; object-fit: cover;"
+                                >
+                            </div>
+                        {% endif %}
+
+                        <input
+                            type="file"
+                            name="foto_referencia"
+                            class="form-control"
+                            accept="image/*"
+                            capture="environment"
+                        >
+                        <small class="form-text text-muted">
+                            Opcional. Si subes una nueva foto, reemplazará la anterior.
+                        </small>
+                    </div>
 
                     <div class="form-actions d-flex justify-content-between flex-wrap gap-2">
 
