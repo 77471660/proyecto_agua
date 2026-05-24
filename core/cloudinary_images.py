@@ -1,5 +1,7 @@
 from io import BytesIO
 import logging
+import re
+from urllib.parse import unquote, urlparse
 
 import cloudinary
 import cloudinary.uploader
@@ -19,6 +21,7 @@ MAX_UPLOAD_SIZE = 5 * 1024 * 1024
 MAX_IMAGE_WIDTH = 900
 JPEG_QUALITY = 68
 CLOUDINARY_CLIENTES_FOLDER = 'aquasmart/clientes'
+_CLOUDINARY_UPLOAD_MARKER = '/upload/'
 
 
 class ClientPhotoError(Exception):
@@ -124,6 +127,51 @@ def upload_client_reference_photo(uploaded_file):
     }
 
 
+def extract_cloudinary_public_id(image_url):
+    if not image_url:
+        return ''
+
+    parsed = urlparse(str(image_url))
+    path = unquote(parsed.path or '')
+
+    if _CLOUDINARY_UPLOAD_MARKER not in path:
+        return ''
+
+    public_path = path.split(_CLOUDINARY_UPLOAD_MARKER, 1)[1].lstrip('/')
+
+    if not public_path:
+        return ''
+
+    parts = public_path.split('/')
+
+    if parts and re.match(r'^v\d+$', parts[0]):
+        parts = parts[1:]
+
+    if not parts:
+        return ''
+
+    public_id = '/'.join(parts)
+
+    if '.' in public_id.rsplit('/', 1)[-1]:
+        public_id = public_id.rsplit('.', 1)[0]
+
+    return public_id
+
+
+def get_client_reference_photo_public_id(cliente):
+    if not cliente:
+        return ''
+
+    public_id = getattr(cliente, 'foto_referencia_public_id', '') or ''
+
+    if public_id:
+        return public_id
+
+    return extract_cloudinary_public_id(
+        getattr(cliente, 'foto_referencia_url', '') or ''
+    )
+
+
 def delete_client_reference_photo(public_id):
     if not public_id or not cloudinary_configured():
         return
@@ -136,8 +184,9 @@ def delete_client_reference_photo(public_id):
             resource_type='image',
             invalidate=True,
         )
-    except Exception:
-        logger.exception(
-            'No se pudo eliminar foto anterior de Cloudinary. public_id=%s',
-            public_id
+    except Exception as error:
+        logger.warning(
+            'No se pudo eliminar foto anterior de Cloudinary. public_id=%s error=%s',
+            public_id,
+            error
         )

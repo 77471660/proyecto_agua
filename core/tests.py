@@ -611,6 +611,111 @@ class PermisosRolesTests(TestCase):
         self.assertIsNone(self.cliente.foto_referencia_actualizada_en)
         destroy_mock.assert_called_once()
 
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    def test_eliminar_cliente_elimina_foto_cloudinary(self, destroy_mock):
+        self.cliente.foto_referencia_url = (
+            'https://res.cloudinary.com/demo/image/upload/v123/'
+            'aquasmart/clientes/foto.jpg'
+        )
+        self.cliente.foto_referencia_public_id = 'aquasmart/clientes/foto'
+        self.cliente.save()
+        cliente_id = self.cliente.id
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('eliminar_cliente', kwargs={'cliente_id': cliente_id})
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('lista_clientes'),
+            fetch_redirect_response=False
+        )
+        self.assertFalse(Cliente.objects.filter(id=cliente_id).exists())
+        destroy_mock.assert_called_once()
+        self.assertEqual(
+            destroy_mock.call_args.args[0],
+            'aquasmart/clientes/foto'
+        )
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    def test_eliminar_cliente_extrae_public_id_desde_url(self, destroy_mock):
+        self.cliente.foto_referencia_url = (
+            'https://res.cloudinary.com/demo/image/upload/v123/'
+            'aquasmart/clientes/foto-url.jpg'
+        )
+        self.cliente.foto_referencia_public_id = ''
+        self.cliente.save()
+        cliente_id = self.cliente.id
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('eliminar_cliente', kwargs={'cliente_id': cliente_id})
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('lista_clientes'),
+            fetch_redirect_response=False
+        )
+        self.assertFalse(Cliente.objects.filter(id=cliente_id).exists())
+        self.assertEqual(
+            destroy_mock.call_args.args[0],
+            'aquasmart/clientes/foto-url'
+        )
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    def test_eliminar_cliente_no_falla_si_destroy_falla(self, destroy_mock):
+        self.cliente.foto_referencia_public_id = 'aquasmart/clientes/foto'
+        self.cliente.save()
+        destroy_mock.side_effect = Exception('cloudinary temporalmente caido')
+        cliente_id = self.cliente.id
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('eliminar_cliente', kwargs={'cliente_id': cliente_id})
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('lista_clientes'),
+            fetch_redirect_response=False
+        )
+        self.assertFalse(Cliente.objects.filter(id=cliente_id).exists())
+        destroy_mock.assert_called_once()
+
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    def test_eliminar_cliente_sin_foto_no_llama_cloudinary(self, destroy_mock):
+        cliente_id = self.cliente.id
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('eliminar_cliente', kwargs={'cliente_id': cliente_id})
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('lista_clientes'),
+            fetch_redirect_response=False
+        )
+        self.assertFalse(Cliente.objects.filter(id=cliente_id).exists())
+        destroy_mock.assert_not_called()
+
     def test_repartidor_no_entra_al_crm_operativo(self):
         self.client.force_login(self.repartidor)
 

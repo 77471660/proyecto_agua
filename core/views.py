@@ -48,6 +48,7 @@ from .fcm_notifications import token_for_log
 from .cloudinary_images import (
     ClientPhotoError,
     delete_client_reference_photo,
+    get_client_reference_photo_public_id,
     upload_client_reference_photo,
     validate_client_photo,
 )
@@ -1443,7 +1444,9 @@ def eliminar_cliente(request, cliente_id):
         )
         return redirect('lista_clientes')
 
+    public_id_foto = get_client_reference_photo_public_id(cliente)
     cliente.delete()
+    delete_client_reference_photo(public_id_foto)
 
     messages.success(
         request,
