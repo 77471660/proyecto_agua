@@ -15,16 +15,28 @@
             background: #f5f7fb;
             color: #1f2937;
             min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        .login-shell {
+            justify-content: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .login-panel {
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 420px;
+            width: 100%;
         }
 
         .login-card {
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.07);
-        }
-
-        .login-shell {
-            min-height: 100vh;
         }
 
         .login-brand {
@@ -48,8 +60,20 @@
         }
 
         .action-button {
-            min-height: 48px;
             font-weight: 700;
+            min-height: 48px;
+        }
+
+        @media (max-width: 575.98px) {
+            .login-shell {
+                align-items: center !important;
+                padding-bottom: 2rem;
+                padding-top: 2rem;
+            }
+
+            .login-card .card-body {
+                padding: 1.2rem !important;
+            }
         }
     </style>
 </head>
@@ -57,69 +81,67 @@
 <body>
 
 <main class="container py-5 login-shell d-flex align-items-center">
-    <div class="row justify-content-center w-100">
-        <div class="col-12 col-sm-8 col-md-5">
-            <div class="text-center mb-4">
-                <h1 class="h4 mb-1 login-brand">AquaSmart CRM</h1>
-                <p class="text-muted mb-0">Iniciar sesión</p>
-            </div>
-
-            <section class="card login-card">
-                <div class="card-body p-4">
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {{ form.non_field_errors }}
-                        </div>
-                    {% endif %}
-
-                    <form method="post">
-                        {% csrf_token %}
-
-                        <div class="mb-3">
-                            <label class="form-label" for="{{ form.username.id_for_label }}">
-                                Usuario
-                            </label>
-                            <input
-                                type="text"
-                                name="{{ form.username.html_name }}"
-                                id="{{ form.username.id_for_label }}"
-                                class="form-control form-control-lg"
-                                autocomplete="username"
-                                required
-                            >
-                            {% if form.username.errors %}
-                                <div class="text-danger small mt-1">
-                                    {{ form.username.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label" for="{{ form.password.id_for_label }}">
-                                Contraseña
-                            </label>
-                            <input
-                                type="password"
-                                name="{{ form.password.html_name }}"
-                                id="{{ form.password.id_for_label }}"
-                                class="form-control form-control-lg"
-                                autocomplete="current-password"
-                                required
-                            >
-                            {% if form.password.errors %}
-                                <div class="text-danger small mt-1">
-                                    {{ form.password.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100 action-button">
-                            Ingresar
-                        </button>
-                    </form>
-                </div>
-            </section>
+    <div class="login-panel">
+        <div class="text-center mb-4">
+            <h1 class="h4 mb-1 login-brand">AquaSmart CRM</h1>
+            <p class="login-kicker mb-0">Iniciar sesión</p>
         </div>
+
+        <section class="card login-card">
+            <div class="card-body p-4">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.username.id_for_label }}">
+                            Usuario
+                        </label>
+                        <input
+                            type="text"
+                            name="{{ form.username.html_name }}"
+                            id="{{ form.username.id_for_label }}"
+                            class="form-control form-control-lg"
+                            autocomplete="username"
+                            required
+                        >
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.username.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label" for="{{ form.password.id_for_label }}">
+                            Contraseña
+                        </label>
+                        <input
+                            type="password"
+                            name="{{ form.password.html_name }}"
+                            id="{{ form.password.id_for_label }}"
+                            class="form-control form-control-lg"
+                            autocomplete="current-password"
+                            required
+                        >
+                        {% if form.password.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.password.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 action-button">
+                        Ingresar
+                    </button>
+                </form>
+            </div>
+        </section>
     </div>
 </main>
 

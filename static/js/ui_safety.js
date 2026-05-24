@@ -90,4 +90,47 @@
             }
         });
     });
+
+    document.querySelectorAll('input[type="file"][name="foto_referencia"]').forEach(function (input) {
+        const root = input.closest('[data-photo-preview-root]') || input.parentElement;
+
+        if (!root) {
+            return;
+        }
+
+        let image = root.querySelector('[data-photo-preview-image]');
+        let status = root.querySelector('[data-photo-preview-status]');
+
+        if (!image) {
+            image = document.createElement('img');
+            image.alt = 'Vista previa de foto seleccionada';
+            image.className = 'photo-preview-thumb';
+            image.setAttribute('data-photo-preview-image', '');
+            input.insertAdjacentElement('afterend', image);
+        }
+
+        if (!status) {
+            status = document.createElement('div');
+            status.className = 'photo-preview-status';
+            status.setAttribute('data-photo-preview-status', '');
+            image.insertAdjacentElement('afterend', status);
+        }
+
+        input.addEventListener('change', function () {
+            const file = input.files && input.files[0];
+
+            if (!file) {
+                image.removeAttribute('src');
+                image.classList.remove('is-visible');
+                status.textContent = '';
+                status.classList.remove('is-visible');
+                return;
+            }
+
+            image.src = URL.createObjectURL(file);
+            image.classList.add('is-visible');
+            status.textContent = 'Foto seleccionada correctamente';
+            status.classList.add('is-visible');
+        });
+    });
 })();

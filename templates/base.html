@@ -216,6 +216,37 @@
         width: 1px;
     }
 
+    .photo-preview-thumb {
+        aspect-ratio: 4 / 3;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        display: none;
+        margin-top: 0.75rem;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .photo-preview-thumb.is-visible,
+    .photo-preview.is-visible {
+        display: block;
+    }
+
+    .photo-preview-status {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        color: #166534;
+        display: none;
+        font-size: 0.9rem;
+        font-weight: 700;
+        margin-top: 0.6rem;
+        padding: 0.55rem 0.7rem;
+    }
+
+    .photo-preview-status.is-visible {
+        display: block;
+    }
+
     .table {
         --bs-table-bg: transparent;
     }

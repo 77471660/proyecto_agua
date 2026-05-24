@@ -62,6 +62,36 @@
             width: 1px;
         }
 
+        .photo-preview-thumb {
+            aspect-ratio: 4 / 3;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            display: none;
+            margin-top: 0.75rem;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .photo-preview-thumb.is-visible {
+            display: block;
+        }
+
+        .photo-preview-status {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            color: #166534;
+            display: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-top: 0.6rem;
+            padding: 0.55rem 0.7rem;
+        }
+
+        .photo-preview-status.is-visible {
+            display: block;
+        }
+
         @media (max-width: 575.98px) {
             body {
                 padding-bottom: calc(1.25rem + var(--app-safe-area-bottom));
@@ -214,6 +244,16 @@
                     >
                         📷 Tomar foto
                     </label>
+                    <img
+                        src=""
+                        alt="Vista previa de foto seleccionada"
+                        class="photo-preview-thumb"
+                        data-photo-preview-image
+                    >
+                    <div
+                        class="photo-preview-status"
+                        data-photo-preview-status
+                    ></div>
                     <div class="form-text">
                         Opcional. Si agregas foto, captura tambi&eacute;n la ubicaci&oacute;n GPS.
                     </div>
