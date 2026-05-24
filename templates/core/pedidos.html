@@ -137,7 +137,7 @@ Pedidos - AquaSmart CRM
     </a>
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="card toolbar-card mb-4">
     <div class="card-body">
 
         <form method="GET" class="row g-3">
@@ -192,7 +192,7 @@ Pedidos - AquaSmart CRM
 
         </form>
 
-        <div class="mt-3">
+        <div class="filter-actions mt-3">
             <a href="/pedidos/" class="btn btn-outline-secondary btn-sm">
                 Limpiar filtros
             </a>
@@ -235,7 +235,7 @@ Pedidos - AquaSmart CRM
     </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card content-card">
     <div class="card-body">
 
         <div class="table-responsive">
@@ -384,9 +384,11 @@ Pedidos - AquaSmart CRM
 
                     {% empty %}
                         <tr>
-                            <td colspan="9" class="text-center text-muted">
+                        <td colspan="9">
+                            <div class="empty-state">
                                 No se encontraron pedidos.
-                            </td>
+                            </div>
+                        </td>
                         </tr>
                     {% endfor %}
                 </tbody>

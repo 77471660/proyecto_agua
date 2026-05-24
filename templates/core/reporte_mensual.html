@@ -26,7 +26,7 @@ Reporte Mensual
     }
 
     .monthly-chart-bar {
-        background: #0d6efd;
+        background: #2563eb;
         border-radius: 6px 6px 0 0;
         min-height: 4px;
         width: 100%;
@@ -114,7 +114,7 @@ Reporte Mensual
     <div class="row g-4">
 
         <div class="col-md-4">
-            <div class="card shadow-sm border-success h-100">
+            <div class="card metric-card metric-success h-100">
                 <div class="card-body">
                     <h6 class="text-muted">Ingresos del Mes</h6>
                     <h3 class="text-success">
@@ -125,7 +125,7 @@ Reporte Mensual
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm border-primary h-100">
+            <div class="card metric-card h-100">
                 <div class="card-body">
                     <h6 class="text-muted">Pedidos Entregados</h6>
                     <h3>{{ total_entregados }}</h3>
@@ -134,7 +134,7 @@ Reporte Mensual
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm border-primary h-100">
+            <div class="card metric-card h-100">
                 <div class="card-body">
                     <h6 class="text-muted">Bidones Vendidos</h6>
                     <h3>{{ bidones_mes }}</h3>
@@ -143,7 +143,7 @@ Reporte Mensual
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm border-primary h-100">
+            <div class="card metric-card metric-info h-100">
                 <div class="card-body">
                     <h6 class="text-muted">Clientes Únicos</h6>
                     <h3>{{ clientes_unicos }}</h3>
@@ -152,7 +152,7 @@ Reporte Mensual
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm border-warning h-100">
+            <div class="card metric-card metric-warning h-100">
                 <div class="card-body">
                     <h6 class="text-muted">Pedidos Pendientes</h6>
                     <h3 class="text-warning">{{ pendientes }}</h3>
@@ -161,7 +161,7 @@ Reporte Mensual
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm border-secondary h-100">
+            <div class="card metric-card metric-muted h-100">
                 <div class="card-body">
                     <h6 class="text-muted">Pedidos Cancelados</h6>
                     <h3 class="text-secondary">{{ cancelados }}</h3>
@@ -171,8 +171,8 @@ Reporte Mensual
 
     </div>
 
-    <div class="card shadow-sm mt-4">
-        <div class="card-header bg-primary text-white">
+    <div class="card content-card mt-4">
+        <div class="card-header bg-white">
             Análisis del mes
         </div>
 
@@ -183,7 +183,7 @@ Reporte Mensual
 
             <div class="row g-3">
                 <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
+                    <div class="form-section h-100 mb-0">
                         <h6 class="mb-3">Estado de pedidos</h6>
 
                         <div class="mb-3">
@@ -228,7 +228,7 @@ Reporte Mensual
                 </div>
 
                 <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
+                    <div class="form-section h-100 mb-0">
                         <h6>Top cliente del mes</h6>
 
                         {% if top_cliente_mes %}
@@ -252,7 +252,7 @@ Reporte Mensual
                 </div>
 
                 <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
+                    <div class="form-section h-100 mb-0">
                         <h6>Día con más ventas</h6>
 
                         {% if dia_mas_ventas %}
@@ -278,7 +278,7 @@ Reporte Mensual
         </div>
     </div>
 
-    <div class="card shadow-sm mt-4">
+    <div class="card content-card mt-4">
         <div class="card-header bg-white">
             <h5 class="mb-0">
                 Gráfico diario de ventas
@@ -302,14 +302,14 @@ Reporte Mensual
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="alert alert-info mb-0">
+                <div class="empty-state">
                     No hay ventas entregadas para graficar en este mes.
                 </div>
             {% endif %}
         </div>
     </div>
 
-    <div class="card shadow-sm mt-4">
+    <div class="card content-card mt-4">
         <div class="card-header bg-white">
             <h5 class="mb-0">
                 Pedidos de {{ nombre_mes_analizado }} {{ anio_actual }}
@@ -369,7 +369,7 @@ Reporte Mensual
 
             {% else %}
 
-                <div class="alert alert-info mb-0">
+                <div class="empty-state">
                     No hay pedidos registrados para el mes seleccionado.
                 </div>
 

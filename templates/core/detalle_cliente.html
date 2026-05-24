@@ -52,6 +52,19 @@ Detalle del cliente
         width: 100%;
     }
 
+    .client-profile-body > p {
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 0.85rem;
+        padding-bottom: 0.85rem;
+    }
+
+    .client-profile-body > p strong {
+        color: #64748b;
+        font-size: 0.76rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+
     .client-order-actions {
         align-items: center;
         display: flex;
@@ -138,13 +151,13 @@ Detalle del cliente
 
     <div class="{% if menu_puede_crm_operativo or menu_es_jefe_repartidores %}col-md-4{% else %}col-md-12{% endif %} mb-3">
 
-        <div class="card shadow-sm h-100">
+        <div class="card h-100">
 
-            <div class="card-header bg-dark text-white">
+            <div class="card-header bg-white">
                 Información del cliente
             </div>
 
-            <div class="card-body">
+            <div class="card-body client-profile-body">
 
                 <p>
                     <strong>Teléfono:</strong><br>
@@ -219,25 +232,25 @@ Detalle del cliente
         <div class="row">
 
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm border-primary h-100">
+                <div class="card metric-card h-100">
                     <div class="card-body">
-                        <h6 class="text-muted">Total pedidos</h6>
-                        <h2>{{ total_pedidos }}</h2>
+                        <h6 class="metric-label">Total pedidos</h6>
+                        <div class="metric-value metric-value-sm">{{ total_pedidos }}</div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm border-success h-100">
+                <div class="card metric-card metric-success h-100">
                     <div class="card-body">
-                        <h6 class="text-muted">Total gastado</h6>
-                        <h2>S/ {{ total_gastado }}</h2>
+                        <h6 class="metric-label">Total gastado</h6>
+                        <div class="metric-value metric-value-sm">S/ {{ total_gastado }}</div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm border-dark h-100">
+                <div class="card metric-card metric-muted h-100">
                     <div class="card-body">
                         <h6 class="text-muted">Último pedido</h6>
 
@@ -254,9 +267,9 @@ Detalle del cliente
 
         </div>
 
-        <div class="card shadow-sm">
+        <div class="card content-card">
 
-            <div class="card-header bg-primary text-white">
+            <div class="card-header bg-white">
                 Últimos pedidos
             </div>
 
@@ -430,7 +443,7 @@ Detalle del cliente
 
                 {% else %}
 
-                    <div class="alert alert-secondary mb-0">
+                    <div class="empty-state">
                         Este cliente todavía no tiene pedidos registrados.
                     </div>
 
@@ -441,8 +454,8 @@ Detalle del cliente
         </div>
 
         {% if puede_ver_historial_pedidos %}
-        <div class="card shadow-sm mt-3">
-            <div class="card-header bg-dark text-white">
+        <div class="card content-card mt-3">
+            <div class="card-header bg-white">
                 Historial de cambios de pedidos
             </div>
 
@@ -506,7 +519,7 @@ Detalle del cliente
                         </small>
                     {% endif %}
                 {% else %}
-                    <div class="alert alert-secondary mb-0">
+                    <div class="empty-state">
                         Todavía no hay cambios registrados en pedidos de este cliente.
                     </div>
                 {% endif %}

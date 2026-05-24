@@ -20,7 +20,7 @@ Clientes - AquaSmart CRM
     </a>
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="card toolbar-card mb-4">
     <div class="card-body">
         <form method="GET" action="/clientes/">
             <div class="row g-2">
@@ -45,7 +45,7 @@ Clientes - AquaSmart CRM
     </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card content-card">
     <div class="card-body">
 
         <div class="table-responsive">
@@ -132,8 +132,10 @@ Clientes - AquaSmart CRM
                     {% empty %}
 
                     <tr>
-                        <td colspan="5" class="text-center text-muted">
-                            No se encontraron clientes registrados.
+                        <td colspan="5">
+                            <div class="empty-state">
+                                No se encontraron clientes registrados.
+                            </div>
                         </td>
                     </tr>
 

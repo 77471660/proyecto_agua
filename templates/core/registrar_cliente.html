@@ -7,98 +7,117 @@ Registrar cliente - AquaSmart CRM
 
 {% block content %}
 
+<div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+        <h2>Registrar cliente</h2>
+        <small class="text-muted">Alta de cliente con datos de contacto y referencia.</small>
+    </div>
+</div>
+
 <div class="row justify-content-center">
     <div class="col-lg-8">
 
-<div class="card shadow-sm">
-    <div class="card-header bg-success text-white">
-        <h5 class="mb-0">Registrar nuevo cliente</h5>
-    </div>
-
-    <div class="card-body">
-
-        <form method="POST" enctype="multipart/form-data" data-reference-house-form>
-
-            {% csrf_token %}
-
-            <div class="mb-3">
-                <label class="form-label">Nombre</label>
-                <input
-                    type="text"
-                    name="nombre"
-                    class="form-control"
-                    maxlength="100"
-                    required
-                >
+        <div class="card content-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Datos del cliente</h5>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label">Teléfono</label>
-                <input
-                    type="text"
-                    name="telefono"
-                    class="form-control"
-                    minlength="6"
-                    maxlength="20"
-                    required
-                >
+            <div class="card-body">
+
+                <form method="POST" enctype="multipart/form-data" data-reference-house-form>
+
+                    {% csrf_token %}
+
+                    <div class="form-section">
+                        <div class="form-section-title">Información básica</div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input
+                                type="text"
+                                name="nombre"
+                                class="form-control"
+                                maxlength="100"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input
+                                type="text"
+                                name="telefono"
+                                class="form-control"
+                                minlength="6"
+                                maxlength="20"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="form-label">Dirección</label>
+                            <input
+                                type="text"
+                                name="direccion"
+                                class="form-control"
+                                maxlength="255"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Referencia de entrega</div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Referencia</label>
+                            <textarea
+                                name="referencia"
+                                class="form-control"
+                                maxlength="255"
+                                rows="3"
+                            ></textarea>
+                        </div>
+
+                        {% include 'core/includes/cliente_ubicacion_fields.html' %}
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Foto opcional</div>
+
+                        <div class="mb-0">
+                            <label class="form-label">Foto de referencia</label>
+                            <input
+                                type="file"
+                                name="foto_referencia"
+                                class="form-control"
+                                accept="image/*"
+                                capture="environment"
+                            >
+                            <small class="form-text text-muted">
+                                Opcional. Foto ligera de la casa o fachada del cliente.
+                            </small>
+                            <div
+                                class="form-text text-danger d-none"
+                                data-reference-house-status
+                            ></div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-success">
+                            Guardar cliente
+                        </button>
+
+                        <a href="/clientes/" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                    </div>
+
+                </form>
+
             </div>
-
-            <div class="mb-3">
-                <label class="form-label">Dirección</label>
-                <input
-                    type="text"
-                    name="direccion"
-                    class="form-control"
-                    maxlength="255"
-                    required
-                >
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Referencia</label>
-                <textarea
-                    name="referencia"
-                    class="form-control"
-                    maxlength="255"
-                    rows="3"
-                ></textarea>
-            </div>
-
-            {% include 'core/includes/cliente_ubicacion_fields.html' %}
-
-            <div class="mb-3">
-                <label class="form-label">Foto de referencia</label>
-                <input
-                    type="file"
-                    name="foto_referencia"
-                    class="form-control"
-                    accept="image/*"
-                    capture="environment"
-                >
-                <small class="form-text text-muted">
-                    Opcional. Foto ligera de la casa o fachada del cliente.
-                </small>
-                <div
-                    class="form-text text-danger d-none"
-                    data-reference-house-status
-                ></div>
-            </div>
-
-            <div class="form-actions d-flex gap-2 flex-wrap">
-                <button type="submit" class="btn btn-success">
-                    Guardar cliente
-                </button>
-
-                <a href="/clientes/" class="btn btn-outline-secondary">
-                    Cancelar
-                </a>
-            </div>
-
-        </form>
-
-    </div>
-</div>
+        </div>
 
     </div>
 </div>

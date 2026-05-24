@@ -17,30 +17,30 @@ Reporte Diario - AquaSmart CRM
 
 <div class="row mb-3">
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm border-success h-100">
+        <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="text-muted">Ventas de hoy</h6>
-                <h1>S/ {{ ventas_hoy|floatformat:2 }}</h1>
+                <h6 class="metric-label">Ventas de hoy</h6>
+                <div class="metric-value">S/ {{ ventas_hoy|floatformat:2 }}</div>
                 <small class="text-muted">Pedidos entregados hoy</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm border-primary h-100">
+        <div class="card metric-card h-100">
             <div class="card-body">
-                <h6 class="text-muted">Bidones vendidos hoy</h6>
-                <h1>{{ bidones_hoy }}</h1>
+                <h6 class="metric-label">Bidones vendidos hoy</h6>
+                <div class="metric-value">{{ bidones_hoy }}</div>
                 <small class="text-muted">Solo pedidos entregados</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm border-info h-100">
+        <div class="card metric-card metric-info h-100">
             <div class="card-body">
-                <h6 class="text-muted">Pedidos entregados hoy</h6>
-                <h1>{{ pedidos_entregados_hoy }}</h1>
+                <h6 class="metric-label">Pedidos entregados hoy</h6>
+                <div class="metric-value">{{ pedidos_entregados_hoy }}</div>
                 <small class="text-muted">Completados durante el día</small>
             </div>
         </div>
@@ -60,7 +60,7 @@ Reporte Diario - AquaSmart CRM
 <div class="row mb-4">
     {% for dia in comparativo_ventas %}
         <div class="col-sm-6 col-lg-3 mb-3">
-            <div class="card shadow-sm h-100">
+            <div class="card metric-card h-100">
                 <div class="card-body py-3">
                     <div class="mb-2">
                         <h6 class="mb-0">{{ dia.etiqueta }}</h6>
@@ -80,8 +80,8 @@ Reporte Diario - AquaSmart CRM
     {% endfor %}
 </div>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-dark text-white">
+<div class="card content-card mb-4">
+    <div class="card-header bg-white">
         Detalle diario del mes
     </div>
 

@@ -32,6 +32,7 @@
     body {
         --app-safe-area-top: env(safe-area-inset-top, 0px);
         --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        background: #f5f7fb;
         color: #1f2937;
         min-height: 100vh;
         min-height: 100dvh;
@@ -44,11 +45,25 @@
     }
 
     .navbar {
-        box-shadow: 0 0.25rem 0.75rem rgba(15, 23, 42, 0.08);
+        background: #0f5fb8 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.12);
+    }
+
+    .navbar-brand {
+        font-weight: 800;
+        letter-spacing: 0;
+    }
+
+    .navbar .btn {
+        border-radius: 7px;
+        font-weight: 700;
     }
 
     .page-heading {
+        border-bottom: 1px solid #e2e8f0;
         margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
     }
 
     .page-heading h2 {
@@ -62,16 +77,143 @@
     }
 
     .card {
-        border: 0;
-        box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.08);
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        box-shadow: 0 0.3rem 0.9rem rgba(15, 23, 42, 0.06);
     }
 
     .card-header {
+        border-bottom-color: #e2e8f0;
         font-weight: 600;
+    }
+
+    .card-header.bg-white,
+    .card-header.card-header-soft {
+        background: #fff !important;
+        color: #0f172a;
+    }
+
+    .toolbar-card .card-body,
+    .content-card .card-body {
+        padding: 1.15rem;
+    }
+
+    .section-title {
+        align-items: baseline;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 0.7rem;
+        margin: 1.65rem 0 0.85rem;
+    }
+
+    .section-title h5 {
+        font-size: 1rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .section-title small {
+        color: #64748b;
+    }
+
+    .metric-card {
+        border-top: 3px solid #dbeafe;
+    }
+
+    .metric-card.metric-success {
+        border-top-color: #86efac;
+    }
+
+    .metric-card.metric-warning {
+        border-top-color: #fde68a;
+    }
+
+    .metric-card.metric-danger {
+        border-top-color: #fca5a5;
+    }
+
+    .metric-card.metric-info {
+        border-top-color: #7dd3fc;
+    }
+
+    .metric-card.metric-muted {
+        border-top-color: #cbd5e1;
+    }
+
+    .metric-label {
+        color: #64748b;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+    }
+
+    .metric-value {
+        color: #0f172a;
+        font-size: clamp(1.55rem, 3vw, 2.1rem);
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-value-sm {
+        font-size: 1.5rem;
+    }
+
+    .form-label {
+        color: #334155;
+        font-weight: 700;
+        margin-bottom: 0.35rem;
+    }
+
+    .form-control,
+    .form-select {
+        border-color: #cbd5e1;
+        border-radius: 7px;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
+    }
+
+    .form-section {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+
+    .form-section-title {
+        color: #0f172a;
+        font-size: 0.9rem;
+        font-weight: 800;
+        margin-bottom: 0.85rem;
+    }
+
+    .filter-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .empty-state {
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 8px;
+        color: #64748b;
+        padding: 1rem;
+        text-align: center;
     }
 
     .table {
         --bs-table-bg: transparent;
+    }
+
+    .table > :not(caption) > * > * {
+        border-bottom-color: #e2e8f0;
     }
 
     .table th {
@@ -84,6 +226,10 @@
 
     .table td {
         vertical-align: middle;
+    }
+
+    .table tbody tr:last-child td {
+        border-bottom: 0;
     }
 
     .badge,
@@ -175,6 +321,11 @@
     .alert {
         border-radius: 8px;
         border-width: 1px;
+    }
+
+    .btn {
+        border-radius: 7px;
+        font-weight: 700;
     }
 
     .alert-info {

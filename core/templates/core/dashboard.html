@@ -55,7 +55,7 @@ Dashboard - AquaSmart CRM
 
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="card toolbar-card mb-4">
     <div class="card-body py-3">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
@@ -99,7 +99,7 @@ Dashboard - AquaSmart CRM
 
 
 
-<div class="card shadow-sm mb-4 overflow-hidden">
+<div class="card mb-4 overflow-hidden">
     <div class="position-relative">
         <img
             src="{% static 'img/eco_agua_banner_dashboard.png' %}"
@@ -135,45 +135,48 @@ Dashboard - AquaSmart CRM
 
 
 <!-- OPERACIÓN DEL DÍA -->
-<h5 class="mt-3 mb-3">Operación de hoy</h5>
+<div class="section-title">
+    <h5>Operación de hoy</h5>
+    <small>Indicadores principales del día</small>
+</div>
 
 <div class="row mb-3">
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-primary h-100">
+        <div class="card metric-card h-100">
             <div class="card-body">
-                <h6 class="text-muted">Bidones vendidos hoy</h6>
-                <h1>{{ bidones_hoy }}</h1>
+                <h6 class="metric-label">Bidones vendidos hoy</h6>
+                <div class="metric-value">{{ bidones_hoy }}</div>
                 <small class="text-muted">Solo pedidos entregados</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-success h-100">
+        <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="text-muted">Ingresos de hoy</h6>
-                <h1>S/ {{ ventas_hoy|floatformat:2 }}</h1>
+                <h6 class="metric-label">Ingresos de hoy</h6>
+                <div class="metric-value">S/ {{ ventas_hoy|floatformat:2 }}</div>
                 <small class="text-muted">Ventas entregadas hoy</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-warning h-100">
+        <div class="card metric-card metric-warning h-100">
             <div class="card-body">
-                <h6 class="text-muted">Pedidos registrados hoy</h6>
-                <h1>{{ pedidos_hoy }}</h1>
+                <h6 class="metric-label">Pedidos registrados hoy</h6>
+                <div class="metric-value">{{ pedidos_hoy }}</div>
                 <small class="text-muted">Registrados hoy</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-danger h-100">
+        <div class="card metric-card metric-danger h-100">
             <div class="card-body">
-                <h6 class="text-muted">Pendientes por atender</h6>
-                <h1>{{ pedidos_pendientes }}</h1>
+                <h6 class="metric-label">Pendientes por atender</h6>
+                <div class="metric-value">{{ pedidos_pendientes }}</div>
                 <small class="text-muted">Requieren seguimiento</small>
             </div>
         </div>
@@ -182,9 +185,12 @@ Dashboard - AquaSmart CRM
 </div>
 
 <!-- PEDIDOS URGENTES -->
-<h5 class="mt-4 mb-3">Pedidos urgentes</h5>
+<div class="section-title">
+    <h5>Pedidos urgentes</h5>
+    <small>Atrasados o programados para hoy</small>
+</div>
 
-<div class="card shadow-sm mb-4">
+<div class="card content-card mb-4">
     <div class="card-body">
 
         {% if pedidos_urgentes %}
@@ -258,7 +264,7 @@ Dashboard - AquaSmart CRM
 
         {% else %}
 
-            <div class="alert alert-info mb-0">
+            <div class="empty-state">
                 No existen pedidos atrasados ni entregas urgentes para hoy.
             </div>
 
@@ -268,45 +274,48 @@ Dashboard - AquaSmart CRM
 </div>
 
 <!-- RESUMEN GENERAL -->
-<h5 class="mt-4 mb-3">Resumen general</h5>
+<div class="section-title">
+    <h5>Resumen general</h5>
+    <small>Actividad histórica y del mes actual</small>
+</div>
 
 <div class="row mb-3">
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm h-100">
+        <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="text-muted">Ventas del mes</h6>
-                <h1>S/ {{ ventas_mes|floatformat:2 }}</h1>
+                <h6 class="metric-label">Ventas del mes</h6>
+                <div class="metric-value">S/ {{ ventas_mes|floatformat:2 }}</div>
                 <small class="text-muted">Ingresos del mes actual</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm h-100">
+        <div class="card metric-card h-100">
             <div class="card-body">
-                <h6 class="text-muted">Bidones vendidos</h6>
-                <h1>{{ total_bidones_vendidos }}</h1>
+                <h6 class="metric-label">Bidones vendidos</h6>
+                <div class="metric-value">{{ total_bidones_vendidos }}</div>
                 <small class="text-muted">Total histórico entregado</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm h-100">
+        <div class="card metric-card metric-info h-100">
             <div class="card-body">
-                <h6 class="text-muted">Total clientes</h6>
-                <h1>{{ total_clientes }}</h1>
+                <h6 class="metric-label">Total clientes</h6>
+                <div class="metric-value">{{ total_clientes }}</div>
                 <small class="text-muted">Clientes registrados</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm h-100">
+        <div class="card metric-card metric-muted h-100">
             <div class="card-body">
-                <h6 class="text-muted">Clientes nuevos hoy</h6>
-                <h1>{{ clientes_nuevos }}</h1>
+                <h6 class="metric-label">Clientes nuevos hoy</h6>
+                <div class="metric-value">{{ clientes_nuevos }}</div>
                 <small class="text-muted">Altas registradas hoy</small>
             </div>
         </div>
@@ -316,45 +325,48 @@ Dashboard - AquaSmart CRM
 
 
 <!-- ESTADO DE PEDIDOS -->
-<h5 class="mt-4 mb-3">Estado de pedidos</h5>
+<div class="section-title">
+    <h5>Estado de pedidos</h5>
+    <small>Distribución operativa actual</small>
+</div>
 
 <div class="row">
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-success h-100">
+        <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="text-muted">Entregados</h6>
-                <h1>{{ pedidos_entregados }}</h1>
+                <h6 class="metric-label">Entregados</h6>
+                <div class="metric-value">{{ pedidos_entregados }}</div>
                 <small class="text-muted">Pedidos completados</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-warning h-100">
+        <div class="card metric-card metric-warning h-100">
             <div class="card-body">
-                <h6 class="text-muted">Pendientes</h6>
-                <h1>{{ pedidos_pendientes }}</h1>
+                <h6 class="metric-label">Pendientes</h6>
+                <div class="metric-value">{{ pedidos_pendientes }}</div>
                 <small class="text-muted">Aún no entregados</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-danger h-100">
+        <div class="card metric-card metric-danger h-100">
             <div class="card-body">
-                <h6 class="text-muted">Cancelados</h6>
-                <h1>{{ pedidos_cancelados }}</h1>
+                <h6 class="metric-label">Cancelados</h6>
+                <div class="metric-value">{{ pedidos_cancelados }}</div>
                 <small class="text-muted">Pedidos anulados</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-info h-100">
+        <div class="card metric-card metric-info h-100">
             <div class="card-body">
-                <h6 class="text-muted">Total pedidos</h6>
-                <h1>{{ total_pedidos }}</h1>
+                <h6 class="metric-label">Total pedidos</h6>
+                <div class="metric-value">{{ total_pedidos }}</div>
                 <small class="text-muted">Histórico registrado</small>
             </div>
         </div>
@@ -364,45 +376,48 @@ Dashboard - AquaSmart CRM
 
 
 <!-- ESTADO DE CLIENTES -->
-<h5 class="mt-4 mb-3">Estado de clientes</h5>
+<div class="section-title">
+    <h5>Estado de clientes</h5>
+    <small>Clasificación comercial automática</small>
+</div>
 
 <div class="row mt-3">
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-success h-100">
+        <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="text-muted">Clientes activos</h6>
-                <h1>{{ clientes_activos }}</h1>
+                <h6 class="metric-label">Clientes activos</h6>
+                <div class="metric-value">{{ clientes_activos }}</div>
                 <small class="text-muted">2 o más pedidos entregados</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-warning h-100">
+        <div class="card metric-card metric-warning h-100">
             <div class="card-body">
-                <h6 class="text-muted">Clientes en riesgo</h6>
-                <h1>{{ clientes_riesgo }}</h1>
+                <h6 class="metric-label">Clientes en riesgo</h6>
+                <div class="metric-value">{{ clientes_riesgo }}</div>
                 <small class="text-muted">Pedidos pendientes urgentes</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-danger h-100">
+        <div class="card metric-card metric-danger h-100">
             <div class="card-body">
-                <h6 class="text-muted">Clientes abandonados</h6>
-                <h1>{{ clientes_abandonados }}</h1>
+                <h6 class="metric-label">Clientes abandonados</h6>
+                <div class="metric-value">{{ clientes_abandonados }}</div>
                 <small class="text-muted">Más de 30 días sin compras</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3 mb-3">
-        <div class="card shadow-sm border-secondary h-100">
+        <div class="card metric-card metric-muted h-100">
             <div class="card-body">
-                <h6 class="text-muted">Sin historial</h6>
-                <h1>{{ clientes_sin_historial }}</h1>
+                <h6 class="metric-label">Sin historial</h6>
+                <div class="metric-value">{{ clientes_sin_historial }}</div>
                 <small class="text-muted">0 pedidos entregados</small>
             </div>
         </div>
@@ -413,8 +428,8 @@ Dashboard - AquaSmart CRM
 <div class="row mt-4">
 
     <div class="col-md-8 mb-3">
-        <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white">
+        <div class="card content-card">
+            <div class="card-header bg-white">
                 Ranking de clientes frecuentes
             </div>
 
@@ -458,9 +473,9 @@ Dashboard - AquaSmart CRM
 
                 {% else %}
 
-                    <p class="text-muted mb-0">
+                    <div class="empty-state">
                         Todavía no existen clientes con pedidos entregados.
-                    </p>
+                    </div>
 
                 {% endif %}
 
@@ -469,8 +484,8 @@ Dashboard - AquaSmart CRM
     </div>
 
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
+        <div class="card content-card">
+            <div class="card-header bg-white">
                 Lectura inteligente simple
             </div>
 
@@ -519,7 +534,7 @@ Dashboard - AquaSmart CRM
 
                 {% else %}
 
-                    <div class="alert alert-info mt-3 mb-0">
+                    <div class="empty-state mt-3">
                         No existen alertas importantes actualmente.
                     </div>
 
