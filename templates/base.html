@@ -45,19 +45,59 @@
     }
 
     .navbar {
-        background: #0f5fb8 !important;
+        background: linear-gradient(180deg, #0f5fb8 0%, #0e55a8 100%) !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.18);
         box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.12);
     }
 
     .navbar-brand {
-        font-weight: 800;
+        font-weight: 700;
         letter-spacing: 0;
     }
 
     .navbar .btn {
         border-radius: 7px;
-        font-weight: 700;
+        font-weight: 600;
+    }
+
+    .navbar-actions-desktop .btn {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.18);
+        box-shadow: none;
+        color: rgba(255, 255, 255, 0.92);
+    }
+
+    .navbar-actions-desktop .btn:hover,
+    .navbar-actions-desktop .btn:focus,
+    .navbar-actions-desktop .btn:focus-visible {
+        background: rgba(255, 255, 255, 0.16);
+        border-color: rgba(255, 255, 255, 0.32);
+        color: #fff;
+    }
+
+    .navbar-actions-desktop .btn.btn-light {
+        background: #fff;
+        border-color: #fff;
+        color: #0f5fb8;
+    }
+
+    .navbar-actions-desktop .btn.btn-success,
+    .navbar-actions-desktop .btn.btn-warning,
+    .navbar-actions-desktop .btn.btn-outline-light {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.18);
+        color: rgba(255, 255, 255, 0.92);
+    }
+
+    .navbar-actions-desktop .btn.btn-success:hover,
+    .navbar-actions-desktop .btn.btn-success:focus,
+    .navbar-actions-desktop .btn.btn-warning:hover,
+    .navbar-actions-desktop .btn.btn-warning:focus,
+    .navbar-actions-desktop .btn.btn-outline-light:hover,
+    .navbar-actions-desktop .btn.btn-outline-light:focus {
+        background: rgba(255, 255, 255, 0.16);
+        border-color: rgba(255, 255, 255, 0.32);
+        color: #fff;
     }
 
     .page-heading {
@@ -87,6 +127,12 @@
         font-weight: 600;
     }
 
+    .card-header h5 {
+        color: #0f172a;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
     .card-header.bg-white,
     .card-header.card-header-soft {
         background: #fff !important;
@@ -108,7 +154,7 @@
 
     .section-title h5 {
         font-size: 1rem;
-        font-weight: 800;
+        font-weight: 700;
         margin: 0;
     }
 
@@ -143,7 +189,7 @@
     .metric-label {
         color: #64748b;
         font-size: 0.78rem;
-        font-weight: 800;
+        font-weight: 600;
         letter-spacing: 0.02em;
         margin-bottom: 0.35rem;
         text-transform: uppercase;
@@ -163,7 +209,7 @@
 
     .form-label {
         color: #334155;
-        font-weight: 700;
+        font-weight: 400;
         margin-bottom: 0.35rem;
     }
 
@@ -182,15 +228,17 @@
     .form-section {
         border: 1px solid #e2e8f0;
         border-radius: 8px;
+        background: #fff;
         margin-bottom: 1rem;
         padding: 1rem;
     }
 
     .form-section-title {
-        color: #0f172a;
-        font-size: 0.9rem;
-        font-weight: 800;
-        margin-bottom: 0.85rem;
+        color: #475569;
+        font-size: 0.84rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        margin-bottom: 0.75rem;
     }
 
     .filter-actions {
@@ -238,7 +286,7 @@
         color: #166534;
         display: none;
         font-size: 0.9rem;
-        font-weight: 700;
+        font-weight: 600;
         margin-top: 0.6rem;
         padding: 0.55rem 0.7rem;
     }
@@ -258,7 +306,7 @@
     .table th {
         color: #475569;
         font-size: 0.82rem;
-        font-weight: 700;
+        font-weight: 600;
         text-transform: uppercase;
         white-space: nowrap;
     }
@@ -278,7 +326,7 @@
         align-items: center;
         gap: 0.25rem;
         font-size: 0.78rem;
-        font-weight: 700;
+        font-weight: 600;
         letter-spacing: 0;
         line-height: 1;
         padding: 0.38rem 0.68rem;
@@ -364,6 +412,12 @@
 
     .btn {
         border-radius: 7px;
+        font-weight: 600;
+    }
+
+    .btn-primary,
+    .btn-success,
+    .btn-danger {
         font-weight: 700;
     }
 
@@ -432,7 +486,7 @@
 
     .location-open-button,
     .location-copy-button {
-        font-weight: 700;
+        font-weight: 600;
         white-space: nowrap;
     }
 
@@ -443,7 +497,7 @@
     }
 
     .location-fields .btn {
-        font-weight: 700;
+        font-weight: 600;
     }
 
     .location-fields .form-text {
@@ -480,7 +534,7 @@
     .temporal-label {
         color: #64748b;
         font-size: 0.68rem;
-        font-weight: 700;
+        font-weight: 600;
         text-transform: uppercase;
         white-space: nowrap;
     }
