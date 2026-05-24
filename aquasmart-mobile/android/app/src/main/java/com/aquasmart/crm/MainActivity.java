@@ -13,6 +13,6 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         getWindow().setStatusBarColor(Color.parseColor("#0d6efd"));
-        getWindow().setNavigationBarColor(Color.WHITE);
+        getWindow().setNavigationBarColor(Color.parseColor("#0f172a"));
     }
 }
