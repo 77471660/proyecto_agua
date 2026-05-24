@@ -22,7 +22,11 @@
             </div>
 
             <div class="order-card-row">
-                <a class="order-card-phone text-decoration-none" href="tel:{{ pedido.telefono_limpio }}">
+                <a
+                    class="order-card-phone text-decoration-none"
+                    href="tel:{{ pedido.telefono_limpio }}"
+                    data-confirm="Llamar al cliente?"
+                >
                     {{ pedido.cliente.telefono|format_phone_display }}
                 </a>
 
@@ -61,7 +65,7 @@
 
             {% if pedido.cliente.referencia_ubicacion %}
                 <div class="col-12">
-                    <div class="order-label">Referencia de ubicaci&oacute;n</div>
+                    <div class="order-label">Referencia para llegar</div>
                     <div class="order-value">{{ pedido.cliente.referencia_ubicacion }}</div>
                 </div>
             {% endif %}
@@ -102,6 +106,7 @@
                 <a
                     href="tel:{{ pedido.telefono_limpio }}"
                     class="btn btn-outline-primary w-100 action-button"
+                    data-confirm="Llamar al cliente?"
                 >
                     Llamar
                 </a>
@@ -111,6 +116,7 @@
                     target="_blank"
                     rel="noopener"
                     class="btn btn-whatsapp w-100 action-button"
+                    data-confirm="Abrir WhatsApp?"
                 >
                     WhatsApp
                 </a>
@@ -120,6 +126,7 @@
                 <a
                     href="{% url 'actualizar_referencia_cliente_repartidor' pedido.cliente.id %}"
                     class="btn btn-outline-secondary w-100 action-button"
+                    data-confirm="Actualizar referencia?"
                 >
                     {% if pedido.cliente.tiene_coordenadas or pedido.cliente.foto_referencia_url %}
                         Actualizar referencia de casa
@@ -144,6 +151,7 @@
                         method="post"
                         action="{% url 'marcar_pedido_en_ruta_repartidor' pedido.id %}"
                         class="mb-0"
+                        data-confirm="Marcar en ruta?"
                     >
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-primary w-100 action-button">
@@ -156,6 +164,7 @@
                     method="post"
                     action="{% url 'marcar_pedido_entregado_repartidor' pedido.id %}"
                     class="mb-0"
+                    data-confirm="Marcar entregado?"
                 >
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary w-100 action-button">
@@ -167,6 +176,7 @@
                     method="post"
                     action="{% url 'cancelar_pedido_repartidor' pedido.id %}"
                     class="mb-0"
+                    data-confirm="Cancelar pedido?"
                 >
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-danger w-100 action-button">

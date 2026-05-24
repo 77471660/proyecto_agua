@@ -334,6 +334,7 @@ Pedidos - AquaSmart CRM
                                             <form
                                                 method="POST"
                                                 action="{% url 'cambiar_estado_pedido' pedido.id 'EN_RUTA' %}"
+                                                data-confirm="Marcar en ruta?"
                                             >
                                                 {% csrf_token %}
                                                 <button
@@ -348,6 +349,7 @@ Pedidos - AquaSmart CRM
                                         <form
                                             method="POST"
                                             action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}"
+                                            data-confirm="Marcar entregado?"
                                         >
                                             {% csrf_token %}
                                             <button
@@ -361,12 +363,12 @@ Pedidos - AquaSmart CRM
                                         <form
                                             method="POST"
                                             action="{% url 'cambiar_estado_pedido' pedido.id 'CANCELADO' %}"
+                                            data-confirm="Cancelar pedido?"
                                         >
                                             {% csrf_token %}
                                             <button
                                                 type="submit"
                                                 class="btn btn-sm btn-outline-danger"
-                                                onclick="return confirm('¿Seguro que deseas cancelar este pedido?')"
                                             >
                                                 Cancelar
                                             </button>

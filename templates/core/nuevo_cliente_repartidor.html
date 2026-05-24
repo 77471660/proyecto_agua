@@ -54,6 +54,14 @@
             padding: 0.55rem 0.7rem;
         }
 
+        .photo-input-hidden {
+            height: 1px;
+            opacity: 0;
+            overflow: hidden;
+            position: absolute;
+            width: 1px;
+        }
+
         @media (max-width: 575.98px) {
             body {
                 padding-bottom: calc(1.25rem + var(--app-safe-area-bottom));
@@ -190,16 +198,22 @@
 
                 <div class="mb-4">
                     <label class="form-label" for="foto_referencia">
-                        Foto de referencia
+                        Foto
                     </label>
                     <input
                         type="file"
                         id="foto_referencia"
                         name="foto_referencia"
-                        class="form-control"
+                        class="form-control photo-input-hidden"
                         accept="image/*"
                         capture="environment"
                     >
+                    <label
+                        class="btn btn-outline-primary w-100 action-button mt-2"
+                        for="foto_referencia"
+                    >
+                        📷 Tomar foto
+                    </label>
                     <div class="form-text">
                         Opcional. Si agregas foto, captura tambi&eacute;n la ubicaci&oacute;n GPS.
                     </div>
@@ -221,6 +235,7 @@
 <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
 </script>
+<script src="{% static 'js/ui_safety.js' %}"></script>
 <script src="{% static 'js/reference_house_form.js' %}" defer></script>
 
 </body>

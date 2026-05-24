@@ -64,6 +64,14 @@
             object-fit: cover;
             width: 100%;
         }
+
+        .photo-input-hidden {
+            height: 1px;
+            opacity: 0;
+            overflow: hidden;
+            position: absolute;
+            width: 1px;
+        }
     </style>
 </head>
 
@@ -103,7 +111,7 @@
 
                 <div class="mb-4" data-photo-preview-root>
                     <label class="form-label" for="foto_referencia">
-                        Foto de referencia
+                        Foto
                     </label>
 
                     {% if cliente.foto_referencia_url %}
@@ -121,11 +129,17 @@
                             type="file"
                             id="foto_referencia"
                             name="foto_referencia"
-                            class="form-control"
+                            class="form-control photo-input-hidden"
                             accept="image/*"
                             capture="environment"
                             data-photo-preview-input
                         >
+                        <label
+                            class="btn btn-outline-primary w-100 action-button mt-2"
+                            for="foto_referencia"
+                        >
+                            📷 Tomar foto
+                        </label>
                         <img
                             src=""
                             alt="Vista previa de foto seleccionada"
@@ -153,7 +167,11 @@
                     {% endif %}
                 </div>
 
-                <button type="submit" class="btn btn-success w-100 action-button">
+                <button
+                    type="submit"
+                    class="btn btn-success w-100 action-button"
+                    data-confirm="Actualizar referencia?"
+                >
                     Guardar referencia
                 </button>
             </form>
@@ -201,6 +219,7 @@
 </script>
 <script src="{% static 'js/pwa.js' %}"></script>
 <script src="{% static 'js/capacitor_push.js' %}"></script>
+<script src="{% static 'js/ui_safety.js' %}"></script>
 <script src="{% static 'js/reference_house_form.js' %}" defer></script>
 
 </body>

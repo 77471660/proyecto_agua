@@ -175,7 +175,7 @@ Detalle del cliente
                 </p>
 
                 <p>
-                    <strong>Referencia de ubicaci&oacute;n:</strong><br>
+                    <strong>Referencia para llegar:</strong><br>
                     {{ cliente.referencia_ubicacion|default:"No registrada" }}
                 </p>
 
@@ -188,7 +188,7 @@ Detalle del cliente
 
                 {% if cliente.foto_referencia_url %}
                     <div class="client-location-panel">
-                        <h6 class="text-muted">Foto de referencia</h6>
+                        <h6 class="text-muted">Foto</h6>
                         <a
                             href="{{ cliente.foto_referencia_url }}"
                             target="_blank"
@@ -339,6 +339,7 @@ Detalle del cliente
                                         <form
                                             method="POST"
                                             action="{% url 'cambiar_estado_pedido' pedido.id 'EN_RUTA' %}"
+                                            data-confirm="Marcar en ruta?"
                                         >
                                             {% csrf_token %}
                                             <button
@@ -353,6 +354,7 @@ Detalle del cliente
                                     <form
                                         method="POST"
                                         action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}"
+                                        data-confirm="Marcar entregado?"
                                     >
                                         {% csrf_token %}
                                         <button
@@ -366,12 +368,12 @@ Detalle del cliente
                                     <form
                                         method="POST"
                                         action="{% url 'cambiar_estado_pedido' pedido.id 'CANCELADO' %}"
+                                        data-confirm="Cancelar pedido?"
                                     >
                                         {% csrf_token %}
                                         <button
                                             type="submit"
                                             class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('\u00bfSeguro que deseas cancelar este pedido?')"
                                         >
                                             Cancelar
                                         </button>

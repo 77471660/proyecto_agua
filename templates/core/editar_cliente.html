@@ -78,8 +78,8 @@ Editar cliente
                     {% include 'core/includes/cliente_ubicacion_fields.html' %}
 
                     <div class="mb-3">
-                        <label class="form-label">
-                            Foto de referencia
+                        <label class="form-label" for="foto_referencia">
+                            Foto
                         </label>
 
                         {% if cliente.foto_referencia_url %}
@@ -107,11 +107,18 @@ Editar cliente
 
                         <input
                             type="file"
+                            id="foto_referencia"
                             name="foto_referencia"
-                            class="form-control"
+                            class="form-control photo-input-hidden"
                             accept="image/*"
                             capture="environment"
                         >
+                        <label
+                            class="btn btn-outline-primary w-100 mt-2"
+                            for="foto_referencia"
+                        >
+                            📷 Tomar foto
+                        </label>
                         <small class="form-text text-muted">
                             Opcional. Si subes una nueva foto, reemplazará la anterior.
                         </small>
