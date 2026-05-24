@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load phone_format %}
 
 {% block title %}
 Editar pedido
@@ -12,7 +13,7 @@ Editar pedido
             <div>
                 <h2>Editar pedido #{{ pedido.id }}</h2>
                 <small class="text-muted">
-                    {{ pedido.cliente.nombre }} - {{ pedido.cliente.telefono }}
+                    {{ pedido.cliente.nombre }} - {{ pedido.cliente.telefono|format_phone_display }}
                 </small>
                 <div class="mt-2">
                     {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}

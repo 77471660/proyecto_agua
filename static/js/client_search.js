@@ -14,6 +14,19 @@
             .replaceAll("'", '&#039;');
     }
 
+    function formatPhoneDisplay(phone) {
+        const digits = String(phone || '').replace(/\D/g, '');
+        const localDigits = digits.length === 11 && digits.startsWith('51')
+            ? digits.slice(2)
+            : digits;
+
+        if (localDigits.length === 9) {
+            return `${localDigits.slice(0, 3)} ${localDigits.slice(3, 6)} ${localDigits.slice(6)}`;
+        }
+
+        return phone || '';
+    }
+
     searchBlocks.forEach((block) => {
         const input = block.querySelector('[data-client-input]');
         const hidden = block.querySelector('[data-client-hidden]');
@@ -56,7 +69,7 @@
         function renderSummary(client) {
             if (summary) {
                 const fields = {
-                    resumen_telefono: client.telefono || 'No registrado',
+                    resumen_telefono: formatPhoneDisplay(client.telefono) || 'No registrado',
                     resumen_direccion: client.direccion || 'No registrada',
                     resumen_estado: client.estado || 'Sin estado',
                     resumen_pedidos: client.pedidos_entregados || '0',
@@ -78,7 +91,7 @@
             if (selected) {
                 selected.innerHTML = `
                     <strong>${escapeHtml(client.nombre)}</strong><br>
-                    <span>${escapeHtml(client.telefono)}</span><br>
+                    <span>${escapeHtml(formatPhoneDisplay(client.telefono))}</span><br>
                     <small>${escapeHtml(client.direccion || 'Sin dirección registrada')}</small>
                 `;
                 selected.classList.remove('d-none');
@@ -87,7 +100,7 @@
 
         function selectClient(client) {
             hidden.value = client.id;
-            input.value = `${client.nombre} - ${client.telefono}`;
+            input.value = `${client.nombre} - ${formatPhoneDisplay(client.telefono)}`;
 
             if (error) {
                 error.classList.add('d-none');
@@ -118,7 +131,7 @@
                 button.type = 'button';
                 button.className = 'client-suggestion';
                 button.innerHTML = `
-                    <div class="fw-semibold">${escapeHtml(client.nombre)} - ${escapeHtml(client.telefono)}</div>
+                    <div class="fw-semibold">${escapeHtml(client.nombre)} - ${escapeHtml(formatPhoneDisplay(client.telefono))}</div>
                     <small class="text-muted">${escapeHtml((client.direccion || 'Sin dirección registrada') + reference)}</small>
                 `;
                 button.addEventListener('click', () => selectClient(client));

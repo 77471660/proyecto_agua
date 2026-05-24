@@ -13,6 +13,7 @@ from django.utils import timezone
 from PIL import Image
 
 from .models import Cliente, Pedido, PedidoHistorial
+from .templatetags.phone_format import format_phone_display
 from .views import repartidores_disponibles
 
 
@@ -99,6 +100,16 @@ class PermisosRolesTests(TestCase):
                 'https://www.google.com/maps/search/?api=1&query='
                 '-12.046374,-77.042793'
             )
+        )
+
+    def test_format_phone_display_agrupa_numero_de_nueve_digitos(self):
+        self.assertEqual(
+            format_phone_display('999111222'),
+            '999 111 222'
+        )
+        self.assertEqual(
+            format_phone_display('+51 999-111-222'),
+            '999 111 222'
         )
 
     def test_cliente_maps_url_usa_direccion_sin_coordenadas(self):

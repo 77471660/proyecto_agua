@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load phone_format %}
 
 {% block title %}
 Detalle del cliente
@@ -147,7 +148,7 @@ Detalle del cliente
 
                 <p>
                     <strong>Teléfono:</strong><br>
-                    {{ cliente.telefono }}
+                    {{ cliente.telefono|format_phone_display }}
                 </p>
 
                 <p>

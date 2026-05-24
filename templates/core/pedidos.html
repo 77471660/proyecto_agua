@@ -8,23 +8,35 @@ Pedidos - AquaSmart CRM
 
 <style>
     .orders-table .col-order-id {
-        width: 4.25rem;
+        width: 3.75rem;
+    }
+
+    .orders-table .col-order-client {
+        width: 10.5rem;
+    }
+
+    .orders-table .col-order-driver {
+        width: 8.5rem;
+    }
+
+    .orders-table .col-order-date {
+        width: 9rem;
     }
 
     .orders-table .col-order-qty {
-        width: 5.5rem;
+        width: 4.5rem;
     }
 
     .orders-table .col-order-total {
-        width: 6.5rem;
+        width: 5.75rem;
     }
 
     .orders-table .col-order-notes {
-        width: 7rem;
+        width: 5.75rem;
     }
 
     .orders-table .col-order-actions {
-        width: 8rem;
+        width: 7.5rem;
     }
 
     .orders-table th,
@@ -32,15 +44,24 @@ Pedidos - AquaSmart CRM
         vertical-align: middle;
     }
 
+    .order-client-name,
     .order-note-compact {
         color: #64748b;
         display: inline-block;
-        font-size: 0.78rem;
-        max-width: 7rem;
         overflow: hidden;
         text-overflow: ellipsis;
         vertical-align: middle;
         white-space: nowrap;
+    }
+
+    .order-client-name {
+        color: inherit;
+        max-width: 10.5rem;
+    }
+
+    .order-note-compact {
+        font-size: 0.78rem;
+        max-width: 5.75rem;
     }
 
     .order-note-empty {
@@ -51,7 +72,7 @@ Pedidos - AquaSmart CRM
 
     .order-actions-menu {
         display: inline-block;
-        min-width: 7.25rem;
+        min-width: 6.75rem;
     }
 
     .order-actions-menu summary {
@@ -92,8 +113,8 @@ Pedidos - AquaSmart CRM
 
         .orders-table th,
         .orders-table td {
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
+            padding-left: 0.42rem;
+            padding-right: 0.42rem;
         }
 
         .orders-table .badge,
@@ -222,9 +243,9 @@ Pedidos - AquaSmart CRM
                 <thead class="table-light">
                     <tr>
                         <th class="col-order-id">ID</th>
-                        <th>Cliente</th>
-                        <th>Repartidor</th>
-                        <th>Fecha / prioridad</th>
+                        <th class="col-order-client">Cliente</th>
+                        <th class="col-order-driver">Repartidor</th>
+                        <th class="col-order-date">Fecha / prioridad</th>
                         <th class="text-center col-order-qty">Cantidad</th>
                         <th class="text-end col-order-total">Total</th>
                         <th>Estado</th>
@@ -238,11 +259,13 @@ Pedidos - AquaSmart CRM
                         <tr class="{{ pedido.fila_prioridad_clase }}">
                             <td>#{{ pedido.id }}</td>
 
-                            <td>
-                                <div class="fw-semibold">{{ pedido.cliente.nombre }}</div>
+                            <td class="col-order-client">
+                                <div class="fw-semibold order-client-name" title="{{ pedido.cliente.nombre }}">
+                                    {{ pedido.cliente.nombre }}
+                                </div>
                             </td>
 
-                            <td>
+                            <td class="col-order-driver">
                                 {% if pedido.repartidor %}
                                     <span class="badge bg-primary">
                                         {% if pedido.repartidor.get_full_name %}
@@ -258,7 +281,7 @@ Pedidos - AquaSmart CRM
                                 {% endif %}
                             </td>
 
-                            <td class="order-date-cell">
+                            <td class="order-date-cell col-order-date">
                                 <div>{{ pedido.fecha_pedido|date:"d/m/Y" }}</div>
                                 <small class="text-muted">
                                     {{ pedido.fecha_pedido|date:"H:i" }}
@@ -274,11 +297,11 @@ Pedidos - AquaSmart CRM
                                 {% endif %}
                             </td>
 
-                            <td class="text-center">
+                            <td class="text-center col-order-qty">
                                 {{ pedido.cantidad_bidones }}
                             </td>
 
-                            <td class="text-end money-cell">
+                            <td class="text-end money-cell col-order-total">
                                 S/ {{ pedido.total|floatformat:2 }}
                             </td>
 

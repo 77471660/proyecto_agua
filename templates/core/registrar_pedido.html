@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load phone_format %}
 {% load static %}
 
 {% block content %}
@@ -81,7 +82,7 @@
                 placeholder="Buscar por nombre, teléfono o dirección..."
                 autocomplete="off"
                 data-client-input
-                value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.nombre }} - {{ cliente_preseleccionado.telefono }}{% endif %}"
+                value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.nombre }} - {{ cliente_preseleccionado.telefono|format_phone_display }}{% endif %}"
                 required
             >
             <input
@@ -134,7 +135,7 @@
 
             <p class="mb-1">
                 <strong>Teléfono:</strong>
-                <span id="resumen_telefono">{{ cliente_preseleccionado.telefono }}</span>
+                <span id="resumen_telefono">{{ cliente_preseleccionado.telefono|format_phone_display }}</span>
             </p>
 
             <p class="mb-1">

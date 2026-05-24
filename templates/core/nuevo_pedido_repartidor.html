@@ -1,4 +1,5 @@
 {% load static %}
+{% load phone_format %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -127,7 +128,7 @@
                         placeholder="Buscar por nombre, teléfono o dirección..."
                         autocomplete="off"
                         data-client-input
-                        value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.nombre }} - {{ cliente_preseleccionado.telefono }}{% endif %}"
+                        value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.nombre }} - {{ cliente_preseleccionado.telefono|format_phone_display }}{% endif %}"
                         required
                     >
                     <input
@@ -142,7 +143,7 @@
                     <div id="cliente_seleccionado" class="alert alert-info selected-client mt-2 {% if not cliente_preseleccionado %}d-none{% endif %} mb-0">
                         {% if cliente_preseleccionado %}
                             <strong>{{ cliente_preseleccionado.nombre }}</strong><br>
-                            <span>{{ cliente_preseleccionado.telefono }}</span><br>
+                            <span>{{ cliente_preseleccionado.telefono|format_phone_display }}</span><br>
                             <small>{{ cliente_preseleccionado.direccion|default:"Sin dirección registrada" }}</small>
                         {% endif %}
                     </div>

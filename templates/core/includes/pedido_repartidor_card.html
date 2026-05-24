@@ -1,3 +1,5 @@
+{% load phone_format %}
+
 <article id="pedido-{{ pedido.id }}" class="card order-card mb-3">
     <div class="card-body">
         <div class="order-card-header">
@@ -21,7 +23,7 @@
 
             <div class="order-card-row">
                 <a class="order-card-phone text-decoration-none" href="tel:{{ pedido.telefono_limpio }}">
-                    {{ pedido.cliente.telefono }}
+                    {{ pedido.cliente.telefono|format_phone_display }}
                 </a>
 
                 <span class="waiting-badge {{ pedido.tiempo_esperando_clase }}">

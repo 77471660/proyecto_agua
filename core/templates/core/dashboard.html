@@ -1,5 +1,6 @@
 ﻿{% extends 'base.html' %}
 {% load static %}
+{% load phone_format %}
 
 {% block title %}
 Dashboard - AquaSmart CRM
@@ -206,7 +207,7 @@ Dashboard - AquaSmart CRM
                         {% for pedido in pedidos_urgentes %}
                             <tr>
                                 <td>{{ pedido.cliente.nombre }}</td>
-                                <td>{{ pedido.cliente.telefono }}</td>
+                                <td>{{ pedido.cliente.telefono|format_phone_display }}</td>
                                 <td>{{ pedido.fecha_programada|date:"d/m/Y" }}</td>
                                 <td>
                                     {% if pedido.fecha_pedido <= limite_2_horas %}
@@ -436,7 +437,7 @@ Dashboard - AquaSmart CRM
                                 {% for cliente in clientes_frecuentes %}
                                     <tr>
                                         <td>{{ cliente.nombre }}</td>
-                                        <td>{{ cliente.telefono }}</td>
+                                        <td>{{ cliente.telefono|format_phone_display }}</td>
                                         <td>{{ cliente.total_entregados }}</td>
                                         <td>
                                             {% if cliente.estado == 'ACTIVO' %}

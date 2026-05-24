@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load phone_format %}
 
 {% block title %}
 Clientes - AquaSmart CRM
@@ -74,7 +75,7 @@ Clientes - AquaSmart CRM
                             {% endif %}
                         </td>
 
-                        <td>{{ cliente.telefono }}</td>
+                        <td>{{ cliente.telefono|format_phone_display }}</td>
                         <td>{{ cliente.direccion }}</td>
 
                         <td>
