@@ -41,7 +41,7 @@ def payload_for_log(payload):
 
     return {
         'title': payload.get('title'),
-        'body': payload.get('body'),
+        'body': '[redacted]' if payload.get('body') else '',
         'url': payload.get('url'),
         'tag': payload.get('tag'),
         'icon': payload.get('icon'),

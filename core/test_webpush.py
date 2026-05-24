@@ -12,7 +12,11 @@ from django.utils import timezone
 from pywebpush import WebPushException
 
 from .models import Cliente, FCMToken, Pedido, PushSubscription
-from .push_notifications import send_order_assignment_push, send_push_to_user
+from .push_notifications import (
+    payload_for_log,
+    send_order_assignment_push,
+    send_push_to_user,
+)
 
 
 class WebPushTests(TestCase):
@@ -248,13 +252,14 @@ class WebPushTests(TestCase):
         self.client.force_login(self.jefe)
 
         with patch('core.views.send_order_assignment_push') as send_push:
-            response = self.client.post(
-                reverse(
-                    'asignar_pedido_repartidor',
-                    kwargs={'pedido_id': pedido.id}
-                ),
-                {'repartidor': str(self.repartidor.id)}
-            )
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.post(
+                    reverse(
+                        'asignar_pedido_repartidor',
+                        kwargs={'pedido_id': pedido.id}
+                    ),
+                    {'repartidor': str(self.repartidor.id)}
+                )
 
         pedido.refresh_from_db()
         self.assertRedirects(
@@ -264,6 +269,17 @@ class WebPushTests(TestCase):
         )
         self.assertEqual(pedido.repartidor, self.repartidor)
         send_push.assert_called_once()
+
+    def test_payload_para_log_oculta_datos_del_cliente(self):
+        logged_payload = payload_for_log({
+            'title': 'Pedido asignado',
+            'body': 'Cliente: Persona Privada\nEntrega en Dirección Confidencial',
+            'tag': 'pedido-1-asignado',
+        })
+
+        self.assertEqual(logged_payload['body'], '[redacted]')
+        self.assertNotIn('Persona Privada', str(logged_payload))
+        self.assertNotIn('Dirección Confidencial', str(logged_payload))
 
     def test_payload_de_pedido_asignado_abre_ancla_del_pedido(self):
         pedido = Pedido.objects.create(

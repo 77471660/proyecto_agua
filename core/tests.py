@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from datetime import timedelta
 from decimal import Decimal
 from io import BytesIO
@@ -7,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
@@ -579,6 +582,81 @@ class PermisosRolesTests(TestCase):
         CLOUDINARY_API_SECRET='secret'
     )
     @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    @patch('core.cloudinary_images.cloudinary.uploader.upload')
+    def test_editar_cliente_reemplaza_foto_legacy_usando_public_id_de_url(
+        self,
+        upload_mock,
+        destroy_mock
+    ):
+        self.cliente.foto_referencia_url = (
+            'https://res.cloudinary.com/demo/image/upload/v123/'
+            'aquasmart/clientes/legacy.jpg'
+        )
+        self.cliente.foto_referencia_public_id = ''
+        self.cliente.save()
+        upload_mock.return_value = {
+            'secure_url': 'https://res.cloudinary.com/demo/clientes/new.jpg',
+            'public_id': 'aquasmart/clientes/new',
+        }
+        self.client.force_login(self.secretaria)
+
+        self.client.post(
+            reverse('editar_cliente', kwargs={'cliente_id': self.cliente.id}),
+            {
+                'nombre': self.cliente.nombre,
+                'telefono': self.cliente.telefono,
+                'direccion': self.cliente.direccion,
+                'referencia': '',
+                'foto_referencia': self.crear_foto_prueba('nueva.jpg'),
+            }
+        )
+
+        self.assertEqual(
+            destroy_mock.call_args.args[0],
+            'aquasmart/clientes/legacy'
+        )
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    @patch('core.cloudinary_images.cloudinary.uploader.upload')
+    def test_registrar_cliente_limpia_foto_nueva_si_falla_guardado(
+        self,
+        upload_mock,
+        destroy_mock
+    ):
+        upload_mock.return_value = {
+            'secure_url': 'https://res.cloudinary.com/demo/clientes/new.jpg',
+            'public_id': 'aquasmart/clientes/new',
+        }
+        self.client.force_login(self.secretaria)
+
+        with patch('core.models.Cliente.save', side_effect=RuntimeError('db error')):
+            with self.assertRaises(RuntimeError):
+                self.client.post(
+                    reverse('registrar_cliente'),
+                    {
+                        'nombre': 'Cliente Foto Fallida',
+                        'telefono': '999444555',
+                        'direccion': 'Av. Error 1',
+                        'latitud': '-12.050000',
+                        'longitud': '-77.030000',
+                        'foto_referencia': self.crear_foto_prueba(),
+                    }
+                )
+
+        destroy_mock.assert_called_once()
+        self.assertEqual(destroy_mock.call_args.args[0], 'aquasmart/clientes/new')
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
     def test_admin_elimina_foto_sin_limite_de_tiempo(self, destroy_mock):
         self.cliente.foto_referencia_url = 'https://old.example/foto.jpg'
         self.cliente.foto_referencia_public_id = 'aquasmart/clientes/old'
@@ -956,6 +1034,38 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(pedido.fecha_programada, fecha_futura)
         self.assertEqual(pedido.repartidor, self.repartidor)
 
+    def test_nuevo_pedido_repartidor_rechaza_cantidad_mayor_a_100(self):
+        self.client.force_login(self.repartidor)
+
+        self.client.post(
+            reverse('nuevo_pedido_repartidor'),
+            {
+                'cliente': str(self.cliente.id),
+                'cantidad_bidones': '101',
+                'precio_unitario': '7.00',
+                'observacion': '',
+                'fecha_programada': '',
+            }
+        )
+
+        self.assertFalse(Pedido.objects.exists())
+
+    def test_nuevo_pedido_repartidor_rechaza_precio_mayor_a_50(self):
+        self.client.force_login(self.repartidor)
+
+        self.client.post(
+            reverse('nuevo_pedido_repartidor'),
+            {
+                'cliente': str(self.cliente.id),
+                'cantidad_bidones': '2',
+                'precio_unitario': '50.01',
+                'observacion': '',
+                'fecha_programada': '',
+            }
+        )
+
+        self.assertFalse(Pedido.objects.exists())
+
     def test_repartidor_solo_ve_pedidos_asignados(self):
         pedido_asignado = self.crear_pedido(self.repartidor)
         cliente_otro = Cliente.objects.create(
@@ -1091,6 +1201,37 @@ class PermisosRolesTests(TestCase):
                 valor_nuevo=Pedido.EN_RUTA
             ).exists()
         )
+
+    def test_repartidor_no_actualiza_referencia_de_pedido_cerrado_antiguo(self):
+        pedido = self.crear_pedido(self.repartidor)
+        momento = timezone.now() - timedelta(days=2)
+        pedido.registrar_estado(Pedido.ENTREGADO, self.repartidor, momento=momento)
+        pedido.save()
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_repartidor_actualiza_referencia_de_entrega_reciente(self):
+        pedido = self.crear_pedido(self.repartidor)
+        pedido.registrar_estado(Pedido.ENTREGADO, self.repartidor)
+        pedido.save()
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
 
     def test_repartidor_ve_boton_foto_referencia_cliente(self):
         self.cliente.foto_referencia_url = 'https://res.cloudinary.com/demo/foto.jpg'
@@ -1505,6 +1646,46 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(pedido.cantidad_bidones, 2)
         self.assertEqual(pedido.total, Decimal('14.00'))
 
+    def test_registrar_pedido_revierte_creacion_si_falla_historial(self):
+        self.client.force_login(self.secretaria)
+
+        with patch(
+            'core.views.registrar_historial_pedido',
+            side_effect=RuntimeError('historial no disponible')
+        ):
+            with self.assertRaises(RuntimeError):
+                self.client.post(
+                    reverse('registrar_pedido'),
+                    {
+                        'cliente': str(self.cliente.id),
+                        'repartidor': '',
+                        'cantidad_bidones': '2',
+                        'precio_unitario': '7.00',
+                        'estado': Pedido.PENDIENTE,
+                        'observacion': '',
+                        'fecha_programada': '',
+                    }
+                )
+
+        self.assertFalse(Pedido.objects.exists())
+
+    def test_dashboard_y_reporte_diario_contabilizan_por_fecha_entrega(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            fecha_pedido=timezone.now() - timedelta(days=1),
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now()
+        )
+        self.client.force_login(self.secretaria)
+
+        dashboard = self.client.get(reverse('dashboard'))
+        diario = self.client.get(reverse('reporte_diario'))
+
+        self.assertEqual(dashboard.context['ventas_hoy'], Decimal('14.00'))
+        self.assertEqual(dashboard.context['bidones_hoy'], 2)
+        self.assertEqual(diario.context['ventas_hoy'], Decimal('14.00'))
+        self.assertEqual(diario.context['bidones_hoy'], 2)
+
 
 class ReporteMensualTests(TestCase):
     def setUp(self):
@@ -1525,4 +1706,70 @@ class ReporteMensualTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+    def test_reporte_mensual_contabiliza_por_fecha_entrega(self):
+        cliente = Cliente.objects.create(
+            nombre='Cliente Mensual',
+            telefono='999111999',
+            direccion='Av. Mes 1'
+        )
+        pedido = Pedido.objects.create(
+            cliente=cliente,
+            cantidad_bidones=3,
+            precio_unitario=Decimal('7.00'),
+            total=Decimal('21.00'),
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now()
+        )
+        Pedido.objects.filter(pk=pedido.pk).update(
+            fecha_pedido=timezone.now() - timedelta(days=40)
+        )
+        hoy = timezone.localdate()
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(
+            reverse('reporte_mensual'),
+            {'mes': str(hoy.month), 'anio': str(hoy.year)}
+        )
+
+        self.assertEqual(response.context['ingresos_mes'], Decimal('21.00'))
+        self.assertEqual(response.context['bidones_mes'], 3)
         self.assertContains(response, 'Gráfico diario de ventas')
+
+
+class ProductionSettingsTests(SimpleTestCase):
+    def test_debug_es_false_por_defecto(self):
+        env = os.environ.copy()
+        env.pop('DEBUG', None)
+        env['SECRET_KEY'] = 'test-key'
+        env['DJANGO_ENV'] = 'development'
+        env.pop('RENDER_EXTERNAL_HOSTNAME', None)
+
+        result = subprocess.run(
+            [sys.executable, '-c', 'import water_system.settings as s; print(s.DEBUG)'],
+            cwd=os.getcwd(),
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn('False', result.stdout)
+
+    def test_produccion_rechaza_secret_key_ausente(self):
+        env = os.environ.copy()
+        env.pop('SECRET_KEY', None)
+        env['DJANGO_ENV'] = 'production'
+
+        result = subprocess.run(
+            [sys.executable, '-c', 'import water_system.settings'],
+            cwd=os.getcwd(),
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('SECRET_KEY es obligatoria', result.stderr)

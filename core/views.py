@@ -8,6 +8,7 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import (
     Sum,
     Count,
@@ -166,7 +167,7 @@ def aplicar_foto_referencia_cliente(cliente, uploaded_file, usuario=None):
     if not uploaded_file:
         return ''
 
-    public_id_anterior = cliente.foto_referencia_public_id
+    public_id_anterior = get_client_reference_photo_public_id(cliente)
     resultado = upload_client_reference_photo(uploaded_file)
     cliente.foto_referencia_url = resultado['secure_url']
     cliente.foto_referencia_public_id = resultado['public_id']
@@ -177,9 +178,15 @@ def aplicar_foto_referencia_cliente(cliente, uploaded_file, usuario=None):
     return public_id_anterior
 
 
+def limpiar_foto_nueva_si_falla_guardado(public_id_nuevo, public_id_anterior=''):
+
+    if public_id_nuevo and public_id_nuevo != public_id_anterior:
+        delete_client_reference_photo(public_id_nuevo)
+
+
 def limpiar_foto_referencia_cliente(cliente):
 
-    public_id_anterior = cliente.foto_referencia_public_id
+    public_id_anterior = get_client_reference_photo_public_id(cliente)
     cliente.foto_referencia_url = ''
     cliente.foto_referencia_public_id = ''
     cliente.foto_referencia_actualizada_en = None
@@ -287,6 +294,23 @@ def cambiar_estado_operativo(pedido, nuevo_estado, usuario, descripcion):
         valor_anterior=estado_anterior,
         valor_nuevo=nuevo_estado
     )
+
+
+def programar_notificacion_asignacion(pedido, repartidor_anterior=None):
+
+    pedido_id = pedido.id
+
+    def enviar_notificacion():
+        pedido_actualizado = Pedido.objects.select_related(
+            'cliente',
+            'repartidor'
+        ).get(id=pedido_id)
+        send_order_assignment_push(
+            pedido_actualizado,
+            previous_repartidor=repartidor_anterior
+        )
+
+    transaction.on_commit(enviar_notificacion)
 
 
 def cambios_edicion_pedido(pedido, nuevos_valores):
@@ -1004,7 +1028,7 @@ def dashboard(request):
 
     ventas_hoy = Pedido.objects.filter(
         estado=Pedido.ENTREGADO,
-        fecha_pedido__date=hoy
+        fecha_entrega__date=hoy
     ).aggregate(
         total=Sum('total')
     )['total'] or 0
@@ -1015,7 +1039,7 @@ def dashboard(request):
 
     bidones_hoy = Pedido.objects.filter(
         estado=Pedido.ENTREGADO,
-        fecha_pedido__date=hoy
+        fecha_entrega__date=hoy
     ).aggregate(
         total=Sum('cantidad_bidones')
     )['total'] or 0
@@ -1035,7 +1059,7 @@ def dashboard(request):
     ]:
         pedidos_dia = Pedido.objects.filter(
             estado=Pedido.ENTREGADO,
-            fecha_pedido__date=fecha
+            fecha_entrega__date=fecha
         )
 
         comparativo_ventas.append({
@@ -1073,7 +1097,7 @@ def dashboard(request):
     if fecha_comparacion:
         pedidos_fecha_comparacion = Pedido.objects.filter(
             estado=Pedido.ENTREGADO,
-            fecha_pedido__date=fecha_comparacion
+            fecha_entrega__date=fecha_comparacion
         )
 
         venta_fecha_comparacion = {
@@ -1097,7 +1121,7 @@ def dashboard(request):
 
     ventas_mes = Pedido.objects.filter(
         estado=Pedido.ENTREGADO,
-        fecha_pedido__date__gte=inicio_mes
+        fecha_entrega__date__gte=inicio_mes
     ).aggregate(
         total=Sum('total')
     )['total'] or 0
@@ -1307,7 +1331,7 @@ def reporte_diario(request):
     ]:
         pedidos_dia = Pedido.objects.filter(
             estado=Pedido.ENTREGADO,
-            fecha_pedido__date=fecha
+            fecha_entrega__date=fecha
         )
 
         comparativo_ventas.append({
@@ -1334,7 +1358,7 @@ def reporte_diario(request):
     while fecha_iteracion <= hoy:
         pedidos_dia = Pedido.objects.filter(
             estado=Pedido.ENTREGADO,
-            fecha_pedido__date=fecha_iteracion
+            fecha_entrega__date=fecha_iteracion
         )
 
         detalle_diario_mes.append({
@@ -1543,6 +1567,9 @@ def editar_cliente(request, cliente_id):
         cliente.longitud = longitud
         cliente.referencia_ubicacion = referencia_ubicacion
 
+        public_id_anterior = ''
+        public_id_nuevo = ''
+
         try:
             cliente.full_clean()
             public_id_anterior = aplicar_foto_referencia_cliente(
@@ -1550,6 +1577,8 @@ def editar_cliente(request, cliente_id):
                 foto_referencia,
                 request.user
             )
+            if foto_referencia:
+                public_id_nuevo = cliente.foto_referencia_public_id
             if eliminar_foto_referencia and not foto_referencia:
                 public_id_anterior = limpiar_foto_referencia_cliente(cliente)
             cliente.save()
@@ -1575,6 +1604,12 @@ def editar_cliente(request, cliente_id):
                 'editar_cliente',
                 cliente_id=cliente.id
             )
+        except Exception:
+            limpiar_foto_nueva_si_falla_guardado(
+                public_id_nuevo,
+                public_id_anterior
+            )
+            raise
 
         messages.success(
             request,
@@ -1658,9 +1693,13 @@ def registrar_cliente(request):
             referencia_ubicacion=referencia_ubicacion
         )
 
+        public_id_nuevo = ''
+
         try:
             cliente.full_clean()
             aplicar_foto_referencia_cliente(cliente, foto_referencia, request.user)
+            if foto_referencia:
+                public_id_nuevo = cliente.foto_referencia_public_id
             cliente.save()
         except ValidationError as error:
             logger.warning(
@@ -1672,6 +1711,9 @@ def registrar_cliente(request):
         except ClientPhotoError as error:
             messages.error(request, str(error))
             return redirect('registrar_cliente')
+        except Exception:
+            limpiar_foto_nueva_si_falla_guardado(public_id_nuevo)
+            raise
 
         messages.success(request, 'Cliente registrado correctamente.')
         return redirect('lista_clientes')
@@ -1823,29 +1865,30 @@ def registrar_pedido(request):
             messages.error(request, 'Un pedido reprogramado debe tener fecha futura.')
             return redirect('registrar_pedido')
 
-        pedido = Pedido(
-            cliente=cliente,
-            repartidor=repartidor,
-            cantidad_bidones=cantidad_bidones,
-            precio_unitario=precio_unitario,
-            total=total,
-            observacion=observacion,
-            fecha_programada=fecha_programada_valor,
-        )
-        pedido.registrar_estado(estado_inicial, request.user)
-        pedido.save()
-        registrar_historial_pedido(
-            pedido,
-            request.user,
-            PedidoHistorial.CREADO,
-            (
-                'Pedido creado por '
-                f'{nombre_usuario_historial(request.user)}.'
-            ),
-            valor_nuevo=resumen_pedido_historial(pedido)
-        )
+        with transaction.atomic():
+            pedido = Pedido(
+                cliente=cliente,
+                repartidor=repartidor,
+                cantidad_bidones=cantidad_bidones,
+                precio_unitario=precio_unitario,
+                total=total,
+                observacion=observacion,
+                fecha_programada=fecha_programada_valor,
+            )
+            pedido.registrar_estado(estado_inicial, request.user)
+            pedido.save()
+            registrar_historial_pedido(
+                pedido,
+                request.user,
+                PedidoHistorial.CREADO,
+                (
+                    'Pedido creado por '
+                    f'{nombre_usuario_historial(request.user)}.'
+                ),
+                valor_nuevo=resumen_pedido_historial(pedido)
+            )
 
-        actualizar_estados_clientes()
+            actualizar_estados_clientes()
 
         messages.success(request, 'Pedido registrado correctamente.')
         return redirect('lista_pedidos')
@@ -1861,6 +1904,7 @@ def registrar_pedido(request):
 
 
 @login_required
+@transaction.atomic
 def editar_pedido(request, pedido_id):
 
     if not puede_editar_pedido(request.user):
@@ -2051,9 +2095,9 @@ def editar_pedido(request, pedido_id):
                 valor_anterior=anterior_texto,
                 valor_nuevo=nuevo_texto
             )
-            send_order_assignment_push(
+            programar_notificacion_asignacion(
                 pedido,
-                previous_repartidor=repartidor_anterior
+                repartidor_anterior=repartidor_anterior
             )
 
         if fecha_reprogramada:
@@ -2492,6 +2536,7 @@ def panel_jefe_repartidores(request):
 @login_required
 @jefe_repartidores_required
 @require_POST
+@transaction.atomic
 def asignar_pedido_repartidor(request, pedido_id):
 
     repartidor_id = request.POST.get('repartidor', '').strip()
@@ -2541,9 +2586,9 @@ def asignar_pedido_repartidor(request, pedido_id):
         valor_anterior=nombre_repartidor_historial(repartidor_anterior),
         valor_nuevo=nombre_repartidor_historial(repartidor)
     )
-    send_order_assignment_push(
+    programar_notificacion_asignacion(
         pedido,
-        previous_repartidor=repartidor_anterior
+        repartidor_anterior=repartidor_anterior
     )
 
     messages.success(
@@ -2557,6 +2602,7 @@ def asignar_pedido_repartidor(request, pedido_id):
 @login_required
 @repartidor_required
 @require_POST
+@transaction.atomic
 def marcar_pedido_entregado_repartidor(request, pedido_id):
 
     pedido = get_object_or_404(
@@ -2592,6 +2638,7 @@ def marcar_pedido_entregado_repartidor(request, pedido_id):
 @login_required
 @repartidor_required
 @require_POST
+@transaction.atomic
 def marcar_pedido_en_ruta_repartidor(request, pedido_id):
 
     pedido = get_object_or_404(
@@ -2666,8 +2713,16 @@ def nuevo_pedido_repartidor(request):
             messages.error(request, 'La cantidad mínima es 1 bidón.')
             return redirect('nuevo_pedido_repartidor')
 
-        if precio_unitario <= Decimal('0'):
-            messages.error(request, 'El precio unitario debe ser mayor a 0.')
+        if cantidad_bidones > 100:
+            messages.error(request, 'La cantidad máxima permitida es 100 bidones.')
+            return redirect('nuevo_pedido_repartidor')
+
+        if precio_unitario < Decimal('1.00'):
+            messages.error(request, 'El precio unitario mínimo permitido es S/ 1.00.')
+            return redirect('nuevo_pedido_repartidor')
+
+        if precio_unitario > Decimal('50.00'):
+            messages.error(request, 'El precio unitario máximo permitido es S/ 50.00.')
             return redirect('nuevo_pedido_repartidor')
 
         fecha_programada_valor = timezone.localdate()
@@ -2698,29 +2753,30 @@ def nuevo_pedido_repartidor(request):
         total = cantidad_bidones * precio_unitario
         estado = Pedido.ENTREGADO if entregar_ahora else Pedido.ASIGNADO
 
-        pedido = Pedido(
-            cliente=cliente,
-            repartidor=request.user,
-            cantidad_bidones=cantidad_bidones,
-            precio_unitario=precio_unitario,
-            total=total,
-            observacion=observacion,
-            fecha_programada=fecha_programada_valor,
-        )
-        pedido.registrar_estado(estado, request.user)
-        pedido.save()
-        registrar_historial_pedido(
-            pedido,
-            request.user,
-            PedidoHistorial.CREADO,
-            (
-                'Pedido creado desde panel repartidor por '
-                f'{nombre_usuario_historial(request.user)}.'
-            ),
-            valor_nuevo=resumen_pedido_historial(pedido)
-        )
+        with transaction.atomic():
+            pedido = Pedido(
+                cliente=cliente,
+                repartidor=request.user,
+                cantidad_bidones=cantidad_bidones,
+                precio_unitario=precio_unitario,
+                total=total,
+                observacion=observacion,
+                fecha_programada=fecha_programada_valor,
+            )
+            pedido.registrar_estado(estado, request.user)
+            pedido.save()
+            registrar_historial_pedido(
+                pedido,
+                request.user,
+                PedidoHistorial.CREADO,
+                (
+                    'Pedido creado desde panel repartidor por '
+                    f'{nombre_usuario_historial(request.user)}.'
+                ),
+                valor_nuevo=resumen_pedido_historial(pedido)
+            )
 
-        actualizar_estados_clientes()
+            actualizar_estados_clientes()
 
         if entregar_ahora:
             messages.success(
@@ -2824,9 +2880,13 @@ def nuevo_cliente_repartidor(request):
             referencia_ubicacion=referencia_ubicacion
         )
 
+        public_id_nuevo = ''
+
         try:
             cliente.full_clean()
             aplicar_foto_referencia_cliente(cliente, foto_referencia, request.user)
+            if foto_referencia:
+                public_id_nuevo = cliente.foto_referencia_public_id
             cliente.save()
         except ValidationError as error:
             logger.warning(
@@ -2838,6 +2898,9 @@ def nuevo_cliente_repartidor(request):
         except ClientPhotoError as error:
             messages.error(request, str(error))
             return redirect('nuevo_cliente_repartidor')
+        except Exception:
+            limpiar_foto_nueva_si_falla_guardado(public_id_nuevo)
+            raise
 
         messages.success(
             request,
@@ -2855,10 +2918,15 @@ def nuevo_cliente_repartidor(request):
 @repartidor_required
 def actualizar_referencia_cliente_repartidor(request, cliente_id):
 
+    limite_reciente = timezone.now() - timedelta(hours=24)
     cliente = get_object_or_404(
         Cliente.objects.filter(
             id=cliente_id,
             pedido__repartidor=request.user
+        ).filter(
+            Q(pedido__estado__in=Pedido.ESTADOS_ACTIVOS)
+            | Q(pedido__fecha_entrega__gte=limite_reciente)
+            | Q(pedido__fecha_cancelacion__gte=limite_reciente)
         ).distinct()
     )
     puede_cambiar_foto = puede_repartidor_actualizar_foto_cliente(cliente)
@@ -2914,6 +2982,9 @@ def actualizar_referencia_cliente_repartidor(request, cliente_id):
         cliente.longitud = longitud
         cliente.referencia_ubicacion = referencia_ubicacion
 
+        public_id_anterior = ''
+        public_id_nuevo = ''
+
         try:
             cliente.full_clean()
             public_id_anterior = aplicar_foto_referencia_cliente(
@@ -2921,6 +2992,8 @@ def actualizar_referencia_cliente_repartidor(request, cliente_id):
                 foto_referencia,
                 request.user
             )
+            if foto_referencia:
+                public_id_nuevo = cliente.foto_referencia_public_id
             cliente.save()
             if (
                 public_id_anterior
@@ -2944,6 +3017,12 @@ def actualizar_referencia_cliente_repartidor(request, cliente_id):
                 'actualizar_referencia_cliente_repartidor',
                 cliente_id=cliente.id
             )
+        except Exception:
+            limpiar_foto_nueva_si_falla_guardado(
+                public_id_nuevo,
+                public_id_anterior
+            )
+            raise
 
         messages.success(request, 'Referencia de casa actualizada correctamente.')
         return redirect('pedidos_repartidor')
@@ -2963,6 +3042,7 @@ def actualizar_referencia_cliente_repartidor(request, cliente_id):
 @login_required
 @repartidor_required
 @require_POST
+@transaction.atomic
 def cancelar_pedido_repartidor(request, pedido_id):
 
     pedido = get_object_or_404(
@@ -3017,6 +3097,7 @@ def cerrar_sesion_usuario(request):
 @login_required
 @secretaria_required
 @require_POST
+@transaction.atomic
 def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
 
     pedido = get_object_or_404(
@@ -3146,6 +3227,7 @@ def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
 @login_required
 @secretaria_required
 @require_POST
+@transaction.atomic
 def revertir_entrega(request, pedido_id):
 
     pedido = get_object_or_404(
@@ -3219,8 +3301,10 @@ def reporte_mensual(request):
         fecha_pedido__month=mes
     )
 
-    pedidos_entregados = pedidos_mes.filter(
-        estado=Pedido.ENTREGADO
+    pedidos_entregados = Pedido.objects.filter(
+        estado=Pedido.ENTREGADO,
+        fecha_entrega__year=anio,
+        fecha_entrega__month=mes
     )
 
     ingresos_mes = pedidos_entregados.aggregate(
@@ -3267,7 +3351,7 @@ def reporte_mensual(request):
     ).first()
 
     dia_mas_ventas = pedidos_entregados.extra(
-        select={'fecha': 'DATE(fecha_pedido)'}
+        select={'fecha': 'DATE(fecha_entrega)'}
     ).values(
         'fecha'
     ).annotate(
@@ -3295,7 +3379,7 @@ def reporte_mensual(request):
     for dia in range(1, ultimo_dia_mes + 1):
         fecha = datetime(anio, mes, dia).date()
         pedidos_dia = pedidos_entregados.filter(
-            fecha_pedido__date=fecha
+            fecha_entrega__date=fecha
         )
         ingresos_dia = pedidos_dia.aggregate(
             total=Sum('total')

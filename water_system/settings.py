@@ -9,15 +9,21 @@ import sys
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    'SECRET_KEY',
-    'django-insecure-=2ndt1-d0+upwvcbbujdxc(#w5egsja3@db7z@qp0-=)vdw2hx',
-)
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+ENVIRONMENT = os.environ.get('DJANGO_ENV', 'development').lower()
+IS_PRODUCTION = ENVIRONMENT in {'production', 'prod'} or bool(RENDER_EXTERNAL_HOSTNAME)
 
-DEBUG = os.environ.get('DEBUG', 'True').lower() in {'1', 'true', 'yes', 'on'}
+SECRET_KEY = os.environ.get('SECRET_KEY', '').strip()
+if not SECRET_KEY:
+    if IS_PRODUCTION:
+        raise ImproperlyConfigured('SECRET_KEY es obligatoria en producción.')
+    SECRET_KEY = 'django-insecure-local-development-only-change-me'
+
+DEBUG = os.environ.get('DEBUG', 'False').lower() in {'1', 'true', 'yes', 'on'}
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
@@ -26,7 +32,6 @@ ALLOWED_HOSTS = [
     '.onrender.com',
 ]
 
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
