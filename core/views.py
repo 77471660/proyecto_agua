@@ -488,8 +488,9 @@ def webpush_unsubscribe(request):
 def fcm_register_token(request):
 
     logger.info(
-        'POST /fcm/register-token/ recibido. usuario=%s',
-        request.user.id
+        'POST /fcm/register-token/ recibido. usuario=%s username=%s',
+        request.user.id,
+        request.user.get_username()
     )
 
     try:
@@ -515,6 +516,16 @@ def fcm_register_token(request):
     if len(device_id) > 120:
         device_id = device_id[:120]
 
+    logger.info(
+        'FCM token recibido. usuario=%s username=%s token=%s '
+        'platform=%s device_id=%s',
+        request.user.id,
+        request.user.get_username(),
+        token_for_log(token),
+        platform,
+        device_id or 'sin-device-id'
+    )
+
     fcm_token, created = FCMToken.objects.update_or_create(
         token=token,
         defaults={
@@ -532,16 +543,22 @@ def fcm_register_token(request):
 
     logger.info(
         'FCM token guardado. usuario=%s token_id=%s created=%s '
-        'token=%s platform=%s tokens_activos_usuario=%s',
+        'token=%s platform=%s device_id=%s tokens_activos_usuario=%s',
         request.user.id,
         fcm_token.id,
         created,
         token_for_log(token),
         platform,
+        device_id or 'sin-device-id',
         active_count
     )
 
-    return JsonResponse({'ok': True})
+    return JsonResponse({
+        'ok': True,
+        'token_id': fcm_token.id,
+        'user_id': request.user.id,
+        'platform': platform,
+    })
 
 
 def paginar_queryset(request, queryset, por_pagina, page_param='page'):

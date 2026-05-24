@@ -82,10 +82,19 @@ def is_invalid_fcm_error(exc):
 
 def send_fcm_to_user(user, payload):
 
+    logger.info(
+        'FCM envio solicitado. usuario_destino=%s username=%s payload=%s',
+        user.id,
+        user.get_username(),
+        payload_for_log(payload)
+    )
+
     if not initialize_firebase():
         logger.warning(
-            'FCM omitido por configuracion. usuario_destino=%s payload=%s',
+            'FCM omitido por configuracion. usuario_destino=%s username=%s '
+            'payload=%s',
             user.id,
+            user.get_username(),
             payload_for_log(payload)
         )
         return
@@ -102,16 +111,19 @@ def send_fcm_to_user(user, payload):
     )
     token_count = tokens.count()
     logger.info(
-        'FCM envio iniciado. usuario_destino=%s tokens_activos=%s payload=%s',
+        'FCM envio iniciado. usuario_destino=%s username=%s '
+        'tokens_activos=%s payload=%s',
         user.id,
+        user.get_username(),
         token_count,
         payload_for_log(payload)
     )
 
     if token_count == 0:
         logger.warning(
-            'FCM sin tokens activos. usuario_destino=%s tag=%s',
+            'FCM sin tokens activos. usuario_destino=%s username=%s tag=%s',
             user.id,
+            user.get_username(),
             payload.get('tag')
         )
         return
@@ -147,9 +159,10 @@ def send_fcm_to_user(user, payload):
                 token.last_error = ''
                 token.save(update_fields=['last_error', 'updated_at'])
             logger.info(
-                'FCM enviado correctamente. usuario_destino=%s token_id=%s '
-                'token=%s response=%s',
+                'FCM enviado correctamente. usuario_destino=%s username=%s '
+                'token_id=%s token=%s response=%s',
                 user.id,
+                user.get_username(),
                 token.id,
                 token_log,
                 response
@@ -157,9 +170,10 @@ def send_fcm_to_user(user, payload):
         except Exception as exc:
             error_text = str(exc)[:500]
             logger.exception(
-                'Error enviando FCM. usuario_destino=%s token_id=%s '
-                'token=%s exception=%s',
+                'Error enviando FCM. usuario_destino=%s username=%s '
+                'token_id=%s token=%s exception=%s',
                 user.id,
+                user.get_username(),
                 token.id,
                 token_log,
                 error_text
@@ -174,8 +188,9 @@ def send_fcm_to_user(user, payload):
                 update_fields.append('is_active')
                 logger.warning(
                     'FCM token invalido desactivado. usuario_destino=%s '
-                    'token_id=%s token=%s error=%s',
+                    'username=%s token_id=%s token=%s error=%s',
                     user.id,
+                    user.get_username(),
                     token.id,
                     token_log,
                     exc.__class__.__name__

@@ -9,6 +9,18 @@
     }
   }
 
+  function tokenForLog(token) {
+    if (!token) {
+      return 'sin-token';
+    }
+
+    if (token.length <= 24) {
+      return token;
+    }
+
+    return `${token.slice(0, 12)}...${token.slice(-8)}`;
+  }
+
   function isNativeCapacitor() {
     return Boolean(
       capacitor
@@ -68,7 +80,12 @@
   }
 
   async function postToken(token) {
-    log('Enviando token FCM al backend');
+    const deviceId = getDeviceId();
+    log('Enviando token FCM al backend', {
+      token: tokenForLog(token),
+      deviceId,
+      platform: 'android',
+    });
     const response = await fetch('/fcm/register-token/', {
       method: 'POST',
       credentials: 'same-origin',
@@ -79,16 +96,24 @@
       body: JSON.stringify({
         token,
         platform: 'android',
-        deviceId: getDeviceId(),
+        deviceId,
       }),
     });
-    log(`Respuesta registro token FCM: ${response.status}`);
+
+    let responseBody = {};
+    try {
+      responseBody = await response.json();
+    } catch (error) {
+      responseBody = { parseError: String(error) };
+    }
+
+    log(`Respuesta registro token FCM: ${response.status}`, responseBody);
 
     if (!response.ok) {
       throw new Error(`Registro FCM fallo con status ${response.status}`);
     }
 
-    log('Token FCM registrado en backend');
+    log('Token FCM registrado en backend', responseBody);
   }
 
   function openNotificationTarget(notification) {
@@ -124,7 +149,9 @@
     }
 
     await pushNotifications.addListener('registration', async function (token) {
-      log('registration token FCM recibido');
+      log('registration token FCM recibido', {
+        token: tokenForLog(token.value),
+      });
       try {
         await postToken(token.value);
       } catch (error) {
