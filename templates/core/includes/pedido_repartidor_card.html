@@ -25,7 +25,7 @@
                 <a
                     class="order-card-phone text-decoration-none"
                     href="tel:{{ pedido.telefono_limpio }}"
-                    data-confirm="Llamar al cliente?"
+                    onclick="return confirm('\u00bfDeseas llamar a este cliente?')"
                 >
                     {{ pedido.cliente.telefono|format_phone_display }}
                 </a>
@@ -106,7 +106,7 @@
                 <a
                     href="tel:{{ pedido.telefono_limpio }}"
                     class="btn btn-outline-primary w-100 action-button"
-                    data-confirm="Llamar al cliente?"
+                    onclick="return confirm('\u00bfDeseas llamar a este cliente?')"
                 >
                     Llamar
                 </a>
@@ -116,7 +116,7 @@
                     target="_blank"
                     rel="noopener"
                     class="btn btn-whatsapp w-100 action-button"
-                    data-confirm="Abrir WhatsApp?"
+                    onclick="return confirm('\u00bfDeseas abrir WhatsApp para este cliente?')"
                 >
                     WhatsApp
                 </a>
@@ -126,7 +126,7 @@
                 <a
                     href="{% url 'actualizar_referencia_cliente_repartidor' pedido.cliente.id %}"
                     class="btn btn-outline-secondary w-100 action-button"
-                    data-confirm="Actualizar referencia?"
+                    onclick="return confirm('\u00bfDeseas actualizar la referencia de este cliente?')"
                 >
                     {% if pedido.cliente.tiene_coordenadas or pedido.cliente.foto_referencia_url %}
                         Actualizar referencia de casa
@@ -151,7 +151,7 @@
                         method="post"
                         action="{% url 'marcar_pedido_en_ruta_repartidor' pedido.id %}"
                         class="mb-0"
-                        data-confirm="Marcar en ruta?"
+                        onsubmit="return confirm('\u00bfConfirmas marcar este pedido como en ruta?')"
                     >
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-primary w-100 action-button">
@@ -164,7 +164,7 @@
                     method="post"
                     action="{% url 'marcar_pedido_entregado_repartidor' pedido.id %}"
                     class="mb-0"
-                    data-confirm="Marcar entregado?"
+                    onsubmit="return confirm('\u00bfConfirmas marcar este pedido como entregado?')"
                 >
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary w-100 action-button">
@@ -176,7 +176,7 @@
                     method="post"
                     action="{% url 'cancelar_pedido_repartidor' pedido.id %}"
                     class="mb-0"
-                    data-confirm="Cancelar pedido?"
+                    onsubmit="return confirm('\u00bfSeguro que deseas cancelar este pedido?')"
                 >
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-danger w-100 action-button">

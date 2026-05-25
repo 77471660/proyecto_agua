@@ -16,6 +16,8 @@
         body {
             --app-safe-area-top: env(safe-area-inset-top, 0px);
             --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+            --primary-blue: #0f5fb8;
+            --primary-blue-deep: #0e55a8;
             background: #f8fafc;
             color: #1f2937;
             min-height: 100vh;
@@ -28,7 +30,11 @@
         }
 
         .top-bar {
-            background: #0d6efd;
+            background: linear-gradient(
+                180deg,
+                var(--primary-blue) 0%,
+                var(--primary-blue-deep) 100%
+            );
             color: white;
         }
 

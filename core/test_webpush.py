@@ -98,9 +98,53 @@ class WebPushTests(TestCase):
         self.assertIn('Permiso granted sin push subscription; recreando suscripcion', pwa_js)
         self.assertIn("button.dataset.webpushState === 'renew'", pwa_js)
         self.assertIn("const ACTIVE_PUSH_TEXT = '\\u{1F514} Notificaciones activas';", pwa_js)
+        self.assertIn("const ANDROID_PUSH_TEXT = '\\u{1F514} Notificaciones Android activas';", pwa_js)
         self.assertIn("const INACTIVE_PUSH_TEXT = '\\u26A0\\uFE0F Activar notificaciones';", pwa_js)
         self.assertIn("const RENEW_PUSH_TEXT = '\\u{1F504} Renovar notificaciones';", pwa_js)
+        self.assertIn("classList.contains('capacitor-android')", pwa_js)
+        self.assertIn('setUnsupportedPushState();', pwa_js)
         self.assertIn('setActivePushState();', pwa_js)
+
+    def test_panel_repartidor_usa_confirmaciones_inline_en_acciones_android(self):
+        self.cliente.latitud = Decimal('-12.046374')
+        self.cliente.longitud = Decimal('-77.042793')
+        self.cliente.save()
+        Pedido.objects.create(
+            cliente=self.cliente,
+            repartidor=self.repartidor,
+            cantidad_bidones=2,
+            precio_unitario=Decimal('7.00'),
+            total=Decimal('14.00'),
+            fecha_programada=timezone.localdate()
+        )
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(reverse('pedidos_repartidor'))
+
+        self.assertContains(
+            response,
+            "onclick=\"return confirm('\\u00bfDeseas llamar a este cliente?')\""
+        )
+        self.assertContains(
+            response,
+            "onclick=\"return confirm('\\u00bfDeseas abrir WhatsApp para este cliente?')\""
+        )
+        self.assertContains(
+            response,
+            "onclick=\"return confirm('\\u00bfDeseas abrir la ubicaci\\u00f3n en Google Maps?')\""
+        )
+        self.assertContains(
+            response,
+            "onsubmit=\"return confirm('\\u00bfConfirmas marcar este pedido como en ruta?')\""
+        )
+        self.assertContains(
+            response,
+            "onsubmit=\"return confirm('\\u00bfConfirmas marcar este pedido como entregado?')\""
+        )
+        self.assertContains(
+            response,
+            "onsubmit=\"return confirm('\\u00bfSeguro que deseas cancelar este pedido?')\""
+        )
 
     def test_titulo_pedidos_hoy_es_subtitulo_discreto(self):
         self.client.force_login(self.repartidor)
@@ -389,6 +433,37 @@ class WebPushTests(TestCase):
         self.assertIn('apple-mobile-web-app-capable', repartidor_template)
         self.assertIn('apple-touch-icon', repartidor_template)
         self.assertIn("classList.add('capacitor-android')", capacitor_js)
+
+    def test_headers_repartidor_usan_azul_sobrio_del_dashboard(self):
+        base_template = (
+            Path(settings.BASE_DIR)
+            / 'templates'
+            / 'base.html'
+        ).read_text(encoding='utf-8')
+        templates_repartidor = [
+            'pedidos_repartidor.html',
+            'nuevo_pedido_repartidor.html',
+            'nuevo_cliente_repartidor.html',
+            'actualizar_referencia_cliente_repartidor.html',
+        ]
+
+        self.assertIn(
+            'linear-gradient(180deg, #0f5fb8 0%, #0e55a8 100%)',
+            base_template
+        )
+
+        for filename in templates_repartidor:
+            template = (
+                Path(settings.BASE_DIR)
+                / 'templates'
+                / 'core'
+                / filename
+            ).read_text(encoding='utf-8')
+
+            self.assertIn('--primary-blue: #0f5fb8;', template)
+            self.assertIn('--primary-blue-deep: #0e55a8;', template)
+            self.assertIn('var(--primary-blue)', template)
+            self.assertIn('var(--primary-blue-deep)', template)
 
     def test_manifest_configurado_para_pwa_instalada(self):
         manifest_path = Path(settings.BASE_DIR) / 'static' / 'manifest.json'

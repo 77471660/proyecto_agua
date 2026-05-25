@@ -4,6 +4,7 @@
   let serviceWorkerRegistration = null;
   let subscriptionInProgress = false;
   const ACTIVE_PUSH_TEXT = '\u{1F514} Notificaciones activas';
+  const ANDROID_PUSH_TEXT = '\u{1F514} Notificaciones Android activas';
   const INACTIVE_PUSH_TEXT = '\u26A0\uFE0F Activar notificaciones';
   const RENEW_PUSH_TEXT = '\u{1F504} Renovar notificaciones';
 
@@ -79,6 +80,16 @@
     updateButtons(RENEW_PUSH_TEXT, false, 'renew');
   }
 
+  function setUnsupportedPushState() {
+    if (document.documentElement.classList.contains('capacitor-android')) {
+      updateButtons(ANDROID_PUSH_TEXT, true, 'active');
+      return true;
+    }
+
+    updateButtons('Notificaciones no disponibles', true, 'unsupported');
+    return false;
+  }
+
   function showTemporaryAlert(message, silent) {
     if (!silent) {
       window.alert(message);
@@ -148,8 +159,9 @@
     try {
       if (!('PushManager' in window) || !('Notification' in window)) {
         console.log('Permiso notificaciones: no-disponible');
-        updateButtons('Notificaciones no disponibles', true, 'unsupported');
-        showTemporaryAlert('Notificaciones no disponibles en este navegador.', silent);
+        if (!setUnsupportedPushState()) {
+          showTemporaryAlert('Notificaciones no disponibles en este navegador.', silent);
+        }
         return;
       }
 
@@ -239,6 +251,11 @@
   });
 
   window.addEventListener('load', function () {
+    if (document.documentElement.classList.contains('capacitor-android')) {
+      setUnsupportedPushState();
+      return;
+    }
+
     ensureServiceWorkerRegistration()
       .then(async function (registration) {
         const buttons = webpushButtons();
@@ -249,7 +266,7 @@
         }
 
         if (!('PushManager' in window) || !('Notification' in window)) {
-          updateButtons('Notificaciones no disponibles', true, 'unsupported');
+          setUnsupportedPushState();
           return;
         }
 
