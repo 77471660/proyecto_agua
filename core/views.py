@@ -956,7 +956,7 @@ def actualizar_estados_clientes():
 
 @login_required
 @secretaria_required
-def dashboard(request):
+def dashboard(request, template_name='core/dashboard.html'):
 
     actualizar_estados_clientes()
 
@@ -1195,7 +1195,7 @@ def dashboard(request):
         'limite_2_horas': limite_2_horas,
     }
 
-    return render(request, 'core/dashboard.html', context)
+    return render(request, template_name, context)
 
 @login_required
 @clientes_required
@@ -2299,7 +2299,7 @@ def lista_pedidos(request):
 
 @login_required
 @repartidor_required
-def pedidos_repartidor(request):
+def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
 
     hoy = timezone.localdate()
 
@@ -2398,7 +2398,7 @@ def pedidos_repartidor(request):
 
     return render(
         request,
-        'core/pedidos_repartidor.html',
+        template_name,
         context
     )
 

@@ -59,6 +59,13 @@ urlpatterns = [
     ),
 
     path(
+        'dashboard/fragmento/',
+        views.dashboard,
+        {'template_name': 'core/includes/dashboard_fragmento.html'},
+        name='dashboard_fragmento'
+    ),
+
+    path(
         'clientes/',
         views.lista_clientes,
         name='lista_clientes'
@@ -110,6 +117,13 @@ urlpatterns = [
         'pedidos/',
         views.lista_pedidos,
         name='lista_pedidos'
+    ),
+
+    path(
+        'pedidos/fragmento/',
+        views.pedidos_repartidor,
+        {'template_name': 'core/includes/pedidos_repartidor_fragmento.html'},
+        name='pedidos_repartidor_fragmento'
     ),
 
     path(

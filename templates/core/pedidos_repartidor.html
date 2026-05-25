@@ -607,6 +607,11 @@
         {% endfor %}
     {% endif %}
 
+    <section
+        id="pedidos-container"
+        data-partial-refresh-url="{% url 'pedidos_repartidor_fragmento' %}"
+        data-partial-refresh-ms="5000"
+    >
     <section class="card summary-card mb-3">
         <div class="card-body">
             <h2 class="h6 mb-3">Resumen de hoy</h2>
@@ -644,7 +649,7 @@
         </div>
     {% endfor %}
 
-    <details class="history-details">
+    <details class="history-details" data-refresh-key="programados">
         <summary class="history-summary scheduled">
             Ver pedidos programados ({{ total_pedidos_programados }})
         </summary>
@@ -665,7 +670,7 @@
     </details>
 
 
-    <details class="history-details">
+    <details class="history-details" data-refresh-key="entregas-hoy">
         <summary class="history-summary delivered">
             Ver entregas de hoy
         </summary>
@@ -724,7 +729,7 @@
         </div>
     </details>
 
-    <details class="history-details">
+    <details class="history-details" data-refresh-key="cancelados-hoy">
         <summary class="history-summary cancelled">
             Ver cancelados de hoy
         </summary>
@@ -777,6 +782,7 @@
             {% endfor %}
         </div>
     </details>
+    </section>
 
 </main>
 
@@ -787,6 +793,7 @@
 <script src="{% static 'js/capacitor_push.js' %}"></script>
 <script src="{% static 'js/location_actions.js' %}"></script>
 <script src="{% static 'js/ui_safety.js' %}"></script>
+<script src="{% static 'js/partial_refresh.js' %}"></script>
 
 </body>
 </html>

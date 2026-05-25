@@ -134,6 +134,11 @@ Dashboard - AquaSmart CRM
 
 
 
+<section
+    id="dashboard-live-container"
+    data-partial-refresh-url="{% url 'dashboard_fragmento' %}"
+    data-partial-refresh-ms="10000"
+>
 <!-- OPERACIÓN DEL DÍA -->
 <div class="section-title">
     <h5>Operación de hoy</h5>
@@ -272,6 +277,8 @@ Dashboard - AquaSmart CRM
 
     </div>
 </div>
+
+</section>
 
 <!-- RESUMEN GENERAL -->
 <div class="section-title">

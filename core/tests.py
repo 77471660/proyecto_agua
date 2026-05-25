@@ -894,6 +894,51 @@ class PermisosRolesTests(TestCase):
             200
         )
 
+    def test_dashboard_refresca_solo_fragmento_operativo(self):
+        self.crear_pedido(self.repartidor)
+        self.client.force_login(self.secretaria)
+
+        page = self.client.get(reverse('dashboard'))
+        fragment = self.client.get(reverse('dashboard_fragmento'))
+
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'id="dashboard-live-container"')
+        self.assertContains(page, 'data-partial-refresh-ms="10000"')
+        self.assertContains(page, 'js/partial_refresh.js')
+        self.assertEqual(fragment.status_code, 200)
+        self.assertTemplateUsed(
+            fragment,
+            'core/includes/dashboard_fragmento.html'
+        )
+        self.assertContains(fragment, 'Pedidos urgentes')
+        self.assertNotContains(fragment, 'Buscar cliente')
+
+    def test_panel_repartidor_refresca_fragmento_sin_exponer_otro_repartidor(self):
+        pedido_asignado = self.crear_pedido(self.repartidor)
+        cliente_otro = Cliente.objects.create(
+            nombre='Cliente Fragmento Ajeno',
+            telefono='999555444',
+            direccion='Av. No Mostrar 123'
+        )
+        self.crear_pedido(self.otro_repartidor, cliente=cliente_otro)
+        self.client.force_login(self.repartidor)
+
+        page = self.client.get(reverse('pedidos_repartidor'))
+        fragment = self.client.get(reverse('pedidos_repartidor_fragmento'))
+
+        self.assertContains(page, 'id="pedidos-container"')
+        self.assertContains(page, 'data-partial-refresh-ms="5000"')
+        self.assertContains(page, 'js/partial_refresh.js')
+        self.assertContains(page, 'data-refresh-key="acciones-')
+        self.assertEqual(fragment.status_code, 200)
+        self.assertTemplateUsed(
+            fragment,
+            'core/includes/pedidos_repartidor_fragmento.html'
+        )
+        self.assertContains(fragment, pedido_asignado.cliente.nombre)
+        self.assertNotContains(fragment, cliente_otro.nombre)
+        self.assertNotContains(fragment, '<html')
+
     def test_repartidor_puede_ver_clientes_sin_acciones_administrativas(self):
         self.client.force_login(self.repartidor)
 
