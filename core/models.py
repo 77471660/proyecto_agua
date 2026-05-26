@@ -143,6 +143,10 @@ class Pedido(models.Model):
     CANCELADO = 'CANCELADO'
     REPROGRAMADO = 'REPROGRAMADO'
 
+    PAGO_PENDIENTE = 'PENDIENTE'
+    PAGO_EFECTIVO = 'EFECTIVO'
+    PAGO_YAPE = 'YAPE'
+
     ESTADOS_PEDIDO = [
         (PENDIENTE, 'Pendiente'),
         (ASIGNADO, 'Asignado'),
@@ -157,6 +161,12 @@ class Pedido(models.Model):
         ASIGNADO,
         EN_RUTA,
         REPROGRAMADO,
+    ]
+
+    METODOS_PAGO = [
+        (PAGO_PENDIENTE, 'Pendiente'),
+        (PAGO_EFECTIVO, 'Efectivo'),
+        (PAGO_YAPE, 'Yape'),
     ]
 
     cliente = models.ForeignKey(
@@ -264,6 +274,12 @@ class Pedido(models.Model):
     total = models.DecimalField(
         max_digits=8,
         decimal_places=2
+    )
+
+    metodo_pago = models.CharField(
+        max_length=20,
+        choices=METODOS_PAGO,
+        default=PAGO_PENDIENTE
     )
 
     estado = models.CharField(

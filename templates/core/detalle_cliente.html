@@ -310,6 +310,9 @@ Detalle del cliente
 
                 <td>
                     S/ {{ pedido.total|floatformat:2 }}
+                    <small class="d-block text-muted">
+                        Pago: {{ pedido.get_metodo_pago_display }}
+                    </small>
                 </td>
 
                 <td>
@@ -357,6 +360,13 @@ Detalle del cliente
                                         data-confirm="Marcar entregado?"
                                     >
                                         {% csrf_token %}
+                                        {% if pedido.metodo_pago == 'PENDIENTE' %}
+                                            <select name="metodo_pago" class="form-select form-select-sm mb-2" aria-label="Metodo de pago">
+                                                <option value="PENDIENTE" selected>Pago pendiente</option>
+                                                <option value="EFECTIVO">Efectivo</option>
+                                                <option value="YAPE">Yape</option>
+                                            </select>
+                                        {% endif %}
                                         <button
                                             type="submit"
                                             class="btn btn-sm btn-success"

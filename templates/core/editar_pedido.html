@@ -85,6 +85,17 @@ Editar pedido
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label" for="metodo_pago">
+                            M&eacute;todo de pago
+                        </label>
+                        <select id="metodo_pago" name="metodo_pago" class="form-select">
+                            <option value="PENDIENTE" {% if pedido.metodo_pago == 'PENDIENTE' %}selected{% endif %}>Pendiente</option>
+                            <option value="EFECTIVO" {% if pedido.metodo_pago == 'EFECTIVO' %}selected{% endif %}>Efectivo</option>
+                            <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label" for="fecha_programada">
                             Fecha programada
                         </label>

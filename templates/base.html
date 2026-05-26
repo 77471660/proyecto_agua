@@ -717,6 +717,16 @@
                     >Reporte Mensual</a>
 
                     <a
+                        href="/reporte-semanal/"
+                        class="btn btn-sm {% if request.path == '/reporte-semanal/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Reporte Semanal</a>
+
+                    <a
+                        href="/pagos/"
+                        class="btn btn-sm {% if request.path == '/pagos/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Pagos</a>
+
+                    <a
                         href="/registrar-cliente/"
                         class="btn btn-sm {% if request.path == '/registrar-cliente/' %}btn-light{% else %}btn-success{% endif %}"
                     >Nuevo cliente</a>
@@ -771,6 +781,12 @@
                         </li>
                         <li>
                             <a class="dropdown-item" href="/registrar-pedido/">Nuevo pedido</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/reporte-semanal/">Reporte semanal</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/pagos/">Pagos</a>
                         </li>
                     {% endif %}
 

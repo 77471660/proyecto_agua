@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Reporte Semanal - AquaSmart CRM
+{% endblock %}
+
+{% block content %}
+
+<div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+        <h2>Reporte Semanal</h2>
+        <small class="text-muted">Ventas entregadas y control de pagos de la semana.</small>
+        <p class="mb-0 mt-1 text-primary fw-semibold">
+            {{ inicio_semana|date:"d/m/Y" }} - {{ fin_semana|date:"d/m/Y" }}
+        </p>
+    </div>
+
+    <form method="GET" class="d-flex gap-2 align-items-end flex-wrap no-print">
+        <div>
+            <label class="form-label mb-1" for="semana">Semana de referencia</label>
+            <input
+                type="date"
+                id="semana"
+                name="semana"
+                class="form-control"
+                value="{{ inicio_semana|date:'Y-m-d' }}"
+            >
+        </div>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+            Imprimir
+        </button>
+    </form>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card metric-card metric-success h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Total ventas</h6>
+                <div class="metric-value">S/ {{ total_ventas|floatformat:2 }}</div>
+                <small class="text-muted">Por fecha de entrega</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Bidones vendidos</h6>
+                <div class="metric-value">{{ total_bidones }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card metric-info h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Entregados</h6>
+                <div class="metric-value">{{ total_entregados }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card metric-muted h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Cancelados</h6>
+                <div class="metric-value">{{ total_cancelados }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card mb-4">
+    <div class="card-header bg-white">Desglose por m&eacute;todo de pago</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Efectivo</div>
+                    <div class="fs-4 fw-semibold">S/ {{ efectivo|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Yape</div>
+                    <div class="fs-4 fw-semibold">S/ {{ yape|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Pendiente</div>
+                    <div class="fs-4 fw-semibold">S/ {{ pendiente|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Cobrado identificado</div>
+                    <div class="fs-4 fw-semibold text-success">S/ {{ cobrado|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-header bg-white">Pedidos entregados en la semana</div>
+    <div class="card-body">
+        {% if pedidos_entregados %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Entrega</th>
+                            <th>Cliente</th>
+                            <th>Bidones</th>
+                            <th>M&eacute;todo</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pedido in pedidos_entregados %}
+                            <tr>
+                                <td>{{ pedido.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                                <td>{{ pedido.cliente.nombre }}</td>
+                                <td>{{ pedido.cantidad_bidones }}</td>
+                                <td>{{ pedido.get_metodo_pago_display }}</td>
+                                <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">No hay pedidos entregados en la semana seleccionada.</div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

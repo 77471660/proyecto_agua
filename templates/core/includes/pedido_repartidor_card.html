@@ -83,6 +83,11 @@
             </div>
 
             <div class="col-6">
+                <div class="order-label">Pago</div>
+                <div class="order-value">{{ pedido.get_metodo_pago_display }}</div>
+            </div>
+
+            <div class="col-6">
                 <div class="order-label">Fecha programada</div>
                 <div class="order-value">
                     {{ pedido.fecha_programada_texto }}
@@ -167,6 +172,13 @@
                     onsubmit="return confirm('\u00bfConfirmas marcar este pedido como entregado?')"
                 >
                     {% csrf_token %}
+                    {% if pedido.metodo_pago == 'PENDIENTE' %}
+                        <select name="metodo_pago" class="form-select mb-2" aria-label="Metodo de pago">
+                            <option value="PENDIENTE" selected>Pago pendiente</option>
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="YAPE">Yape</option>
+                        </select>
+                    {% endif %}
                     <button type="submit" class="btn btn-primary w-100 action-button">
                         Marcar entregado
                     </button>

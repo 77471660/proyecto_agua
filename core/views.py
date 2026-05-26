@@ -223,6 +223,7 @@ def resumen_pedido_historial(pedido):
     return (
         f"{pedido.cantidad_bidones} bidones, "
         f"S/ {pedido.total}, "
+        f"pago {pedido.get_metodo_pago_display()}, "
         f"estado {pedido.estado}, "
         f"programado {formato_fecha_historial(pedido.fecha_programada)}, "
         f"repartidor {nombre_repartidor_historial(pedido.repartidor)}"
@@ -319,6 +320,7 @@ def cambios_edicion_pedido(pedido, nuevos_valores):
         ('cantidad_bidones', 'Cantidad'),
         ('precio_unitario', 'Precio unitario'),
         ('total', 'Total'),
+        ('metodo_pago', 'Metodo de pago'),
         ('fecha_programada', 'Fecha programada'),
         ('observacion', 'Observación'),
     ]
@@ -897,6 +899,40 @@ def hora_panel(fecha):
     return '-'
 
 
+def leer_metodo_pago_post(post_data, default=Pedido.PAGO_PENDIENTE):
+
+    metodo_pago = post_data.get('metodo_pago', default).strip().upper()
+    metodos_validos = {valor for valor, etiqueta in Pedido.METODOS_PAGO}
+
+    if metodo_pago not in metodos_validos:
+        return None
+
+    return metodo_pago
+
+
+def totales_por_metodo_pago(pedidos_entregados):
+
+    montos = {
+        Pedido.PAGO_EFECTIVO: Decimal('0.00'),
+        Pedido.PAGO_YAPE: Decimal('0.00'),
+        Pedido.PAGO_PENDIENTE: Decimal('0.00'),
+    }
+
+    for item in pedidos_entregados.values('metodo_pago').annotate(total=Sum('total')):
+        if item['metodo_pago'] in montos:
+            montos[item['metodo_pago']] = item['total'] or Decimal('0.00')
+
+    return {
+        'efectivo': montos[Pedido.PAGO_EFECTIVO],
+        'yape': montos[Pedido.PAGO_YAPE],
+        'pendiente': montos[Pedido.PAGO_PENDIENTE],
+        'cobrado': (
+            montos[Pedido.PAGO_EFECTIVO]
+            + montos[Pedido.PAGO_YAPE]
+        ),
+    }
+
+
 def actualizar_estados_clientes():
 
     hoy = timezone.localdate()
@@ -1032,6 +1068,12 @@ def dashboard(request, template_name='core/dashboard.html'):
     ).aggregate(
         total=Sum('total')
     )['total'] or 0
+    pagos_hoy = totales_por_metodo_pago(
+        Pedido.objects.filter(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega__date=hoy
+        )
+    )
 
     pedidos_hoy = Pedido.objects.filter(
         fecha_pedido__date=hoy
@@ -1177,6 +1219,9 @@ def dashboard(request, template_name='core/dashboard.html'):
         'clientes_frecuentes': clientes_frecuentes,
         'recomendaciones': recomendaciones,
         'ventas_hoy': ventas_hoy,
+        'efectivo_hoy': pagos_hoy['efectivo'],
+        'yape_hoy': pagos_hoy['yape'],
+        'total_cobrado_hoy': pagos_hoy['cobrado'],
         'pedidos_hoy': pedidos_hoy,
         'bidones_hoy': bidones_hoy,
         'clientes_nuevos': clientes_nuevos,
@@ -1199,7 +1244,7 @@ def dashboard(request, template_name='core/dashboard.html'):
 
 @login_required
 @clientes_required
-def lista_clientes(request):
+def lista_clientes(request, template_name='core/clientes.html'):
 
     busqueda = request.GET.get('q', '').strip()
     hoy = timezone.localdate()
@@ -1239,7 +1284,7 @@ def lista_clientes(request):
         'hoy': hoy,
     }
 
-    return render(request, 'core/clientes.html', context)
+    return render(request, template_name, context)
 
 
 @login_required
@@ -1385,6 +1430,107 @@ def reporte_diario(request):
         'core/reporte_diario.html',
         context
     )
+
+
+@login_required
+@secretaria_required
+def reporte_semanal(request):
+
+    hoy = timezone.localdate()
+    fecha_param = request.GET.get('semana', '').strip()
+
+    try:
+        fecha_referencia = datetime.strptime(fecha_param, '%Y-%m-%d').date()
+    except ValueError:
+        fecha_referencia = hoy
+
+    inicio_semana = fecha_referencia - timedelta(days=fecha_referencia.weekday())
+    fin_semana = inicio_semana + timedelta(days=6)
+    pedidos_entregados = Pedido.objects.filter(
+        estado=Pedido.ENTREGADO,
+        fecha_entrega__date__range=(inicio_semana, fin_semana)
+    ).select_related('cliente').order_by('-fecha_entrega')
+    total_cancelados = Pedido.objects.filter(
+        estado=Pedido.CANCELADO,
+        fecha_cancelacion__date__range=(inicio_semana, fin_semana)
+    ).count()
+    pagos_semana = totales_por_metodo_pago(pedidos_entregados)
+
+    context = {
+        'hoy': hoy,
+        'inicio_semana': inicio_semana,
+        'fin_semana': fin_semana,
+        'pedidos_entregados': pedidos_entregados,
+        'total_ventas': pedidos_entregados.aggregate(total=Sum('total'))['total'] or 0,
+        'total_bidones': pedidos_entregados.aggregate(
+            total=Sum('cantidad_bidones')
+        )['total'] or 0,
+        'total_entregados': pedidos_entregados.count(),
+        'total_cancelados': total_cancelados,
+        'efectivo': pagos_semana['efectivo'],
+        'yape': pagos_semana['yape'],
+        'pendiente': pagos_semana['pendiente'],
+        'cobrado': pagos_semana['cobrado'],
+    }
+
+    return render(request, 'core/reporte_semanal.html', context)
+
+
+@login_required
+@secretaria_required
+def pagos(request):
+
+    hoy = timezone.localdate()
+    fecha_param = request.GET.get('fecha', '').strip()
+    periodo = request.GET.get('periodo', 'dia').strip()
+
+    try:
+        fecha_referencia = datetime.strptime(fecha_param, '%Y-%m-%d').date()
+    except ValueError:
+        fecha_referencia = hoy
+
+    if periodo == 'semana':
+        inicio_periodo = fecha_referencia - timedelta(
+            days=fecha_referencia.weekday()
+        )
+        fin_periodo = inicio_periodo + timedelta(days=6)
+    else:
+        periodo = 'dia'
+        inicio_periodo = fecha_referencia
+        fin_periodo = fecha_referencia
+
+    entregados_hoy = Pedido.objects.filter(
+        estado=Pedido.ENTREGADO,
+        fecha_entrega__date=hoy
+    )
+    entregados_periodo = Pedido.objects.filter(
+        estado=Pedido.ENTREGADO,
+        fecha_entrega__date__range=(inicio_periodo, fin_periodo)
+    ).select_related('cliente').order_by('-fecha_entrega')
+    pagos_hoy = totales_por_metodo_pago(entregados_hoy)
+    pagos_periodo = totales_por_metodo_pago(entregados_periodo)
+    pendientes_pago = entregados_periodo.filter(
+        metodo_pago=Pedido.PAGO_PENDIENTE
+    )
+
+    context = {
+        'hoy': hoy,
+        'fecha_referencia': fecha_referencia,
+        'periodo': periodo,
+        'inicio_periodo': inicio_periodo,
+        'fin_periodo': fin_periodo,
+        'efectivo_hoy': pagos_hoy['efectivo'],
+        'yape_hoy': pagos_hoy['yape'],
+        'total_cobrado_hoy': pagos_hoy['cobrado'],
+        'efectivo_periodo': pagos_periodo['efectivo'],
+        'yape_periodo': pagos_periodo['yape'],
+        'pendiente_periodo': pagos_periodo['pendiente'],
+        'total_cobrado_periodo': pagos_periodo['cobrado'],
+        'pendientes_pago': pendientes_pago,
+        'total_pendientes_pago': pendientes_pago.count(),
+    }
+
+    return render(request, 'core/pagos.html', context)
 
 
 @login_required
@@ -1755,6 +1901,7 @@ def registrar_pedido(request):
         repartidor_id = request.POST.get('repartidor', '').strip()
         cantidad_bidones = request.POST.get('cantidad_bidones', '').strip()
         precio_unitario = request.POST.get('precio_unitario', '').strip()
+        metodo_pago = leer_metodo_pago_post(request.POST)
         estado = request.POST.get('estado', '').strip()
         observacion = request.POST.get('observacion', '').strip()
         fecha_programada = request.POST.get('fecha_programada', '').strip()
@@ -1777,6 +1924,10 @@ def registrar_pedido(request):
 
         if estado not in estados_validos:
             messages.error(request, 'Estado de pedido inválido.')
+            return redirect('registrar_pedido')
+
+        if metodo_pago is None:
+            messages.error(request, 'Método de pago inválido.')
             return redirect('registrar_pedido')
 
         if not cantidad_bidones or not precio_unitario:
@@ -1872,6 +2023,7 @@ def registrar_pedido(request):
                 cantidad_bidones=cantidad_bidones,
                 precio_unitario=precio_unitario,
                 total=total,
+                metodo_pago=metodo_pago,
                 observacion=observacion,
                 fecha_programada=fecha_programada_valor,
             )
@@ -1934,6 +2086,10 @@ def editar_pedido(request, pedido_id):
     if request.method == 'POST':
         cantidad_bidones = request.POST.get('cantidad_bidones', '').strip()
         precio_unitario = request.POST.get('precio_unitario', '').strip()
+        metodo_pago = leer_metodo_pago_post(
+            request.POST,
+            pedido.metodo_pago
+        )
         fecha_programada = request.POST.get('fecha_programada', '').strip()
         observacion = request.POST.get('observacion', '').strip()
         repartidor_id = request.POST.get('repartidor', '').strip()
@@ -1943,6 +2099,10 @@ def editar_pedido(request, pedido_id):
                 request,
                 'Cantidad y precio unitario son obligatorios.'
             )
+            return redirect('editar_pedido', pedido_id=pedido.id)
+
+        if metodo_pago is None:
+            messages.error(request, 'Método de pago inválido.')
             return redirect('editar_pedido', pedido_id=pedido.id)
 
         try:
@@ -2019,6 +2179,7 @@ def editar_pedido(request, pedido_id):
             'cantidad_bidones': cantidad_bidones,
             'precio_unitario': precio_unitario,
             'total': nuevo_total,
+            'metodo_pago': metodo_pago,
             'fecha_programada': fecha_programada_valor,
             'observacion': observacion,
         }
@@ -2033,6 +2194,7 @@ def editar_pedido(request, pedido_id):
         pedido.cantidad_bidones = cantidad_bidones
         pedido.precio_unitario = precio_unitario
         pedido.total = nuevo_total
+        pedido.metodo_pago = metodo_pago
         pedido.fecha_programada = fecha_programada_valor
         pedido.observacion = observacion
         pedido.repartidor = repartidor
@@ -2047,6 +2209,7 @@ def editar_pedido(request, pedido_id):
                 'cantidad_bidones',
                 'precio_unitario',
                 'total',
+                'metodo_pago',
                 'fecha_programada',
                 'observacion',
                 'repartidor',
@@ -2132,7 +2295,7 @@ def editar_pedido(request, pedido_id):
 
 @login_required
 @secretaria_required
-def lista_pedidos(request):
+def lista_pedidos(request, template_name='core/pedidos.html'):
 
     hoy = timezone.localdate()
     manana = hoy + timedelta(days=1)
@@ -2294,7 +2457,7 @@ def lista_pedidos(request):
         'filtro_actual': filtro,
     }
 
-    return render(request, 'core/pedidos.html', context)
+    return render(request, template_name, context)
 
 
 @login_required
@@ -2612,10 +2775,22 @@ def marcar_pedido_entregado_repartidor(request, pedido_id):
         repartidor=request.user
     )
 
+    update_fields = ['repartidor', *campos_estado_pedido()]
+
+    if pedido.metodo_pago == Pedido.PAGO_PENDIENTE:
+        metodo_pago = leer_metodo_pago_post(request.POST)
+
+        if metodo_pago is None:
+            messages.error(request, 'Método de pago inválido.')
+            return redirect('pedidos_repartidor')
+
+        pedido.metodo_pago = metodo_pago
+        update_fields.append('metodo_pago')
+
     pedido.repartidor = request.user
     estado_anterior = pedido.estado
     pedido.registrar_estado(Pedido.ENTREGADO, request.user)
-    pedido.save(update_fields=['repartidor', *campos_estado_pedido()])
+    pedido.save(update_fields=update_fields)
     registrar_historial_pedido(
         pedido,
         request.user,
@@ -2687,6 +2862,7 @@ def nuevo_pedido_repartidor(request):
         cliente_id = request.POST.get('cliente', '').strip()
         cantidad_bidones = request.POST.get('cantidad_bidones', '').strip()
         precio_unitario = request.POST.get('precio_unitario', '').strip()
+        metodo_pago = leer_metodo_pago_post(request.POST)
         fecha_programada = request.POST.get('fecha_programada', '').strip()
         observacion = request.POST.get('observacion', '').strip()
         entregar_ahora = request.POST.get('entregar_ahora') == 'on'
@@ -2715,6 +2891,10 @@ def nuevo_pedido_repartidor(request):
 
         if cantidad_bidones > 100:
             messages.error(request, 'La cantidad máxima permitida es 100 bidones.')
+            return redirect('nuevo_pedido_repartidor')
+
+        if metodo_pago is None:
+            messages.error(request, 'Método de pago inválido.')
             return redirect('nuevo_pedido_repartidor')
 
         if precio_unitario < Decimal('1.00'):
@@ -2760,6 +2940,7 @@ def nuevo_pedido_repartidor(request):
                 cantidad_bidones=cantidad_bidones,
                 precio_unitario=precio_unitario,
                 total=total,
+                metodo_pago=metodo_pago,
                 observacion=observacion,
                 fecha_programada=fecha_programada_valor,
             )
@@ -3169,6 +3350,19 @@ def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
 
         pedido.fecha_programada = nueva_fecha_programada
         update_fields = ['fecha_programada', *update_fields]
+
+    if (
+        nuevo_estado == Pedido.ENTREGADO
+        and pedido.metodo_pago == Pedido.PAGO_PENDIENTE
+    ):
+        metodo_pago = leer_metodo_pago_post(request.POST)
+
+        if metodo_pago is None:
+            messages.error(request, 'Método de pago inválido.')
+            return redirect('lista_pedidos')
+
+        pedido.metodo_pago = metodo_pago
+        update_fields = ['metodo_pago', *update_fields]
 
     estado_anterior = pedido.estado
     pedido.registrar_estado(nuevo_estado, request.user)

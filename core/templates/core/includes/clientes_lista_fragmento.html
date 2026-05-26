@@ -1,0 +1,119 @@
+{% load phone_format %}
+<div class="card content-card">
+    <div class="card-body">
+
+        <div class="table-responsive d-none d-md-block">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Tel&eacute;fono</th>
+                        <th>Direcci&oacute;n</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acci&oacute;n</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in clientes %}
+                    <tr>
+                        <td>
+                            <strong>{{ cliente.nombre }}</strong>
+                            {% if cliente.fecha_registro|date:"Y-m-d" == hoy|date:"Y-m-d" %}
+                                <span class="badge-estado badge-hoy ms-2">Nuevo</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ cliente.telefono|format_phone_display }}</td>
+                        <td>{{ cliente.direccion }}</td>
+                        <td>
+                            {% if cliente.estado == 'ACTIVO' %}
+                                <span class="badge-estado badge-entregado">Activo</span>
+                            {% elif cliente.estado == 'RIESGO' %}
+                                <span class="badge-estado badge-pendiente">En riesgo</span>
+                            {% elif cliente.estado == 'ABANDONADO' %}
+                                <span class="badge-estado badge-atrasado">Abandonado</span>
+                            {% else %}
+                                <span class="badge-estado badge-cancelado">Sin historial</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="table-action-group d-flex justify-content-end gap-2 flex-nowrap">
+                                <a href="{% url 'detalle_cliente' cliente.id %}" class="btn btn-sm btn-outline-primary">
+                                    Ver
+                                </a>
+                                {% if menu_puede_crm_operativo %}
+                                    <a href="{% url 'registrar_pedido' %}?cliente={{ cliente.id }}" class="btn btn-sm btn-success">
+                                        Pedido
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'nuevo_pedido_repartidor' %}?cliente={{ cliente.id }}" class="btn btn-sm btn-success">
+                                        Pedido
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state">No se encontraron clientes registrados.</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="client-mobile-list d-md-none">
+            {% for cliente in clientes %}
+                <article class="client-mobile-card">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <h3 class="client-mobile-title">{{ cliente.nombre }}</h3>
+                        {% if cliente.fecha_registro|date:"Y-m-d" == hoy|date:"Y-m-d" %}
+                            <span class="badge-estado badge-hoy">Nuevo</span>
+                        {% endif %}
+                    </div>
+                    <div class="client-mobile-meta">
+                        <div>
+                            <span class="client-mobile-label">Tel&eacute;fono</span>
+                            <span class="client-mobile-value">{{ cliente.telefono|format_phone_display }}</span>
+                        </div>
+                        <div>
+                            <span class="client-mobile-label">Direcci&oacute;n</span>
+                            <span class="client-mobile-value">{{ cliente.direccion }}</span>
+                        </div>
+                        <div>
+                            <span class="client-mobile-label">Estado</span>
+                            {% if cliente.estado == 'ACTIVO' %}
+                                <span class="badge-estado badge-entregado">Activo</span>
+                            {% elif cliente.estado == 'RIESGO' %}
+                                <span class="badge-estado badge-pendiente">En riesgo</span>
+                            {% elif cliente.estado == 'ABANDONADO' %}
+                                <span class="badge-estado badge-atrasado">Abandonado</span>
+                            {% else %}
+                                <span class="badge-estado badge-cancelado">Sin historial</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2" style="grid-template-columns: 1fr 1fr;">
+                        <a href="{% url 'detalle_cliente' cliente.id %}" class="btn btn-sm btn-outline-primary">
+                            Ver
+                        </a>
+                        {% if menu_puede_crm_operativo %}
+                            <a href="{% url 'registrar_pedido' %}?cliente={{ cliente.id }}" class="btn btn-sm btn-success">
+                                + Pedido
+                            </a>
+                        {% else %}
+                            <a href="{% url 'nuevo_pedido_repartidor' %}?cliente={{ cliente.id }}" class="btn btn-sm btn-success">
+                                + Pedido
+                            </a>
+                        {% endif %}
+                    </div>
+                </article>
+            {% empty %}
+                <div class="empty-state">No se encontraron clientes registrados.</div>
+            {% endfor %}
+        </div>
+
+        {% include 'includes/pagination.html' %}
+    </div>
+</div>

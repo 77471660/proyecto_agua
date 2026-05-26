@@ -85,6 +85,11 @@ Clientes - AquaSmart CRM
     </div>
 </div>
 
+<div
+    id="clientes-live-container"
+    data-refresh-url="{% url 'clientes_fragmento' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+    data-refresh-ms="10000"
+>
 <div class="card content-card">
     <div class="card-body">
 
@@ -269,6 +274,7 @@ Clientes - AquaSmart CRM
         {% include 'includes/pagination.html' %}
 
     </div>
+</div>
 </div>
 
 {% endblock %}

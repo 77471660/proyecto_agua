@@ -36,8 +36,10 @@
   }
 
   function configureRefresh(container) {
-    const url = container.dataset.partialRefreshUrl;
-    const interval = Number(container.dataset.partialRefreshMs);
+    const url = container.dataset.refreshUrl || container.dataset.partialRefreshUrl;
+    const interval = Number(
+      container.dataset.refreshMs || container.dataset.partialRefreshMs
+    );
     let inProgress = false;
 
     if (!url || !Number.isFinite(interval) || interval < 1000) {
@@ -91,7 +93,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('[data-partial-refresh-url]').forEach(
+    document.querySelectorAll('[data-refresh-url], [data-partial-refresh-url]').forEach(
       configureRefresh
     );
   });

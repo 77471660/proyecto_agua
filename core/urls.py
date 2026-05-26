@@ -61,7 +61,7 @@ urlpatterns = [
     path(
         'dashboard/fragmento/',
         views.dashboard,
-        {'template_name': 'core/includes/dashboard_fragmento.html'},
+        {'template_name': 'core/includes/dashboard_admin_fragmento.html'},
         name='dashboard_fragmento'
     ),
 
@@ -69,6 +69,13 @@ urlpatterns = [
         'clientes/',
         views.lista_clientes,
         name='lista_clientes'
+    ),
+
+    path(
+        'clientes/fragmento/',
+        views.lista_clientes,
+        {'template_name': 'core/includes/clientes_lista_fragmento.html'},
+        name='clientes_fragmento'
     ),
 
     path(
@@ -121,6 +128,13 @@ urlpatterns = [
 
     path(
         'pedidos/fragmento/',
+        views.lista_pedidos,
+        {'template_name': 'core/includes/pedidos_lista_fragmento.html'},
+        name='pedidos_fragmento'
+    ),
+
+    path(
+        'pedidos/repartidor/fragmento/',
         views.pedidos_repartidor,
         {'template_name': 'core/includes/pedidos_repartidor_fragmento.html'},
         name='pedidos_repartidor_fragmento'
@@ -130,6 +144,18 @@ urlpatterns = [
         'reporte-diario/',
         views.reporte_diario,
         name='reporte_diario'
+    ),
+
+    path(
+        'reporte-semanal/',
+        views.reporte_semanal,
+        name='reporte_semanal'
+    ),
+
+    path(
+        'pagos/',
+        views.pagos,
+        name='pagos'
     ),
 
     path(

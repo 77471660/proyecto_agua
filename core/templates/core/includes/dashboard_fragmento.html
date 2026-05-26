@@ -48,6 +48,33 @@
     </div>
 </div>
 
+<div class="row mb-3">
+    <div class="col-md-4 mb-3">
+        <div class="card metric-card h-100">
+            <div class="card-body py-3">
+                <h6 class="metric-label">Efectivo hoy</h6>
+                <div class="metric-value">S/ {{ efectivo_hoy|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card metric-card metric-info h-100">
+            <div class="card-body py-3">
+                <h6 class="metric-label">Yape hoy</h6>
+                <div class="metric-value">S/ {{ yape_hoy|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card metric-card metric-success h-100">
+            <div class="card-body py-3">
+                <h6 class="metric-label">Total cobrado hoy</h6>
+                <div class="metric-value">S/ {{ total_cobrado_hoy|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- PEDIDOS URGENTES -->
 <div class="section-title">
     <h5>Pedidos urgentes</h5>

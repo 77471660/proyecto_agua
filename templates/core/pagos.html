@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Pagos - AquaSmart CRM
+{% endblock %}
+
+{% block content %}
+
+<div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+        <h2>Pagos</h2>
+        <small class="text-muted">Control operativo de cobros registrados en entregas.</small>
+    </div>
+
+    <form method="GET" class="d-flex gap-2 align-items-end flex-wrap">
+        <div>
+            <label class="form-label mb-1" for="periodo">Per&iacute;odo</label>
+            <select id="periodo" name="periodo" class="form-select">
+                <option value="dia" {% if periodo == 'dia' %}selected{% endif %}>D&iacute;a</option>
+                <option value="semana" {% if periodo == 'semana' %}selected{% endif %}>Semana</option>
+            </select>
+        </div>
+        <div>
+            <label class="form-label mb-1" for="fecha">Fecha de referencia</label>
+            <input type="date" id="fecha" name="fecha" class="form-control" value="{{ fecha_referencia|date:'Y-m-d' }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+    </form>
+</div>
+
+<div class="section-title">
+    <h5>Resumen de hoy</h5>
+    <small>Solo pedidos entregados el {{ hoy|date:"d/m/Y" }}</small>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Efectivo hoy</h6>
+                <div class="metric-value">S/ {{ efectivo_hoy|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card metric-card metric-info h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Yape hoy</h6>
+                <div class="metric-value">S/ {{ yape_hoy|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card metric-card metric-success h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Total cobrado hoy</h6>
+                <div class="metric-value">S/ {{ total_cobrado_hoy|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card mb-4">
+    <div class="card-header bg-white">
+        {% if periodo == 'semana' %}
+            Semana {{ inicio_periodo|date:"d/m/Y" }} - {{ fin_periodo|date:"d/m/Y" }}
+        {% else %}
+            D&iacute;a {{ inicio_periodo|date:"d/m/Y" }}
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Efectivo</div>
+                    <div class="fs-4 fw-semibold">S/ {{ efectivo_periodo|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Yape</div>
+                    <div class="fs-4 fw-semibold">S/ {{ yape_periodo|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Por confirmar</div>
+                    <div class="fs-4 fw-semibold">S/ {{ pendiente_periodo|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Total cobrado</div>
+                    <div class="fs-4 fw-semibold text-success">S/ {{ total_cobrado_periodo|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-header bg-white">
+        Pedidos entregados con pago pendiente ({{ total_pendientes_pago }})
+    </div>
+    <div class="card-body">
+        {% if pendientes_pago %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Entrega</th>
+                            <th>Cliente</th>
+                            <th>Bidones</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pedido in pendientes_pago %}
+                            <tr>
+                                <td>{{ pedido.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                                <td>{{ pedido.cliente.nombre }}</td>
+                                <td>{{ pedido.cantidad_bidones }}</td>
+                                <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">No hay entregas pendientes de identificar en este per&iacute;odo.</div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

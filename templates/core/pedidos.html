@@ -235,6 +235,11 @@ Pedidos - AquaSmart CRM
     </div>
 </div>
 
+<div
+    id="pedidos-live-container"
+    data-refresh-url="{% url 'pedidos_fragmento' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+    data-refresh-ms="5000"
+>
 <div class="card content-card">
     <div class="card-body">
 
@@ -309,6 +314,9 @@ Pedidos - AquaSmart CRM
                                 <span class="badge-estado {{ pedido.badge_estado_clase }}">
                                     {{ pedido.get_estado_display }}
                                 </span>
+                                <small class="d-block text-muted mt-1">
+                                    Pago: {{ pedido.get_metodo_pago_display }}
+                                </small>
                             </td>
 
                             <td class="col-order-notes">
@@ -324,7 +332,7 @@ Pedidos - AquaSmart CRM
                             <td class="col-order-actions">
                                 {% if pedido.esta_activo %}
 
-                                    <details class="order-actions-menu">
+                                    <details class="order-actions-menu" data-refresh-key="pedido-admin-{{ pedido.id }}">
                                         <summary class="btn btn-sm btn-outline-secondary">
                                             Acciones &#9662;
                                         </summary>
@@ -352,6 +360,13 @@ Pedidos - AquaSmart CRM
                                             data-confirm="Marcar entregado?"
                                         >
                                             {% csrf_token %}
+                                            {% if pedido.metodo_pago == 'PENDIENTE' %}
+                                                <select name="metodo_pago" class="form-select form-select-sm mb-2" aria-label="Metodo de pago">
+                                                    <option value="PENDIENTE" selected>Pago pendiente</option>
+                                                    <option value="EFECTIVO">Efectivo</option>
+                                                    <option value="YAPE">Yape</option>
+                                                </select>
+                                            {% endif %}
                                             <button
                                                 type="submit"
                                                 class="btn btn-sm btn-success"
@@ -400,6 +415,7 @@ Pedidos - AquaSmart CRM
         {% include 'includes/pagination.html' %}
 
     </div>
+</div>
 </div>
 
 {% endblock %}

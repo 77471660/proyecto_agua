@@ -894,7 +894,18 @@ class PermisosRolesTests(TestCase):
             200
         )
 
-    def test_dashboard_refresca_solo_fragmento_operativo(self):
+    def test_fragmentos_administrativos_requieren_login(self):
+        for fragment_name in (
+            'dashboard_fragmento',
+            'clientes_fragmento',
+            'pedidos_fragmento',
+        ):
+            response = self.client.get(reverse(fragment_name))
+
+            self.assertEqual(response.status_code, 302)
+            self.assertIn('/login/', response['Location'])
+
+    def test_dashboard_refresca_solo_fragmento_visual_completo(self):
         self.crear_pedido(self.repartidor)
         self.client.force_login(self.secretaria)
 
@@ -903,15 +914,55 @@ class PermisosRolesTests(TestCase):
 
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'id="dashboard-live-container"')
-        self.assertContains(page, 'data-partial-refresh-ms="10000"')
+        self.assertContains(page, 'data-refresh-ms="10000"')
         self.assertContains(page, 'js/partial_refresh.js')
         self.assertEqual(fragment.status_code, 200)
         self.assertTemplateUsed(
             fragment,
-            'core/includes/dashboard_fragmento.html'
+            'core/includes/dashboard_admin_fragmento.html'
         )
         self.assertContains(fragment, 'Pedidos urgentes')
+        self.assertContains(fragment, 'Resumen general')
+        self.assertContains(fragment, 'Ranking de clientes frecuentes')
+        self.assertContains(fragment, 'Lectura inteligente simple')
         self.assertNotContains(fragment, 'Buscar cliente')
+
+    def test_clientes_refresca_fragmento_con_clientes_actuales(self):
+        self.client.force_login(self.secretaria)
+
+        page = self.client.get(reverse('lista_clientes'))
+        fragment = self.client.get(reverse('clientes_fragmento'))
+
+        self.assertContains(page, 'id="clientes-live-container"')
+        self.assertContains(page, 'data-refresh-ms="10000"')
+        self.assertEqual(fragment.status_code, 200)
+        self.assertTemplateUsed(
+            fragment,
+            'core/includes/clientes_lista_fragmento.html'
+        )
+        self.assertContains(fragment, self.cliente.nombre)
+        self.assertNotContains(fragment, '<html')
+
+    def test_pedidos_refresca_fragmento_y_mantiene_permiso_secretaria(self):
+        pedido = self.crear_pedido(self.repartidor)
+        self.client.force_login(self.secretaria)
+
+        page = self.client.get(reverse('lista_pedidos'))
+        fragment = self.client.get(reverse('pedidos_fragmento'))
+
+        self.assertContains(page, 'id="pedidos-live-container"')
+        self.assertContains(page, 'data-refresh-ms="5000"')
+        self.assertEqual(fragment.status_code, 200)
+        self.assertTemplateUsed(
+            fragment,
+            'core/includes/pedidos_lista_fragmento.html'
+        )
+        self.assertContains(fragment, pedido.cliente.nombre)
+        self.assertNotContains(fragment, '<html')
+
+        self.client.force_login(self.repartidor)
+        denied_fragment = self.client.get(reverse('pedidos_fragmento'))
+        self.assertEqual(denied_fragment.status_code, 302)
 
     def test_panel_repartidor_refresca_fragmento_sin_exponer_otro_repartidor(self):
         pedido_asignado = self.crear_pedido(self.repartidor)
@@ -927,7 +978,7 @@ class PermisosRolesTests(TestCase):
         fragment = self.client.get(reverse('pedidos_repartidor_fragmento'))
 
         self.assertContains(page, 'id="pedidos-container"')
-        self.assertContains(page, 'data-partial-refresh-ms="5000"')
+        self.assertContains(page, 'data-refresh-ms="5000"')
         self.assertContains(page, 'js/partial_refresh.js')
         self.assertContains(page, 'data-refresh-key="acciones-')
         self.assertEqual(fragment.status_code, 200)
@@ -1714,6 +1765,128 @@ class PermisosRolesTests(TestCase):
 
         self.assertFalse(Pedido.objects.exists())
 
+    def test_metodo_pago_por_defecto_es_pendiente(self):
+        pedido = self.crear_pedido(self.repartidor)
+
+        self.assertEqual(pedido.metodo_pago, Pedido.PAGO_PENDIENTE)
+
+    def test_registrar_pedido_guarda_metodo_pago_seleccionado(self):
+        self.client.force_login(self.secretaria)
+
+        self.client.post(
+            reverse('registrar_pedido'),
+            {
+                'cliente': str(self.cliente.id),
+                'repartidor': '',
+                'cantidad_bidones': '2',
+                'precio_unitario': '7.00',
+                'metodo_pago': Pedido.PAGO_YAPE,
+                'estado': Pedido.PENDIENTE,
+                'observacion': '',
+                'fecha_programada': '',
+            }
+        )
+
+        self.assertEqual(
+            Pedido.objects.latest('id').metodo_pago,
+            Pedido.PAGO_YAPE
+        )
+
+    def test_editar_pedido_actualiza_metodo_pago(self):
+        pedido = self.crear_pedido(self.repartidor)
+        self.client.force_login(self.secretaria)
+
+        self.client.post(
+            reverse('editar_pedido', kwargs={'pedido_id': pedido.id}),
+            {
+                'cantidad_bidones': '2',
+                'precio_unitario': '7.00',
+                'metodo_pago': Pedido.PAGO_EFECTIVO,
+                'fecha_programada': timezone.localdate().strftime('%Y-%m-%d'),
+                'observacion': '',
+                'repartidor': str(self.repartidor.id),
+            }
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.metodo_pago, Pedido.PAGO_EFECTIVO)
+
+    def test_entrega_administrativa_con_efectivo_suma_en_pagos(self):
+        pedido = self.crear_pedido(self.repartidor)
+        self.client.force_login(self.secretaria)
+
+        self.client.post(
+            reverse(
+                'cambiar_estado_pedido',
+                kwargs={
+                    'pedido_id': pedido.id,
+                    'nuevo_estado': Pedido.ENTREGADO,
+                }
+            ),
+            {'metodo_pago': Pedido.PAGO_EFECTIVO}
+        )
+        pedido.refresh_from_db()
+        response = self.client.get(reverse('pagos'))
+
+        self.assertEqual(pedido.metodo_pago, Pedido.PAGO_EFECTIVO)
+        self.assertEqual(response.context['efectivo_hoy'], Decimal('14.00'))
+        self.assertEqual(response.context['yape_hoy'], Decimal('0.00'))
+        self.assertEqual(response.context['total_cobrado_hoy'], Decimal('14.00'))
+
+    def test_entrega_repartidor_con_yape_suma_en_pagos(self):
+        pedido = self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        self.client.post(
+            reverse(
+                'marcar_pedido_entregado_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {'metodo_pago': Pedido.PAGO_YAPE}
+        )
+        pedido.refresh_from_db()
+        self.client.force_login(self.secretaria)
+        response = self.client.get(reverse('pagos'))
+
+        self.assertEqual(pedido.metodo_pago, Pedido.PAGO_YAPE)
+        self.assertEqual(response.context['efectivo_hoy'], Decimal('0.00'))
+        self.assertEqual(response.context['yape_hoy'], Decimal('14.00'))
+        self.assertEqual(response.context['total_cobrado_hoy'], Decimal('14.00'))
+
+    def test_reporte_semanal_usa_fecha_entrega_y_no_suma_no_entregados(self):
+        pedido_entregado = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_entregado.pk).update(
+            fecha_pedido=timezone.now() - timedelta(days=30),
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_YAPE
+        )
+        self.crear_pedido(self.repartidor)
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('reporte_semanal'))
+
+        self.assertEqual(response.context['total_ventas'], Decimal('14.00'))
+        self.assertEqual(response.context['total_bidones'], 2)
+        self.assertEqual(response.context['total_entregados'], 1)
+        self.assertEqual(response.context['yape'], Decimal('14.00'))
+        self.assertEqual(response.context['efectivo'], Decimal('0.00'))
+
+    def test_pagos_y_reporte_semanal_mantienen_permiso_administrativo(self):
+        for route_name in ('pagos', 'reporte_semanal'):
+            response = self.client.get(reverse(route_name))
+            self.assertEqual(response.status_code, 302)
+
+            self.client.force_login(self.repartidor)
+            response = self.client.get(reverse(route_name))
+            self.assertEqual(response.status_code, 302)
+            self.client.logout()
+
+            self.client.force_login(self.secretaria)
+            response = self.client.get(reverse(route_name))
+            self.assertEqual(response.status_code, 200)
+            self.client.logout()
+
     def test_dashboard_y_reporte_diario_contabilizan_por_fecha_entrega(self):
         pedido = self.crear_pedido(self.repartidor)
         Pedido.objects.filter(pk=pedido.pk).update(
@@ -1730,6 +1903,21 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(dashboard.context['bidones_hoy'], 2)
         self.assertEqual(diario.context['ventas_hoy'], Decimal('14.00'))
         self.assertEqual(diario.context['bidones_hoy'], 2)
+
+    def test_dashboard_resume_pagos_entregados_por_metodo(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_EFECTIVO
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.context['efectivo_hoy'], Decimal('14.00'))
+        self.assertEqual(response.context['yape_hoy'], Decimal('0.00'))
+        self.assertContains(response, 'Total cobrado hoy')
 
 
 class ReporteMensualTests(TestCase):
