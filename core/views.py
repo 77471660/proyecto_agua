@@ -913,6 +913,19 @@ def leer_metodo_pago_post(post_data, default=Pedido.PAGO_PENDIENTE):
     return metodo_pago
 
 
+def leer_metodo_pago_entrega_post(post_data):
+
+    metodo_pago = post_data.get('metodo_pago', '').strip().upper()
+    metodos_validos = {
+        valor for valor, etiqueta in Pedido.METODOS_COBRO
+    } | {Pedido.PAGO_FIADO}
+
+    if metodo_pago not in metodos_validos:
+        return None
+
+    return metodo_pago
+
+
 def leer_lugar_activo_post(post_data, campo='lugar'):
 
     lugar_id = post_data.get(campo, '').strip()
@@ -937,6 +950,7 @@ def totales_por_metodo_pago(pedidos_entregados):
         Pedido.PAGO_EFECTIVO: Decimal('0.00'),
         Pedido.PAGO_YAPE: Decimal('0.00'),
         Pedido.PAGO_PLIN: Decimal('0.00'),
+        Pedido.PAGO_TRANSFERENCIA: Decimal('0.00'),
         Pedido.PAGO_FIADO: Decimal('0.00'),
         Pedido.PAGO_PENDIENTE: Decimal('0.00'),
     }
@@ -949,12 +963,14 @@ def totales_por_metodo_pago(pedidos_entregados):
         'efectivo': montos[Pedido.PAGO_EFECTIVO],
         'yape': montos[Pedido.PAGO_YAPE],
         'plin': montos[Pedido.PAGO_PLIN],
+        'transferencia': montos[Pedido.PAGO_TRANSFERENCIA],
         'fiado': montos[Pedido.PAGO_FIADO],
         'pendiente': montos[Pedido.PAGO_PENDIENTE],
         'cobrado': (
             montos[Pedido.PAGO_EFECTIVO]
             + montos[Pedido.PAGO_YAPE]
             + montos[Pedido.PAGO_PLIN]
+            + montos[Pedido.PAGO_TRANSFERENCIA]
         ),
     }
 
@@ -1001,6 +1017,7 @@ def totales_cobros_periodo(
         'efectivo': montos[Pedido.PAGO_EFECTIVO],
         'yape': montos[Pedido.PAGO_YAPE],
         'plin': montos[Pedido.PAGO_PLIN],
+        'transferencia': montos[Pedido.PAGO_TRANSFERENCIA],
         'cobrado': sum(montos.values(), Decimal('0.00')),
     }
 
@@ -1626,6 +1643,7 @@ def reporte_semanal(request):
         'efectivo': cobros_semana['efectivo'],
         'yape': cobros_semana['yape'],
         'plin': cobros_semana['plin'],
+        'transferencia': cobros_semana['transferencia'],
         'fiado': pagos_semana['fiado'],
         'pendiente': pagos_semana['pendiente'],
         'cobrado': cobros_semana['cobrado'],
@@ -1711,11 +1729,13 @@ def pagos(request):
         'efectivo_hoy': pagos_hoy['efectivo'],
         'yape_hoy': pagos_hoy['yape'],
         'plin_hoy': pagos_hoy['plin'],
+        'transferencia_hoy': pagos_hoy['transferencia'],
         'fiado_hoy': ventas_hoy['fiado'],
         'total_cobrado_hoy': pagos_hoy['cobrado'],
         'efectivo_periodo': pagos_periodo['efectivo'],
         'yape_periodo': pagos_periodo['yape'],
         'plin_periodo': pagos_periodo['plin'],
+        'transferencia_periodo': pagos_periodo['transferencia'],
         'fiado_periodo': ventas_periodo['fiado'],
         'pendiente_periodo': ventas_periodo['pendiente'],
         'total_cobrado_periodo': pagos_periodo['cobrado'],
@@ -2274,6 +2294,16 @@ def registrar_pedido(request):
 
         if metodo_pago is None:
             messages.error(request, 'Método de pago inválido.')
+            return redirect('registrar_pedido')
+
+        if (
+            estado == Pedido.ENTREGADO
+            and leer_metodo_pago_entrega_post(request.POST) is None
+        ):
+            messages.error(
+                request,
+                'Selecciona un método de pago antes de marcar como entregado.'
+            )
             return redirect('registrar_pedido')
 
         if error_lugar:
@@ -3152,17 +3182,17 @@ def marcar_pedido_entregado_repartidor(request, pedido_id):
         repartidor=request.user
     )
 
-    update_fields = ['repartidor', *campos_estado_pedido()]
+    metodo_pago = leer_metodo_pago_entrega_post(request.POST)
 
-    if pedido.metodo_pago == Pedido.PAGO_PENDIENTE:
-        metodo_pago = leer_metodo_pago_post(request.POST)
+    if metodo_pago is None:
+        messages.error(
+            request,
+            'Selecciona un método de pago antes de marcar como entregado.'
+        )
+        return redirect('pedidos_repartidor')
 
-        if metodo_pago is None:
-            messages.error(request, 'Método de pago inválido.')
-            return redirect('pedidos_repartidor')
-
-        pedido.metodo_pago = metodo_pago
-        update_fields.append('metodo_pago')
+    update_fields = ['repartidor', 'metodo_pago', *campos_estado_pedido()]
+    pedido.metodo_pago = metodo_pago
 
     pedido.repartidor = request.user
     estado_anterior = pedido.estado
@@ -3274,6 +3304,16 @@ def nuevo_pedido_repartidor(request):
 
         if metodo_pago is None:
             messages.error(request, 'Método de pago inválido.')
+            return redirect('nuevo_pedido_repartidor')
+
+        if (
+            entregar_ahora
+            and leer_metodo_pago_entrega_post(request.POST) is None
+        ):
+            messages.error(
+                request,
+                'Selecciona un método de pago antes de marcar como entregado.'
+            )
             return redirect('nuevo_pedido_repartidor')
 
         if error_lugar:
@@ -3746,14 +3786,14 @@ def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
         pedido.fecha_programada = nueva_fecha_programada
         update_fields = ['fecha_programada', *update_fields]
 
-    if (
-        nuevo_estado == Pedido.ENTREGADO
-        and pedido.metodo_pago == Pedido.PAGO_PENDIENTE
-    ):
-        metodo_pago = leer_metodo_pago_post(request.POST)
+    if nuevo_estado == Pedido.ENTREGADO:
+        metodo_pago = leer_metodo_pago_entrega_post(request.POST)
 
         if metodo_pago is None:
-            messages.error(request, 'Método de pago inválido.')
+            messages.error(
+                request,
+                'Selecciona un método de pago antes de marcar como entregado.'
+            )
             return redirect('lista_pedidos')
 
         pedido.metodo_pago = metodo_pago

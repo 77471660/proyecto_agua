@@ -172,7 +172,10 @@
 
     <section class="card form-card">
         <div class="card-body">
-            <form method="post">
+            <form
+                method="post"
+                onsubmit="if (this.entregar_ahora.checked) { return this.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?'); } return true;"
+            >
                 {% csrf_token %}
 
                 <div
@@ -294,6 +297,7 @@
                         <option value="EFECTIVO">Efectivo</option>
                         <option value="YAPE">Yape</option>
                         <option value="PLIN">Plin</option>
+                        <option value="TRANSFERENCIA">Transferencia</option>
                         <option value="FIADO">Fiado</option>
                     </select>
                     <small class="text-muted">

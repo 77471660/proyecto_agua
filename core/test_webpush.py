@@ -139,7 +139,11 @@ class WebPushTests(TestCase):
         )
         self.assertContains(
             response,
-            "onsubmit=\"return confirm('\\u00bfConfirmas marcar este pedido como entregado?')\""
+            "confirm('\\u00bfConfirmas marcar este pedido como entregado?')"
+        )
+        self.assertContains(
+            response,
+            "confirm('\\u00bfConfirmas entregar como fiado? Este pedido quedar\\u00e1 como deuda pendiente.')"
         )
         self.assertContains(
             response,

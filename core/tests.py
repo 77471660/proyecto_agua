@@ -1644,7 +1644,8 @@ class PermisosRolesTests(TestCase):
                     'pedido_id': pedido.id,
                     'nuevo_estado': Pedido.ENTREGADO,
                 }
-            )
+            ),
+            {'metodo_pago': Pedido.PAGO_EFECTIVO}
         )
 
         self.assertTrue(
@@ -1861,6 +1862,43 @@ class PermisosRolesTests(TestCase):
             Pedido.PAGO_YAPE
         )
 
+    def test_crear_pedido_entregado_exige_metodo_pago_valido(self):
+        self.client.force_login(self.secretaria)
+
+        self.client.post(
+            reverse('registrar_pedido'),
+            {
+                'cliente': str(self.cliente.id),
+                'repartidor': str(self.repartidor.id),
+                'cantidad_bidones': '2',
+                'precio_unitario': '7.00',
+                'metodo_pago': Pedido.PAGO_PENDIENTE,
+                'estado': Pedido.ENTREGADO,
+                'observacion': '',
+                'fecha_programada': '',
+            }
+        )
+
+        self.assertFalse(Pedido.objects.exists())
+
+    def test_nuevo_pedido_repartidor_entregado_exige_metodo_pago_valido(self):
+        self.client.force_login(self.repartidor)
+
+        self.client.post(
+            reverse('nuevo_pedido_repartidor'),
+            {
+                'cliente': str(self.cliente.id),
+                'cantidad_bidones': '2',
+                'precio_unitario': '7.00',
+                'metodo_pago': Pedido.PAGO_PENDIENTE,
+                'entregar_ahora': 'on',
+                'observacion': '',
+                'fecha_programada': '',
+            }
+        )
+
+        self.assertFalse(Pedido.objects.exists())
+
     def test_editar_pedido_actualiza_metodo_pago(self):
         pedido = self.crear_pedido(self.repartidor)
         self.client.force_login(self.secretaria)
@@ -1902,6 +1940,31 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.context['yape_hoy'], Decimal('0.00'))
         self.assertEqual(response.context['total_cobrado_hoy'], Decimal('14.00'))
 
+    def test_entrega_administrativa_rechaza_pago_pendiente_o_ausente(self):
+        self.client.force_login(self.secretaria)
+
+        for datos in ({}, {'metodo_pago': Pedido.PAGO_PENDIENTE}):
+            pedido = self.crear_pedido(self.repartidor)
+            response = self.client.post(
+                reverse(
+                    'cambiar_estado_pedido',
+                    kwargs={
+                        'pedido_id': pedido.id,
+                        'nuevo_estado': Pedido.ENTREGADO,
+                    }
+                ),
+                datos,
+                follow=True
+            )
+            pedido.refresh_from_db()
+
+            self.assertEqual(pedido.estado, Pedido.PENDIENTE)
+            self.assertIsNone(pedido.fecha_entrega)
+            self.assertContains(
+                response,
+                'Selecciona un método de pago antes de marcar como entregado.'
+            )
+
     def test_entrega_repartidor_con_yape_suma_en_pagos(self):
         pedido = self.crear_pedido(self.repartidor)
         self.client.force_login(self.repartidor)
@@ -1921,6 +1984,68 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.context['efectivo_hoy'], Decimal('0.00'))
         self.assertEqual(response.context['yape_hoy'], Decimal('14.00'))
         self.assertEqual(response.context['total_cobrado_hoy'], Decimal('14.00'))
+
+    def test_entrega_repartidor_rechaza_pago_pendiente(self):
+        pedido = self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        self.client.post(
+            reverse(
+                'marcar_pedido_entregado_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {'metodo_pago': Pedido.PAGO_PENDIENTE}
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.estado, Pedido.PENDIENTE)
+        self.assertIsNone(pedido.fecha_entrega)
+
+    def test_entrega_repartidor_con_plin_suma_en_pagos(self):
+        pedido = self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        self.client.post(
+            reverse(
+                'marcar_pedido_entregado_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {'metodo_pago': Pedido.PAGO_PLIN}
+        )
+
+        self.client.force_login(self.secretaria)
+        response = self.client.get(reverse('pagos'))
+
+        self.assertEqual(response.context['plin_hoy'], Decimal('14.00'))
+        self.assertEqual(response.context['total_cobrado_hoy'], Decimal('14.00'))
+
+    def test_entrega_con_transferencia_suma_en_pagos_y_reporte_semanal(self):
+        pedido = self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        self.client.post(
+            reverse(
+                'marcar_pedido_entregado_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {'metodo_pago': Pedido.PAGO_TRANSFERENCIA}
+        )
+        pedido.refresh_from_db()
+        self.client.force_login(self.secretaria)
+        pagos = self.client.get(reverse('pagos'))
+        semanal = self.client.get(reverse('reporte_semanal'))
+
+        self.assertEqual(pedido.estado, Pedido.ENTREGADO)
+        self.assertEqual(pedido.metodo_pago, Pedido.PAGO_TRANSFERENCIA)
+        self.assertEqual(
+            pagos.context['transferencia_hoy'],
+            Decimal('14.00')
+        )
+        self.assertEqual(pagos.context['total_cobrado_hoy'], Decimal('14.00'))
+        self.assertContains(pagos, 'Transferencia')
+        self.assertEqual(semanal.context['transferencia'], Decimal('14.00'))
+        self.assertEqual(semanal.context['cobrado'], Decimal('14.00'))
+        self.assertContains(semanal, 'Transferencia')
 
     def test_entrega_repartidor_fiada_genera_deuda_sin_sumar_cobro(self):
         pedido = self.crear_pedido(self.repartidor)
@@ -1981,6 +2106,21 @@ class PermisosRolesTests(TestCase):
                 descripcion='Cobro posterior de pedido fiado registrado.'
             ).exists()
         )
+
+    def test_entrega_historica_pendiente_sigue_visible_sin_metodo_registrado(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_PENDIENTE
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('pagos'))
+
+        self.assertEqual(response.context['total_pendientes_pago'], 1)
+        self.assertContains(response, 'Sin m&eacute;todo registrado')
+        self.assertEqual(response.context['total_cobrado_hoy'], Decimal('0.00'))
 
     def test_repartidor_no_puede_cerrar_deuda_fiada(self):
         pedido = self.crear_pedido(self.repartidor)

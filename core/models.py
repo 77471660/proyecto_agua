@@ -168,6 +168,7 @@ class Pedido(models.Model):
     PAGO_EFECTIVO = 'EFECTIVO'
     PAGO_YAPE = 'YAPE'
     PAGO_PLIN = 'PLIN'
+    PAGO_TRANSFERENCIA = 'TRANSFERENCIA'
     PAGO_FIADO = 'FIADO'
 
     ESTADOS_PEDIDO = [
@@ -191,6 +192,7 @@ class Pedido(models.Model):
         (PAGO_EFECTIVO, 'Efectivo'),
         (PAGO_YAPE, 'Yape'),
         (PAGO_PLIN, 'Plin'),
+        (PAGO_TRANSFERENCIA, 'Transferencia'),
         (PAGO_FIADO, 'Fiado'),
     ]
 
@@ -198,6 +200,7 @@ class Pedido(models.Model):
         (PAGO_EFECTIVO, 'Efectivo'),
         (PAGO_YAPE, 'Yape'),
         (PAGO_PLIN, 'Plin'),
+        (PAGO_TRANSFERENCIA, 'Transferencia'),
     ]
 
     cliente = models.ForeignKey(
