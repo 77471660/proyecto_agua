@@ -317,6 +317,9 @@ Detalle del cliente
                     S/ {{ pedido.total|floatformat:2 }}
                     <small class="d-block text-muted">
                         Pago: {{ pedido.get_metodo_pago_display }}
+                        {% if pedido.metodo_pago == 'FIADO' and pedido.fecha_pago %}
+                            - cobrado por {{ pedido.get_metodo_pago_final_display }}
+                        {% endif %}
                     </small>
                     <small class="d-block text-muted">
                         Lugar: {{ pedido.lugar|default:"Sin asignar" }}
@@ -374,6 +377,7 @@ Detalle del cliente
                                                 <option value="EFECTIVO">Efectivo</option>
                                                 <option value="YAPE">Yape</option>
                                                 <option value="PLIN">Plin</option>
+                                                <option value="FIADO">Fiado</option>
                                             </select>
                                         {% endif %}
                                         <button

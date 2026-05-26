@@ -159,6 +159,12 @@ urlpatterns = [
     ),
 
     path(
+        'pagos/fiado/<int:pedido_id>/registrar/',
+        views.marcar_fiado_pagado,
+        name='marcar_fiado_pagado'
+    ),
+
+    path(
         'lugares/',
         views.lugares,
         name='lugares'

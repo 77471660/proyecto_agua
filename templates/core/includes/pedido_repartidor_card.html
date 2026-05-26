@@ -178,11 +178,17 @@
                 >
                     {% csrf_token %}
                     {% if pedido.metodo_pago == 'PENDIENTE' %}
-                        <select name="metodo_pago" class="form-select mb-2" aria-label="Metodo de pago">
+                        <select
+                            name="metodo_pago"
+                            class="form-select mb-2"
+                            aria-label="Metodo de pago"
+                            onchange="if (this.value === 'FIADO' && !confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.')) { this.value = 'PENDIENTE'; }"
+                        >
                             <option value="PENDIENTE" selected>Pago pendiente</option>
                             <option value="EFECTIVO">Efectivo</option>
                             <option value="YAPE">Yape</option>
                             <option value="PLIN">Plin</option>
+                            <option value="FIADO">Fiado</option>
                         </select>
                     {% endif %}
                     <button type="submit" class="btn btn-primary w-100 action-button">

@@ -754,6 +754,10 @@
                         href="/repartidor/jefe/"
                         class="btn btn-sm {% if request.path == '/repartidor/jefe/' %}btn-light{% else %}btn-outline-light{% endif %}"
                     >Gestión de repartos</a>
+                    <a
+                        href="/pagos/"
+                        class="btn btn-sm {% if request.path == '/pagos/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Pagos</a>
                 {% endif %}
 
                 <form method="post" action="{% url 'logout' %}" class="mb-0">
@@ -807,6 +811,9 @@
                     {% if menu_es_jefe_repartidores %}
                         <li>
                             <a class="dropdown-item" href="/repartidor/jefe/">Gestión de repartos</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/pagos/">Pagos</a>
                         </li>
                     {% endif %}
 

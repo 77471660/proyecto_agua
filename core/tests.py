@@ -1922,6 +1922,104 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.context['yape_hoy'], Decimal('14.00'))
         self.assertEqual(response.context['total_cobrado_hoy'], Decimal('14.00'))
 
+    def test_entrega_repartidor_fiada_genera_deuda_sin_sumar_cobro(self):
+        pedido = self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        self.client.post(
+            reverse(
+                'marcar_pedido_entregado_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {'metodo_pago': Pedido.PAGO_FIADO}
+        )
+
+        pedido.refresh_from_db()
+        self.client.force_login(self.secretaria)
+        pagos = self.client.get(reverse('pagos'))
+        dashboard = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(pedido.estado, Pedido.ENTREGADO)
+        self.assertEqual(pedido.metodo_pago, Pedido.PAGO_FIADO)
+        self.assertIsNone(pedido.fecha_pago)
+        self.assertEqual(pagos.context['fiado_hoy'], Decimal('14.00'))
+        self.assertEqual(pagos.context['efectivo_hoy'], Decimal('0.00'))
+        self.assertEqual(pagos.context['yape_hoy'], Decimal('0.00'))
+        self.assertEqual(pagos.context['total_cobrado_hoy'], Decimal('0.00'))
+        self.assertEqual(pagos.context['total_por_cobrar'], Decimal('14.00'))
+        self.assertEqual(len(pagos.context['fiados_pendientes']), 1)
+        self.assertEqual(dashboard.context['bidones_hoy'], 2)
+        self.assertEqual(dashboard.context['total_por_cobrar'], Decimal('14.00'))
+
+    def test_marcar_fiado_pagado_registra_metodo_fecha_y_usuario(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.secretaria)
+
+        self.client.post(
+            reverse('marcar_fiado_pagado', kwargs={'pedido_id': pedido.id}),
+            {'metodo_pago_final': Pedido.PAGO_PLIN}
+        )
+
+        pedido.refresh_from_db()
+        pagos = self.client.get(reverse('pagos'))
+
+        self.assertEqual(pedido.metodo_pago, Pedido.PAGO_FIADO)
+        self.assertEqual(pedido.metodo_pago_final, Pedido.PAGO_PLIN)
+        self.assertIsNotNone(pedido.fecha_pago)
+        self.assertEqual(pedido.usuario_pago, self.secretaria)
+        self.assertEqual(pagos.context['plin_hoy'], Decimal('14.00'))
+        self.assertEqual(pagos.context['total_por_cobrar'], Decimal('0.00'))
+        self.assertTrue(
+            PedidoHistorial.objects.filter(
+                pedido=pedido,
+                usuario=self.secretaria,
+                descripcion='Cobro posterior de pedido fiado registrado.'
+            ).exists()
+        )
+
+    def test_repartidor_no_puede_cerrar_deuda_fiada(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse('marcar_fiado_pagado', kwargs={'pedido_id': pedido.id}),
+            {'metodo_pago_final': Pedido.PAGO_EFECTIVO}
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertIsNone(pedido.fecha_pago)
+        self.assertIsNone(pedido.metodo_pago_final)
+
+    def test_jefe_puede_cerrar_deuda_fiada(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.jefe_reparto)
+
+        self.client.post(
+            reverse('marcar_fiado_pagado', kwargs={'pedido_id': pedido.id}),
+            {'metodo_pago_final': Pedido.PAGO_YAPE}
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.metodo_pago_final, Pedido.PAGO_YAPE)
+        self.assertEqual(pedido.usuario_pago, self.jefe_reparto)
+        self.assertIsNotNone(pedido.fecha_pago)
+
     def test_plin_suma_correctamente_y_pagos_filtra_por_lugar(self):
         lugar_plin = Lugar.objects.create(nombre='Pichanaki', orden=1)
         lugar_otro = Lugar.objects.create(nombre='Perene', orden=2)
@@ -2004,6 +2102,37 @@ class PermisosRolesTests(TestCase):
             [pedido_uno]
         )
 
+    def test_reporte_semanal_separa_venta_fiada_y_cobro_posterior(self):
+        pedido_fiado = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_fiado.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.secretaria)
+
+        reporte_pendiente = self.client.get(reverse('reporte_semanal'))
+
+        self.assertEqual(reporte_pendiente.context['total_ventas'], Decimal('14.00'))
+        self.assertEqual(reporte_pendiente.context['total_bidones'], 2)
+        self.assertEqual(reporte_pendiente.context['fiado'], Decimal('14.00'))
+        self.assertEqual(reporte_pendiente.context['cobrado'], Decimal('0.00'))
+        self.assertEqual(
+            reporte_pendiente.context['cuentas_por_cobrar'],
+            Decimal('14.00')
+        )
+
+        Pedido.objects.filter(pk=pedido_fiado.pk).update(
+            fecha_entrega=timezone.now() - timedelta(days=14),
+            fecha_pago=timezone.now(),
+            metodo_pago_final=Pedido.PAGO_EFECTIVO
+        )
+        reporte_cobrado = self.client.get(reverse('reporte_semanal'))
+
+        self.assertEqual(reporte_cobrado.context['total_ventas'], Decimal('0.00'))
+        self.assertEqual(reporte_cobrado.context['efectivo'], Decimal('14.00'))
+        self.assertEqual(reporte_cobrado.context['cobrado'], Decimal('14.00'))
+
     def test_pagos_y_reporte_semanal_mantienen_permiso_administrativo(self):
         for route_name in ('pagos', 'reporte_semanal', 'lugares'):
             response = self.client.get(reverse(route_name))
@@ -2018,6 +2147,9 @@ class PermisosRolesTests(TestCase):
             response = self.client.get(reverse(route_name))
             self.assertEqual(response.status_code, 200)
             self.client.logout()
+
+        self.client.force_login(self.jefe_reparto)
+        self.assertEqual(self.client.get(reverse('pagos')).status_code, 200)
 
     def test_dashboard_y_reporte_diario_contabilizan_por_fecha_entrega(self):
         pedido = self.crear_pedido(self.repartidor)

@@ -48,12 +48,15 @@ class PedidoAdmin(admin.ModelAdmin):
         'cantidad_bidones',
         'precio_unitario',
         'total',
+        'metodo_pago',
+        'metodo_pago_final',
+        'fecha_pago',
         'estado',
         'fecha_estado_actualizado',
         'usuario_estado_actualizado',
     )
     search_fields = ('cliente__nombre', 'repartidor__username')
-    list_filter = ('lugar', 'metodo_pago', 'estado', 'repartidor', 'fecha_pedido', 'fecha_estado_actualizado')
+    list_filter = ('lugar', 'metodo_pago', 'metodo_pago_final', 'estado', 'repartidor', 'fecha_pedido', 'fecha_estado_actualizado')
     ordering = ('-fecha_pedido',)
 
 

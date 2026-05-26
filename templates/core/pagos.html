@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load phone_format %}
 
 {% block title %}
 Pagos - AquaSmart CRM
@@ -45,7 +46,7 @@ Pagos - AquaSmart CRM
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-xl-2">
         <div class="card metric-card h-100">
             <div class="card-body">
                 <h6 class="metric-label">Efectivo hoy</h6>
@@ -53,7 +54,7 @@ Pagos - AquaSmart CRM
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-xl-2">
         <div class="card metric-card metric-info h-100">
             <div class="card-body">
                 <h6 class="metric-label">Yape hoy</h6>
@@ -61,7 +62,7 @@ Pagos - AquaSmart CRM
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-xl-2">
         <div class="card metric-card h-100">
             <div class="card-body">
                 <h6 class="metric-label">Plin hoy</h6>
@@ -69,7 +70,23 @@ Pagos - AquaSmart CRM
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-xl-2">
+        <div class="card metric-card metric-warning h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Fiado hoy</h6>
+                <div class="metric-value">S/ {{ fiado_hoy|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+        <div class="card metric-card metric-warning h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Total por cobrar</h6>
+                <div class="metric-value">S/ {{ total_por_cobrar|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
         <div class="card metric-card metric-success h-100">
             <div class="card-body">
                 <h6 class="metric-label">Total cobrado hoy</h6>
@@ -115,6 +132,12 @@ Pagos - AquaSmart CRM
             </div>
             <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Fiado entregado</div>
+                    <div class="fs-4 fw-semibold">S/ {{ fiado_periodo|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl">
+                <div class="form-section mb-0 h-100">
                     <div class="text-muted small">Total cobrado</div>
                     <div class="fs-4 fw-semibold text-success">S/ {{ total_cobrado_periodo|floatformat:2 }}</div>
                 </div>
@@ -137,6 +160,7 @@ Pagos - AquaSmart CRM
                             <th>Efectivo</th>
                             <th>Yape</th>
                             <th>Plin</th>
+                            <th>Fiado</th>
                             <th>Pendiente</th>
                             <th class="text-end">Total vendido</th>
                         </tr>
@@ -150,6 +174,7 @@ Pagos - AquaSmart CRM
                                 <td>S/ {{ fila.efectivo|floatformat:2 }}</td>
                                 <td>S/ {{ fila.yape|floatformat:2 }}</td>
                                 <td>S/ {{ fila.plin|floatformat:2 }}</td>
+                                <td>S/ {{ fila.fiado|floatformat:2 }}</td>
                                 <td>S/ {{ fila.pendiente|floatformat:2 }}</td>
                                 <td class="text-end fw-semibold">S/ {{ fila.total|floatformat:2 }}</td>
                             </tr>
@@ -159,6 +184,64 @@ Pagos - AquaSmart CRM
             </div>
         {% else %}
             <div class="empty-state">No hay ventas entregadas para el per&iacute;odo y lugar seleccionados.</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card content-card mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>Fiados / cuentas por cobrar ({{ total_fiados_pendientes }})</span>
+        <span class="fw-semibold text-warning">S/ {{ total_por_cobrar|floatformat:2 }}</span>
+    </div>
+    <div class="card-body">
+        {% if fiados_pendientes %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Tel&eacute;fono</th>
+                            <th>Entrega</th>
+                            <th>Bidones</th>
+                            <th>Repartidor</th>
+                            <th>D&iacute;as pendiente</th>
+                            <th class="text-end">Deuda</th>
+                            <th>Acci&oacute;n</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pedido in fiados_pendientes %}
+                            <tr>
+                                <td>{{ pedido.cliente.nombre }}</td>
+                                <td>{{ pedido.cliente.telefono|format_phone_display }}</td>
+                                <td>{{ pedido.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                                <td>{{ pedido.cantidad_bidones }}</td>
+                                <td>{{ pedido.repartidor|default:"Sin asignar" }}</td>
+                                <td>{{ pedido.dias_pendiente }}</td>
+                                <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
+                                <td>
+                                    <form
+                                        method="POST"
+                                        action="{% url 'marcar_fiado_pagado' pedido.id %}"
+                                        class="d-flex gap-2 align-items-center"
+                                        onsubmit="return confirm('\u00bfConfirmas registrar el pago de este fiado?')"
+                                    >
+                                        {% csrf_token %}
+                                        <select name="metodo_pago_final" class="form-select form-select-sm" required aria-label="Método de cobro final">
+                                            <option value="EFECTIVO">Efectivo</option>
+                                            <option value="YAPE">Yape</option>
+                                            <option value="PLIN">Plin</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">Marcar pagado</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">No hay cuentas por cobrar pendientes.</div>
         {% endif %}
     </div>
 </div>

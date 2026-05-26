@@ -168,6 +168,7 @@ class Pedido(models.Model):
     PAGO_EFECTIVO = 'EFECTIVO'
     PAGO_YAPE = 'YAPE'
     PAGO_PLIN = 'PLIN'
+    PAGO_FIADO = 'FIADO'
 
     ESTADOS_PEDIDO = [
         (PENDIENTE, 'Pendiente'),
@@ -187,6 +188,13 @@ class Pedido(models.Model):
 
     METODOS_PAGO = [
         (PAGO_PENDIENTE, 'Pendiente'),
+        (PAGO_EFECTIVO, 'Efectivo'),
+        (PAGO_YAPE, 'Yape'),
+        (PAGO_PLIN, 'Plin'),
+        (PAGO_FIADO, 'Fiado'),
+    ]
+
+    METODOS_COBRO = [
         (PAGO_EFECTIVO, 'Efectivo'),
         (PAGO_YAPE, 'Yape'),
         (PAGO_PLIN, 'Plin'),
@@ -311,6 +319,26 @@ class Pedido(models.Model):
         max_length=20,
         choices=METODOS_PAGO,
         default=PAGO_PENDIENTE
+    )
+
+    fecha_pago = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    metodo_pago_final = models.CharField(
+        max_length=20,
+        choices=METODOS_COBRO,
+        null=True,
+        blank=True
+    )
+
+    usuario_pago = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pedidos_pago_registrado'
     )
 
     estado = models.CharField(

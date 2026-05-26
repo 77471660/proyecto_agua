@@ -160,7 +160,7 @@ Dashboard - AquaSmart CRM
     <div class="col-md-3 mb-3">
         <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="metric-label">Ingresos de hoy</h6>
+                <h6 class="metric-label">Ventas de hoy</h6>
                 <div class="metric-value">S/ {{ ventas_hoy|floatformat:2 }}</div>
                 <small class="text-muted">Ventas entregadas hoy</small>
             </div>
@@ -190,7 +190,7 @@ Dashboard - AquaSmart CRM
 </div>
 
 <div class="row mb-3">
-    <div class="col-md-4 mb-3">
+    <div class="col-sm-6 col-xl mb-3">
         <div class="card metric-card h-100">
             <div class="card-body py-3">
                 <h6 class="metric-label">Efectivo hoy</h6>
@@ -198,7 +198,7 @@ Dashboard - AquaSmart CRM
             </div>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-sm-6 col-xl mb-3">
         <div class="card metric-card metric-info h-100">
             <div class="card-body py-3">
                 <h6 class="metric-label">Yape hoy</h6>
@@ -206,7 +206,23 @@ Dashboard - AquaSmart CRM
             </div>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-sm-6 col-xl mb-3">
+        <div class="card metric-card metric-warning h-100">
+            <div class="card-body py-3">
+                <h6 class="metric-label">Fiado hoy</h6>
+                <div class="metric-value">S/ {{ fiado_hoy|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl mb-3">
+        <div class="card metric-card metric-warning h-100">
+            <div class="card-body py-3">
+                <h6 class="metric-label">Total por cobrar</h6>
+                <div class="metric-value">S/ {{ total_por_cobrar|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl mb-3">
         <div class="card metric-card metric-success h-100">
             <div class="card-body py-3">
                 <h6 class="metric-label">Total cobrado hoy</h6>
@@ -318,7 +334,7 @@ Dashboard - AquaSmart CRM
             <div class="card-body">
                 <h6 class="metric-label">Ventas del mes</h6>
                 <div class="metric-value">S/ {{ ventas_mes|floatformat:2 }}</div>
-                <small class="text-muted">Ingresos del mes actual</small>
+                <small class="text-muted">Ventas entregadas del mes</small>
             </div>
         </div>
     </div>

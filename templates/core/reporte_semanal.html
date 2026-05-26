@@ -80,6 +80,36 @@ Reporte Semanal - AquaSmart CRM
     </div>
 </div>
 
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card metric-card metric-success h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Total cobrado</h6>
+                <div class="metric-value">S/ {{ cobrado|floatformat:2 }}</div>
+                <small class="text-muted">Por fecha de cobro</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card metric-card metric-warning h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Total fiado</h6>
+                <div class="metric-value">S/ {{ fiado|floatformat:2 }}</div>
+                <small class="text-muted">Entregado como cr&eacute;dito</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card metric-card metric-warning h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Cuentas por cobrar</h6>
+                <div class="metric-value">S/ {{ cuentas_por_cobrar|floatformat:2 }}</div>
+                <small class="text-muted">Fiados pendientes de esta semana</small>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card content-card mb-4">
     <div class="card-header bg-white">Desglose por m&eacute;todo de pago</div>
     <div class="card-body">
@@ -110,8 +140,8 @@ Reporte Semanal - AquaSmart CRM
             </div>
             <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Cobrado identificado</div>
-                    <div class="fs-4 fw-semibold text-success">S/ {{ cobrado|floatformat:2 }}</div>
+                    <div class="text-muted small">Fiado entregado</div>
+                    <div class="fs-4 fw-semibold">S/ {{ fiado|floatformat:2 }}</div>
                 </div>
             </div>
         </div>

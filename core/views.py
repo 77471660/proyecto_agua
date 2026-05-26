@@ -936,6 +936,7 @@ def totales_por_metodo_pago(pedidos_entregados):
         Pedido.PAGO_EFECTIVO: Decimal('0.00'),
         Pedido.PAGO_YAPE: Decimal('0.00'),
         Pedido.PAGO_PLIN: Decimal('0.00'),
+        Pedido.PAGO_FIADO: Decimal('0.00'),
         Pedido.PAGO_PENDIENTE: Decimal('0.00'),
     }
 
@@ -947,6 +948,7 @@ def totales_por_metodo_pago(pedidos_entregados):
         'efectivo': montos[Pedido.PAGO_EFECTIVO],
         'yape': montos[Pedido.PAGO_YAPE],
         'plin': montos[Pedido.PAGO_PLIN],
+        'fiado': montos[Pedido.PAGO_FIADO],
         'pendiente': montos[Pedido.PAGO_PENDIENTE],
         'cobrado': (
             montos[Pedido.PAGO_EFECTIVO]
@@ -954,6 +956,70 @@ def totales_por_metodo_pago(pedidos_entregados):
             + montos[Pedido.PAGO_PLIN]
         ),
     }
+
+
+def totales_cobros_periodo(
+    inicio_periodo,
+    fin_periodo,
+    lugar=None,
+    repartidor=None
+):
+
+    metodos_cobro = [valor for valor, etiqueta in Pedido.METODOS_COBRO]
+    pagos_inmediatos = Pedido.objects.filter(
+        estado=Pedido.ENTREGADO,
+        metodo_pago__in=metodos_cobro,
+        fecha_entrega__date__range=(inicio_periodo, fin_periodo)
+    )
+    pagos_fiados = Pedido.objects.filter(
+        estado=Pedido.ENTREGADO,
+        metodo_pago=Pedido.PAGO_FIADO,
+        metodo_pago_final__in=metodos_cobro,
+        fecha_pago__date__range=(inicio_periodo, fin_periodo)
+    )
+
+    if lugar:
+        pagos_inmediatos = pagos_inmediatos.filter(lugar=lugar)
+        pagos_fiados = pagos_fiados.filter(lugar=lugar)
+
+    if repartidor:
+        pagos_inmediatos = pagos_inmediatos.filter(repartidor=repartidor)
+        pagos_fiados = pagos_fiados.filter(repartidor=repartidor)
+
+    montos = {}
+    for metodo in metodos_cobro:
+        inmediato = pagos_inmediatos.filter(
+            metodo_pago=metodo
+        ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+        posterior = pagos_fiados.filter(
+            metodo_pago_final=metodo
+        ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+        montos[metodo] = inmediato + posterior
+
+    return {
+        'efectivo': montos[Pedido.PAGO_EFECTIVO],
+        'yape': montos[Pedido.PAGO_YAPE],
+        'plin': montos[Pedido.PAGO_PLIN],
+        'cobrado': sum(montos.values(), Decimal('0.00')),
+    }
+
+
+def fiados_por_cobrar(lugar=None):
+
+    pedidos = Pedido.objects.filter(
+        estado=Pedido.ENTREGADO,
+        metodo_pago=Pedido.PAGO_FIADO,
+        fecha_pago__isnull=True
+    ).select_related(
+        'cliente',
+        'repartidor',
+        'lugar'
+    ).order_by('fecha_entrega')
+
+    if lugar:
+        pedidos = pedidos.filter(lugar=lugar)
+
+    return pedidos
 
 
 def resumen_pagos_por_lugar(pedidos_entregados):
@@ -1130,6 +1196,10 @@ def dashboard(request, template_name='core/dashboard.html'):
             fecha_entrega__date=hoy
         )
     )
+    cobros_hoy = totales_cobros_periodo(hoy, hoy)
+    total_por_cobrar = fiados_por_cobrar().aggregate(
+        total=Sum('total')
+    )['total'] or 0
 
     pedidos_hoy = Pedido.objects.filter(
         fecha_pedido__date=hoy
@@ -1275,9 +1345,11 @@ def dashboard(request, template_name='core/dashboard.html'):
         'clientes_frecuentes': clientes_frecuentes,
         'recomendaciones': recomendaciones,
         'ventas_hoy': ventas_hoy,
-        'efectivo_hoy': pagos_hoy['efectivo'],
-        'yape_hoy': pagos_hoy['yape'],
-        'total_cobrado_hoy': pagos_hoy['cobrado'],
+        'efectivo_hoy': cobros_hoy['efectivo'],
+        'yape_hoy': cobros_hoy['yape'],
+        'fiado_hoy': pagos_hoy['fiado'],
+        'total_por_cobrar': total_por_cobrar,
+        'total_cobrado_hoy': cobros_hoy['cobrado'],
         'pedidos_hoy': pedidos_hoy,
         'bidones_hoy': bidones_hoy,
         'clientes_nuevos': clientes_nuevos,
@@ -1527,6 +1599,15 @@ def reporte_semanal(request):
 
     total_cancelados = total_cancelados.count()
     pagos_semana = totales_por_metodo_pago(pedidos_entregados)
+    cobros_semana = totales_cobros_periodo(
+        inicio_semana,
+        fin_semana,
+        lugar_actual
+    )
+    cuentas_por_cobrar = pedidos_entregados.filter(
+        metodo_pago=Pedido.PAGO_FIADO,
+        fecha_pago__isnull=True
+    ).aggregate(total=Sum('total'))['total'] or 0
 
     context = {
         'hoy': hoy,
@@ -1541,19 +1622,26 @@ def reporte_semanal(request):
         )['total'] or 0,
         'total_entregados': pedidos_entregados.count(),
         'total_cancelados': total_cancelados,
-        'efectivo': pagos_semana['efectivo'],
-        'yape': pagos_semana['yape'],
-        'plin': pagos_semana['plin'],
+        'efectivo': cobros_semana['efectivo'],
+        'yape': cobros_semana['yape'],
+        'plin': cobros_semana['plin'],
+        'fiado': pagos_semana['fiado'],
         'pendiente': pagos_semana['pendiente'],
-        'cobrado': pagos_semana['cobrado'],
+        'cobrado': cobros_semana['cobrado'],
+        'cuentas_por_cobrar': cuentas_por_cobrar,
     }
 
     return render(request, 'core/reporte_semanal.html', context)
 
 
 @login_required
-@secretaria_required
 def pagos(request):
+
+    if not (
+        puede_ver_crm_operativo(request.user)
+        or es_jefe_repartidores(request.user)
+    ):
+        return redirect(destino_usuario(request.user))
 
     hoy = timezone.localdate()
     fecha_param = request.GET.get('fecha', '').strip()
@@ -1593,11 +1681,23 @@ def pagos(request):
     if lugar_actual:
         entregados_periodo = entregados_periodo.filter(lugar=lugar_actual)
 
-    pagos_hoy = totales_por_metodo_pago(entregados_hoy)
-    pagos_periodo = totales_por_metodo_pago(entregados_periodo)
+    ventas_hoy = totales_por_metodo_pago(entregados_hoy)
+    ventas_periodo = totales_por_metodo_pago(entregados_periodo)
+    pagos_hoy = totales_cobros_periodo(hoy, hoy)
+    pagos_periodo = totales_cobros_periodo(
+        inicio_periodo,
+        fin_periodo,
+        lugar_actual
+    )
     pendientes_pago = entregados_periodo.filter(
         metodo_pago=Pedido.PAGO_PENDIENTE
     )
+    fiados_pendientes = list(fiados_por_cobrar(lugar_actual))
+    for pedido in fiados_pendientes:
+        pedido.dias_pendiente = max(
+            0,
+            (hoy - timezone.localdate(pedido.fecha_entrega)).days
+        )
 
     context = {
         'hoy': hoy,
@@ -1610,18 +1710,72 @@ def pagos(request):
         'efectivo_hoy': pagos_hoy['efectivo'],
         'yape_hoy': pagos_hoy['yape'],
         'plin_hoy': pagos_hoy['plin'],
+        'fiado_hoy': ventas_hoy['fiado'],
         'total_cobrado_hoy': pagos_hoy['cobrado'],
         'efectivo_periodo': pagos_periodo['efectivo'],
         'yape_periodo': pagos_periodo['yape'],
         'plin_periodo': pagos_periodo['plin'],
-        'pendiente_periodo': pagos_periodo['pendiente'],
+        'fiado_periodo': ventas_periodo['fiado'],
+        'pendiente_periodo': ventas_periodo['pendiente'],
         'total_cobrado_periodo': pagos_periodo['cobrado'],
         'pendientes_pago': pendientes_pago,
         'total_pendientes_pago': pendientes_pago.count(),
+        'fiados_pendientes': fiados_pendientes,
+        'total_fiados_pendientes': len(fiados_pendientes),
+        'total_por_cobrar': sum(
+            (pedido.total for pedido in fiados_pendientes),
+            Decimal('0.00')
+        ),
         'resumen_lugares': resumen_pagos_por_lugar(entregados_periodo),
     }
 
     return render(request, 'core/pagos.html', context)
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def marcar_fiado_pagado(request, pedido_id):
+
+    if not (
+        puede_ver_crm_operativo(request.user)
+        or es_jefe_repartidores(request.user)
+    ):
+        return redirect(destino_usuario(request.user))
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        estado=Pedido.ENTREGADO,
+        metodo_pago=Pedido.PAGO_FIADO,
+        fecha_pago__isnull=True
+    )
+    metodo_pago_final = request.POST.get('metodo_pago_final', '').strip().upper()
+    metodos_cobro = {valor for valor, etiqueta in Pedido.METODOS_COBRO}
+
+    if metodo_pago_final not in metodos_cobro:
+        messages.error(request, 'Método de pago final inválido.')
+        return redirect('pagos')
+
+    pedido.metodo_pago_final = metodo_pago_final
+    pedido.fecha_pago = timezone.now()
+    pedido.usuario_pago = request.user
+    pedido.save(update_fields=[
+        'metodo_pago_final',
+        'fecha_pago',
+        'usuario_pago',
+    ])
+    registrar_historial_pedido(
+        pedido,
+        request.user,
+        PedidoHistorial.EDITADO,
+        'Cobro posterior de pedido fiado registrado.',
+        valor_anterior='Fiado pendiente',
+        valor_nuevo=pedido.get_metodo_pago_final_display()
+    )
+    messages.success(request, 'Pago del fiado registrado correctamente.')
+
+    return redirect('pagos')
 
 
 @login_required
@@ -2758,10 +2912,11 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
         entrega.cantidad_bidones
         for entrega in entregas_hoy
     )
-    total_dinero_hoy = sum(
-        entrega.total
-        for entrega in entregas_hoy
-    )
+    total_dinero_hoy = totales_cobros_periodo(
+        hoy,
+        hoy,
+        repartidor=request.user
+    )['cobrado']
     total_pedidos_hoy = len(entregas_hoy)
 
     context = {
@@ -2889,9 +3044,11 @@ def panel_jefe_repartidores(request):
             'bidones_hoy': entregados_hoy.aggregate(
                 total=Sum('cantidad_bidones')
             )['total'] or 0,
-            'dinero_hoy': entregados_hoy.aggregate(
-                total=Sum('total')
-            )['total'] or 0,
+            'dinero_hoy': totales_cobros_periodo(
+                hoy,
+                hoy,
+                repartidor=repartidor
+            )['cobrado'],
         })
 
     context = {
@@ -3676,10 +3833,16 @@ def revertir_entrega(request, pedido_id):
     estado_anterior = pedido.estado
     pedido.fecha_entrega = None
     pedido.usuario_entrega = None
+    pedido.fecha_pago = None
+    pedido.metodo_pago_final = None
+    pedido.usuario_pago = None
     pedido.registrar_estado(Pedido.PENDIENTE, request.user)
     pedido.save(update_fields=[
         'fecha_entrega',
         'usuario_entrega',
+        'fecha_pago',
+        'metodo_pago_final',
+        'usuario_pago',
         *campos_estado_pedido(),
     ])
     registrar_historial_pedido(
