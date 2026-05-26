@@ -1,0 +1,18 @@
+{% if not pedido.lugar %}
+    <label class="form-label mb-1" for="lugar-finalizar-{{ accion }}-{{ pedido.id }}">
+        Lugar de entrega:
+    </label>
+    <select
+        id="lugar-finalizar-{{ accion }}-{{ pedido.id }}"
+        name="lugar"
+        class="form-select mb-2"
+        required
+        oninvalid="this.setCustomValidity('Selecciona el lugar del pedido antes de finalizar.')"
+        onchange="this.setCustomValidity('')"
+    >
+        <option value="" selected disabled>Selecciona lugar</option>
+        {% for lugar in lugares %}
+            <option value="{{ lugar.id }}">{{ lugar.nombre }}</option>
+        {% endfor %}
+    </select>
+{% endif %}

@@ -68,11 +68,22 @@ class PermisosRolesTests(TestCase):
             telefono='999111222',
             direccion='Av. Agua 123'
         )
+        self.lugar_operativo = Lugar.objects.create(
+            nombre='La Merced',
+            orden=1
+        )
 
-    def crear_pedido(self, repartidor, cliente=None, fecha_programada=None):
+    def crear_pedido(
+        self,
+        repartidor,
+        cliente=None,
+        fecha_programada=None,
+        con_lugar=True
+    ):
         return Pedido.objects.create(
             cliente=cliente or self.cliente,
             repartidor=repartidor,
+            lugar=self.lugar_operativo if con_lugar else None,
             cantidad_bidones=2,
             precio_unitario=Decimal('7.00'),
             total=Decimal('14.00'),
@@ -1047,6 +1058,7 @@ class PermisosRolesTests(TestCase):
                 'estado': Pedido.PENDIENTE,
                 'observacion': '',
                 'fecha_programada': '',
+                'lugar': str(self.lugar_operativo.id),
             }
         )
 
@@ -1620,6 +1632,7 @@ class PermisosRolesTests(TestCase):
                 'estado': Pedido.PENDIENTE,
                 'observacion': '',
                 'fecha_programada': '',
+                'lugar': str(self.lugar_operativo.id),
             }
         )
 
@@ -1801,7 +1814,7 @@ class PermisosRolesTests(TestCase):
         )
 
     def test_pedido_hereda_lugar_del_cliente_y_permite_lugar_propio(self):
-        lugar_cliente = Lugar.objects.create(nombre='La Merced', orden=1)
+        lugar_cliente = self.lugar_operativo
         lugar_pedido = Lugar.objects.create(nombre='San Luis de Shuaro', orden=2)
         self.cliente.lugar = lugar_cliente
         self.cliente.save(update_fields=['lugar'])
@@ -1826,6 +1839,147 @@ class PermisosRolesTests(TestCase):
         pedidos = list(Pedido.objects.order_by('id'))
         self.assertEqual(pedidos[0].lugar, lugar_cliente)
         self.assertEqual(pedidos[1].lugar, lugar_pedido)
+
+    def test_no_permite_entregar_sin_lugar(self):
+        pedido = self.crear_pedido(self.repartidor, con_lugar=False)
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse(
+                'cambiar_estado_pedido',
+                kwargs={
+                    'pedido_id': pedido.id,
+                    'nuevo_estado': Pedido.ENTREGADO,
+                }
+            ),
+            {'metodo_pago': Pedido.PAGO_EFECTIVO},
+            follow=True
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.estado, Pedido.PENDIENTE)
+        self.assertIsNone(pedido.lugar)
+        self.assertContains(
+            response,
+            'Selecciona el lugar del pedido antes de finalizar.'
+        )
+
+    def test_permite_entregar_si_se_envia_lugar_valido(self):
+        pedido = self.crear_pedido(self.repartidor, con_lugar=False)
+        self.client.force_login(self.secretaria)
+
+        self.client.post(
+            reverse(
+                'cambiar_estado_pedido',
+                kwargs={
+                    'pedido_id': pedido.id,
+                    'nuevo_estado': Pedido.ENTREGADO,
+                }
+            ),
+            {
+                'metodo_pago': Pedido.PAGO_EFECTIVO,
+                'lugar': str(self.lugar_operativo.id),
+            }
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.estado, Pedido.ENTREGADO)
+        self.assertEqual(pedido.lugar, self.lugar_operativo)
+
+    def test_no_permite_cancelar_sin_lugar_y_permite_lugar_valido(self):
+        pedido_sin_lugar = self.crear_pedido(self.repartidor, con_lugar=False)
+        pedido_con_lugar_post = self.crear_pedido(
+            self.repartidor,
+            con_lugar=False
+        )
+        self.client.force_login(self.secretaria)
+
+        self.client.post(
+            reverse(
+                'cambiar_estado_pedido',
+                kwargs={
+                    'pedido_id': pedido_sin_lugar.id,
+                    'nuevo_estado': Pedido.CANCELADO,
+                }
+            )
+        )
+        self.client.post(
+            reverse(
+                'cambiar_estado_pedido',
+                kwargs={
+                    'pedido_id': pedido_con_lugar_post.id,
+                    'nuevo_estado': Pedido.CANCELADO,
+                }
+            ),
+            {'lugar': str(self.lugar_operativo.id)}
+        )
+
+        pedido_sin_lugar.refresh_from_db()
+        pedido_con_lugar_post.refresh_from_db()
+        self.assertEqual(pedido_sin_lugar.estado, Pedido.PENDIENTE)
+        self.assertIsNone(pedido_sin_lugar.lugar)
+        self.assertEqual(pedido_con_lugar_post.estado, Pedido.CANCELADO)
+        self.assertEqual(pedido_con_lugar_post.lugar, self.lugar_operativo)
+
+    def test_no_permite_usar_lugar_inactivo_para_finalizar(self):
+        lugar_inactivo = Lugar.objects.create(
+            nombre='Zona inactiva',
+            activo=False
+        )
+        pedido = self.crear_pedido(self.repartidor, con_lugar=False)
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse(
+                'cambiar_estado_pedido',
+                kwargs={
+                    'pedido_id': pedido.id,
+                    'nuevo_estado': Pedido.ENTREGADO,
+                }
+            ),
+            {
+                'metodo_pago': Pedido.PAGO_EFECTIVO,
+                'lugar': str(lugar_inactivo.id),
+            },
+            follow=True
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.estado, Pedido.PENDIENTE)
+        self.assertIsNone(pedido.lugar)
+        self.assertContains(response, 'El lugar seleccionado no está activo.')
+
+    def test_pedido_historico_sin_lugar_sigue_listandose(self):
+        pedido = self.crear_pedido(self.repartidor, con_lugar=False)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now()
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('lista_pedidos'))
+
+        self.assertContains(response, 'Sin lugar asignado')
+
+    def test_repartidor_no_puede_cancelar_sin_lugar(self):
+        pedido = self.crear_pedido(self.repartidor, con_lugar=False)
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse(
+                'cancelar_pedido_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            follow=True
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.estado, Pedido.PENDIENTE)
+        self.assertIsNone(pedido.lugar)
+        self.assertContains(
+            response,
+            'Selecciona el lugar del pedido antes de finalizar.'
+        )
 
     def test_lugares_inactivos_no_aparecen_en_formularios_operativos(self):
         Lugar.objects.create(nombre='Zona Activa', activo=True)

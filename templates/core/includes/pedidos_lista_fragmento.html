@@ -59,7 +59,7 @@
                                     Pago: {{ pedido.get_metodo_pago_display }}
                                 </small>
                                 <small class="d-block text-muted">
-                                    Lugar: {{ pedido.lugar|default:"Sin asignar" }}
+                                    Lugar: {{ pedido.lugar|default:"Sin lugar asignado" }}
                                 </small>
                             </td>
                             <td class="col-order-notes">
@@ -82,6 +82,7 @@
                                             {% endif %}
                                             <form method="POST" action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}" onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')">
                                                 {% csrf_token %}
+                                                {% include 'core/includes/lugar_para_finalizar.html' with accion='entregar' %}
                                                 <select name="metodo_pago" class="form-select form-select-sm mb-2" aria-label="Metodo de pago" required>
                                                     <option value="" {% if pedido.metodo_pago == 'PENDIENTE' %}selected{% endif %} disabled>Selecciona pago</option>
                                                     <option value="EFECTIVO" {% if pedido.metodo_pago == 'EFECTIVO' %}selected{% endif %}>Efectivo</option>
@@ -92,8 +93,9 @@
                                                 </select>
                                                 <button type="submit" class="btn btn-sm btn-success">Entregar</button>
                                             </form>
-                                            <form method="POST" action="{% url 'cambiar_estado_pedido' pedido.id 'CANCELADO' %}" data-confirm="Cancelar pedido?">
+                                            <form method="POST" action="{% url 'cambiar_estado_pedido' pedido.id 'CANCELADO' %}" onsubmit="return confirm('\u00bfSeguro que deseas cancelar este pedido?')">
                                                 {% csrf_token %}
+                                                {% include 'core/includes/lugar_para_finalizar.html' with accion='cancelar' %}
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
                                             </form>
                                         </div>

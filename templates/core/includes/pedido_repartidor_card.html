@@ -89,7 +89,7 @@
 
             <div class="col-6">
                 <div class="order-label">Lugar</div>
-                <div class="order-value">{{ pedido.lugar|default:"Sin asignar" }}</div>
+                <div class="order-value">{{ pedido.lugar|default:"Sin lugar asignado" }}</div>
             </div>
 
             <div class="col-6">
@@ -177,6 +177,7 @@
                     onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')"
                 >
                     {% csrf_token %}
+                    {% include 'core/includes/lugar_para_finalizar.html' with accion='entregar' %}
                     <select
                         name="metodo_pago"
                         class="form-select mb-2"
@@ -202,6 +203,7 @@
                     onsubmit="return confirm('\u00bfSeguro que deseas cancelar este pedido?')"
                 >
                     {% csrf_token %}
+                    {% include 'core/includes/lugar_para_finalizar.html' with accion='cancelar' %}
                     <button type="submit" class="btn btn-outline-danger w-100 action-button">
                         Cancelar pedido
                     </button>

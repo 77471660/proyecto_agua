@@ -944,6 +944,23 @@ def leer_lugar_activo_post(post_data, campo='lugar'):
     return lugar, ''
 
 
+def asignar_lugar_para_finalizar(pedido, post_data):
+
+    if pedido.lugar_id:
+        return False, ''
+
+    lugar, error_lugar = leer_lugar_activo_post(post_data)
+
+    if error_lugar:
+        return False, error_lugar
+
+    if lugar is None:
+        return False, 'Selecciona el lugar del pedido antes de finalizar.'
+
+    pedido.lugar = lugar
+    return True, ''
+
+
 def totales_por_metodo_pago(pedidos_entregados):
 
     montos = {
@@ -1925,6 +1942,7 @@ def detalle_cliente(request, cliente_id):
         'historial_pedidos': historial_pedidos,
         'historial_pedidos_tiene_mas': historial_pedidos_tiene_mas,
         'puede_ver_historial_pedidos': puede_ver_historial_pedidos,
+        'lugares': Lugar.objects.filter(activo=True).order_by('orden', 'nombre'),
     }
 
     return render(
@@ -2395,6 +2413,16 @@ def registrar_pedido(request):
         if lugar is None:
             lugar = cliente.lugar
 
+        if (
+            estado_inicial in [Pedido.ENTREGADO, Pedido.CANCELADO]
+            and lugar is None
+        ):
+            messages.error(
+                request,
+                'Selecciona el lugar del pedido antes de finalizar.'
+            )
+            return redirect('registrar_pedido')
+
         if estado == Pedido.REPROGRAMADO and fecha_programada_valor <= timezone.localdate():
             messages.error(request, 'Un pedido reprogramado debe tener fecha futura.')
             return redirect('registrar_pedido')
@@ -2858,6 +2886,7 @@ def lista_pedidos(request, template_name='core/pedidos.html'):
         'busqueda': busqueda,
         'estado_actual': estado,
         'filtro_actual': filtro,
+        'lugares': Lugar.objects.filter(activo=True).order_by('orden', 'nombre'),
     }
 
     return render(request, template_name, context)
@@ -2962,6 +2991,7 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
         'total_pedidos_hoy': total_pedidos_hoy,
         'hoy': hoy,
         'grupo_repartidor': 'Repartidores',
+        'lugares': Lugar.objects.filter(activo=True).order_by('orden', 'nombre'),
     }
 
     return render(
@@ -3191,7 +3221,20 @@ def marcar_pedido_entregado_repartidor(request, pedido_id):
         )
         return redirect('pedidos_repartidor')
 
+    lugar_asignado, error_lugar = asignar_lugar_para_finalizar(
+        pedido,
+        request.POST
+    )
+
+    if error_lugar:
+        messages.error(request, error_lugar)
+        return redirect('pedidos_repartidor')
+
     update_fields = ['repartidor', 'metodo_pago', *campos_estado_pedido()]
+
+    if lugar_asignado:
+        update_fields = ['lugar', *update_fields]
+
     pedido.metodo_pago = metodo_pago
 
     pedido.repartidor = request.user
@@ -3358,6 +3401,13 @@ def nuevo_pedido_repartidor(request):
 
         total = cantidad_bidones * precio_unitario
         estado = Pedido.ENTREGADO if entregar_ahora else Pedido.ASIGNADO
+
+        if entregar_ahora and lugar is None:
+            messages.error(
+                request,
+                'Selecciona el lugar del pedido antes de finalizar.'
+            )
+            return redirect('nuevo_pedido_repartidor')
 
         with transaction.atomic():
             pedido = Pedido(
@@ -3668,10 +3718,24 @@ def cancelar_pedido_repartidor(request, pedido_id):
         repartidor=request.user
     )
 
+    lugar_asignado, error_lugar = asignar_lugar_para_finalizar(
+        pedido,
+        request.POST
+    )
+
+    if error_lugar:
+        messages.error(request, error_lugar)
+        return redirect('pedidos_repartidor')
+
     estado_anterior = pedido.estado
     pedido.repartidor = request.user
     pedido.registrar_estado(Pedido.CANCELADO, request.user)
-    pedido.save(update_fields=['repartidor', *campos_estado_pedido()])
+    update_fields = ['repartidor', *campos_estado_pedido()]
+
+    if lugar_asignado:
+        update_fields = ['lugar', *update_fields]
+
+    pedido.save(update_fields=update_fields)
     registrar_historial_pedido(
         pedido,
         request.user,
@@ -3749,6 +3813,19 @@ def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
             'Debes asignar un repartidor antes de usar este estado.'
         )
         return redirect('lista_pedidos')
+
+    if nuevo_estado in [Pedido.ENTREGADO, Pedido.CANCELADO]:
+        lugar_asignado, error_lugar = asignar_lugar_para_finalizar(
+            pedido,
+            request.POST
+        )
+
+        if error_lugar:
+            messages.error(request, error_lugar)
+            return redirect('lista_pedidos')
+
+        if lugar_asignado:
+            update_fields = ['lugar', *update_fields]
 
     if nuevo_estado == Pedido.REPROGRAMADO:
         fecha_programada = request.POST.get('fecha_programada', '').strip()
