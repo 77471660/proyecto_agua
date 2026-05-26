@@ -22,6 +22,7 @@ from django.db.models import (
     DateTimeField,
     F,
 )
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from calendar import monthrange
@@ -3868,6 +3869,7 @@ def revertir_entrega(request, pedido_id):
 def reporte_mensual(request):
 
     hoy = timezone.localdate()
+    zona_horaria_operativa = timezone.get_default_timezone()
 
     mes = request.GET.get('mes')
     anio = request.GET.get('anio')
@@ -3890,15 +3892,26 @@ def reporte_mensual(request):
     if anio not in anios:
         anio = hoy.year
 
-    pedidos_mes = Pedido.objects.filter(
-        fecha_pedido__year=anio,
-        fecha_pedido__month=mes
+    inicio_mes = datetime(anio, mes, 1).date()
+    fin_mes = datetime(anio, mes, monthrange(anio, mes)[1]).date()
+    pedidos_mes = Pedido.objects.annotate(
+        fecha_pedido_local=TruncDate(
+            'fecha_pedido',
+            tzinfo=zona_horaria_operativa
+        )
+    ).filter(
+        fecha_pedido_local__range=(inicio_mes, fin_mes)
     )
 
     pedidos_entregados = Pedido.objects.filter(
-        estado=Pedido.ENTREGADO,
-        fecha_entrega__year=anio,
-        fecha_entrega__month=mes
+        estado=Pedido.ENTREGADO
+    ).annotate(
+        fecha_entrega_local=TruncDate(
+            'fecha_entrega',
+            tzinfo=zona_horaria_operativa
+        )
+    ).filter(
+        fecha_entrega_local__range=(inicio_mes, fin_mes)
     )
 
     ingresos_mes = pedidos_entregados.aggregate(
@@ -3944,10 +3957,8 @@ def reporte_mensual(request):
         '-total'
     ).first()
 
-    dia_mas_ventas = pedidos_entregados.extra(
-        select={'fecha': 'DATE(fecha_entrega)'}
-    ).values(
-        'fecha'
+    dia_mas_ventas = pedidos_entregados.values(
+        fecha=F('fecha_entrega_local')
     ).annotate(
         total=Sum('total'),
         bidones=Sum('cantidad_bidones')
@@ -3973,7 +3984,7 @@ def reporte_mensual(request):
     for dia in range(1, ultimo_dia_mes + 1):
         fecha = datetime(anio, mes, dia).date()
         pedidos_dia = pedidos_entregados.filter(
-            fecha_entrega__date=fecha
+            fecha_entrega_local=fecha
         )
         ingresos_dia = pedidos_dia.aggregate(
             total=Sum('total')

@@ -1,7 +1,7 @@
 import os
 import subprocess
 import sys
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from io import BytesIO
 from unittest.mock import patch
@@ -2183,6 +2183,56 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.context['yape_hoy'], Decimal('0.00'))
         self.assertContains(response, 'Total cobrado hoy')
 
+    def test_dashboard_diario_y_pagos_usan_fecha_local_cerca_de_medianoche(self):
+        hoy = timezone.localdate()
+        entrega_local = timezone.make_aware(
+            datetime.combine(hoy, time(23, 0)),
+            timezone.get_default_timezone()
+        )
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=entrega_local,
+            metodo_pago=Pedido.PAGO_EFECTIVO
+        )
+        self.client.force_login(self.secretaria)
+
+        dashboard = self.client.get(reverse('dashboard'))
+        diario = self.client.get(reverse('reporte_diario'))
+        semanal = self.client.get(reverse('reporte_semanal'))
+        pagos = self.client.get(
+            reverse('pagos'),
+            {'fecha': hoy.strftime('%Y-%m-%d')}
+        )
+
+        self.assertEqual(dashboard.context['ventas_hoy'], Decimal('14.00'))
+        self.assertEqual(diario.context['ventas_hoy'], Decimal('14.00'))
+        self.assertEqual(semanal.context['total_ventas'], Decimal('14.00'))
+        self.assertEqual(pagos.context['efectivo_periodo'], Decimal('14.00'))
+        self.assertEqual(pagos.context['total_cobrado_periodo'], Decimal('14.00'))
+
+        pedido_fiado = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_fiado.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=entrega_local - timedelta(days=1),
+            metodo_pago=Pedido.PAGO_FIADO,
+            metodo_pago_final=Pedido.PAGO_YAPE,
+            fecha_pago=entrega_local
+        )
+        pagos_con_cobro_posterior = self.client.get(
+            reverse('pagos'),
+            {'fecha': hoy.strftime('%Y-%m-%d')}
+        )
+
+        self.assertEqual(
+            pagos_con_cobro_posterior.context['yape_periodo'],
+            Decimal('14.00')
+        )
+        self.assertEqual(
+            pagos_con_cobro_posterior.context['total_cobrado_periodo'],
+            Decimal('28.00')
+        )
+
 
 class ReporteMensualTests(TestCase):
     def setUp(self):
@@ -2232,6 +2282,53 @@ class ReporteMensualTests(TestCase):
         self.assertEqual(response.context['ingresos_mes'], Decimal('21.00'))
         self.assertEqual(response.context['bidones_mes'], 3)
         self.assertContains(response, 'Gráfico diario de ventas')
+
+
+    def test_reporte_mensual_agrupa_medianoche_en_fecha_local_peru(self):
+        hoy = timezone.localdate()
+        dia_entrega = 15
+        fecha_local = timezone.make_aware(
+            datetime(hoy.year, hoy.month, dia_entrega, 23, 0),
+            timezone.get_default_timezone()
+        )
+        cliente = Cliente.objects.create(
+            nombre='Cliente Medianoche',
+            telefono='999111998',
+            direccion='Av. Noche 1'
+        )
+        Pedido.objects.create(
+            cliente=cliente,
+            cantidad_bidones=5,
+            precio_unitario=Decimal('7.00'),
+            total=Decimal('35.00'),
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=fecha_local
+        )
+        Pedido.objects.create(
+            cliente=cliente,
+            cantidad_bidones=1,
+            precio_unitario=Decimal('7.00'),
+            total=Decimal('7.00'),
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=fecha_local + timedelta(hours=12)
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(
+            reverse('reporte_mensual'),
+            {'mes': str(hoy.month), 'anio': str(hoy.year)}
+        )
+        detalle_por_dia = {
+            dia['dia']: dia['ingresos']
+            for dia in response.context['detalle_diario_mes']
+        }
+
+        self.assertEqual(
+            response.context['dia_mas_ventas']['fecha_larga'].day,
+            dia_entrega
+        )
+        self.assertEqual(detalle_por_dia[dia_entrega], Decimal('35.00'))
+        self.assertEqual(detalle_por_dia[dia_entrega + 1], Decimal('7.00'))
 
 
 class ProductionSettingsTests(SimpleTestCase):
