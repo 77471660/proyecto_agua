@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
 
-from .models import Cliente, Pedido, PedidoHistorial
+from .models import Cliente, Lugar, Pedido, PedidoHistorial
 from .templatetags.phone_format import format_phone_display
 from .views import repartidores_disponibles
 
@@ -1770,6 +1770,75 @@ class PermisosRolesTests(TestCase):
 
         self.assertEqual(pedido.metodo_pago, Pedido.PAGO_PENDIENTE)
 
+    def test_secretaria_crea_lugar_y_cliente_puede_tenerlo(self):
+        self.client.force_login(self.secretaria)
+        response = self.client.post(
+            reverse('lugares'),
+            {'nombre': 'Perene', 'orden': '2'}
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('lugares'),
+            fetch_redirect_response=False
+        )
+        lugar = Lugar.objects.get(nombre='Perene')
+        self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente Zona',
+                'telefono': '999444333',
+                'direccion': 'Av. Zona 4',
+                'referencia': '',
+                'lugar': str(lugar.id),
+            }
+        )
+
+        self.assertEqual(
+            Cliente.objects.get(telefono='999444333').lugar,
+            lugar
+        )
+
+    def test_pedido_hereda_lugar_del_cliente_y_permite_lugar_propio(self):
+        lugar_cliente = Lugar.objects.create(nombre='La Merced', orden=1)
+        lugar_pedido = Lugar.objects.create(nombre='San Luis de Shuaro', orden=2)
+        self.cliente.lugar = lugar_cliente
+        self.cliente.save(update_fields=['lugar'])
+        self.client.force_login(self.secretaria)
+
+        for lugar_enviado in ('', str(lugar_pedido.id)):
+            self.client.post(
+                reverse('registrar_pedido'),
+                {
+                    'cliente': str(self.cliente.id),
+                    'repartidor': '',
+                    'cantidad_bidones': '2',
+                    'precio_unitario': '7.00',
+                    'metodo_pago': Pedido.PAGO_PENDIENTE,
+                    'estado': Pedido.PENDIENTE,
+                    'observacion': '',
+                    'fecha_programada': '',
+                    'lugar': lugar_enviado,
+                }
+            )
+
+        pedidos = list(Pedido.objects.order_by('id'))
+        self.assertEqual(pedidos[0].lugar, lugar_cliente)
+        self.assertEqual(pedidos[1].lugar, lugar_pedido)
+
+    def test_lugares_inactivos_no_aparecen_en_formularios_operativos(self):
+        Lugar.objects.create(nombre='Zona Activa', activo=True)
+        Lugar.objects.create(nombre='Zona Inactiva', activo=False)
+        self.client.force_login(self.secretaria)
+
+        cliente_form = self.client.get(reverse('registrar_cliente'))
+        pedido_form = self.client.get(reverse('registrar_pedido'))
+
+        self.assertContains(cliente_form, 'Zona Activa')
+        self.assertNotContains(cliente_form, 'Zona Inactiva')
+        self.assertContains(pedido_form, 'Zona Activa')
+        self.assertNotContains(pedido_form, 'Zona Inactiva')
+
     def test_registrar_pedido_guarda_metodo_pago_seleccionado(self):
         self.client.force_login(self.secretaria)
 
@@ -1853,6 +1922,36 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.context['yape_hoy'], Decimal('14.00'))
         self.assertEqual(response.context['total_cobrado_hoy'], Decimal('14.00'))
 
+    def test_plin_suma_correctamente_y_pagos_filtra_por_lugar(self):
+        lugar_plin = Lugar.objects.create(nombre='Pichanaki', orden=1)
+        lugar_otro = Lugar.objects.create(nombre='Perene', orden=2)
+        pedido_plin = self.crear_pedido(self.repartidor)
+        pedido_otro = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_plin.pk).update(
+            lugar=lugar_plin,
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_PLIN
+        )
+        Pedido.objects.filter(pk=pedido_otro.pk).update(
+            lugar=lugar_otro,
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_EFECTIVO
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('pagos'), {'lugar': lugar_plin.id})
+
+        self.assertEqual(response.context['plin_periodo'], Decimal('14.00'))
+        self.assertEqual(response.context['efectivo_periodo'], Decimal('0.00'))
+        self.assertEqual(response.context['total_cobrado_periodo'], Decimal('14.00'))
+        self.assertContains(response, 'Pichanaki')
+        self.assertEqual(
+            [fila['nombre'] for fila in response.context['resumen_lugares']],
+            ['Pichanaki']
+        )
+
     def test_reporte_semanal_usa_fecha_entrega_y_no_suma_no_entregados(self):
         pedido_entregado = self.crear_pedido(self.repartidor)
         Pedido.objects.filter(pk=pedido_entregado.pk).update(
@@ -1872,8 +1971,41 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.context['yape'], Decimal('14.00'))
         self.assertEqual(response.context['efectivo'], Decimal('0.00'))
 
+    def test_reporte_semanal_filtra_por_lugar(self):
+        lugar_uno = Lugar.objects.create(nombre='Satipo', orden=1)
+        lugar_dos = Lugar.objects.create(nombre='Oxapampa', orden=2)
+        pedido_uno = self.crear_pedido(self.repartidor)
+        pedido_dos = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_uno.pk).update(
+            lugar=lugar_uno,
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_YAPE
+        )
+        Pedido.objects.filter(pk=pedido_dos.pk).update(
+            lugar=lugar_dos,
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_EFECTIVO
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(
+            reverse('reporte_semanal'),
+            {'lugar': lugar_uno.id}
+        )
+
+        self.assertEqual(response.context['total_ventas'], Decimal('14.00'))
+        self.assertEqual(response.context['yape'], Decimal('14.00'))
+        self.assertEqual(response.context['efectivo'], Decimal('0.00'))
+        self.assertContains(response, 'Satipo')
+        self.assertEqual(
+            list(response.context['pedidos_entregados']),
+            [pedido_uno]
+        )
+
     def test_pagos_y_reporte_semanal_mantienen_permiso_administrativo(self):
-        for route_name in ('pagos', 'reporte_semanal'):
+        for route_name in ('pagos', 'reporte_semanal', 'lugares'):
             response = self.client.get(reverse(route_name))
             self.assertEqual(response.status_code, 302)
 

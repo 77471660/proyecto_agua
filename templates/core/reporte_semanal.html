@@ -26,6 +26,17 @@ Reporte Semanal - AquaSmart CRM
                 value="{{ inicio_semana|date:'Y-m-d' }}"
             >
         </div>
+        <div>
+            <label class="form-label mb-1" for="lugar">Lugar</label>
+            <select id="lugar" name="lugar" class="form-select">
+                <option value="">Todos</option>
+                {% for lugar in lugares %}
+                    <option value="{{ lugar.id }}" {% if lugar_actual.id == lugar.id %}selected{% endif %}>
+                        {{ lugar.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
         <button type="submit" class="btn btn-primary">Filtrar</button>
         <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
             Imprimir
@@ -73,25 +84,31 @@ Reporte Semanal - AquaSmart CRM
     <div class="card-header bg-white">Desglose por m&eacute;todo de pago</div>
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-sm-6 col-lg-3">
+            <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
                     <div class="text-muted small">Efectivo</div>
                     <div class="fs-4 fw-semibold">S/ {{ efectivo|floatformat:2 }}</div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
+            <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
                     <div class="text-muted small">Yape</div>
                     <div class="fs-4 fw-semibold">S/ {{ yape|floatformat:2 }}</div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
+            <div class="col-sm-6 col-xl">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Plin</div>
+                    <div class="fs-4 fw-semibold">S/ {{ plin|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
                     <div class="text-muted small">Pendiente</div>
                     <div class="fs-4 fw-semibold">S/ {{ pendiente|floatformat:2 }}</div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
+            <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
                     <div class="text-muted small">Cobrado identificado</div>
                     <div class="fs-4 fw-semibold text-success">S/ {{ cobrado|floatformat:2 }}</div>
@@ -113,6 +130,7 @@ Reporte Semanal - AquaSmart CRM
                             <th>Cliente</th>
                             <th>Bidones</th>
                             <th>M&eacute;todo</th>
+                            <th>Lugar</th>
                             <th class="text-end">Total</th>
                         </tr>
                     </thead>
@@ -123,6 +141,7 @@ Reporte Semanal - AquaSmart CRM
                                 <td>{{ pedido.cliente.nombre }}</td>
                                 <td>{{ pedido.cantidad_bidones }}</td>
                                 <td>{{ pedido.get_metodo_pago_display }}</td>
+                                <td>{{ pedido.lugar|default:"Sin asignar" }}</td>
                                 <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
                             </tr>
                         {% endfor %}

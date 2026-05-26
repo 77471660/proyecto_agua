@@ -146,6 +146,17 @@ Registrar pedido - AquaSmart CRM
                                 Solo los pedidos asignados aparecerán en el panel del repartidor.
                             </small>
                         </div>
+
+                        <div class="mt-3 mb-0">
+                            <label class="form-label" for="lugar">Lugar / zona de entrega</label>
+                            <select id="lugar" name="lugar" class="form-select">
+                                <option value="">Usar lugar del cliente</option>
+                                {% for lugar in lugares %}
+                                    <option value="{{ lugar.id }}">{{ lugar.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Selecciona otro lugar solo si este pedido lo requiere.</small>
+                        </div>
                     </div>
 
                     <div id="resumen_cliente" class="alert alert-info client-summary {% if not cliente_preseleccionado %}d-none{% endif %}">
@@ -327,6 +338,7 @@ Registrar pedido - AquaSmart CRM
                                 <option value="PENDIENTE" selected>Pendiente</option>
                                 <option value="EFECTIVO">Efectivo</option>
                                 <option value="YAPE">Yape</option>
+                                <option value="PLIN">Plin</option>
                             </select>
 
                             <small class="text-muted">

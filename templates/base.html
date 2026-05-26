@@ -727,6 +727,11 @@
                     >Pagos</a>
 
                     <a
+                        href="/lugares/"
+                        class="btn btn-sm {% if request.path == '/lugares/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                    >Lugares</a>
+
+                    <a
                         href="/registrar-cliente/"
                         class="btn btn-sm {% if request.path == '/registrar-cliente/' %}btn-light{% else %}btn-success{% endif %}"
                     >Nuevo cliente</a>
@@ -787,6 +792,9 @@
                         </li>
                         <li>
                             <a class="dropdown-item" href="/pagos/">Pagos</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/lugares/">Lugares</a>
                         </li>
                     {% endif %}
 

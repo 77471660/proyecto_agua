@@ -10,6 +10,20 @@ from urllib.parse import quote_plus
 logger = logging.getLogger(__name__)
 
 
+class Lugar(models.Model):
+
+    nombre = models.CharField(max_length=100, unique=True)
+    activo = models.BooleanField(default=True)
+    orden = models.PositiveIntegerField(default=0)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('orden', 'nombre')
+
+    def __str__(self):
+        return self.nombre
+
+
 class Cliente(models.Model):
 
     ESTADOS = [
@@ -23,6 +37,13 @@ class Cliente(models.Model):
     telefono = models.CharField(max_length=20)
     direccion = models.CharField(max_length=255)
     referencia = models.CharField(max_length=255, blank=True, null=True)
+    lugar = models.ForeignKey(
+        Lugar,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='clientes'
+    )
 
     latitud = models.DecimalField(
         max_digits=9,
@@ -146,6 +167,7 @@ class Pedido(models.Model):
     PAGO_PENDIENTE = 'PENDIENTE'
     PAGO_EFECTIVO = 'EFECTIVO'
     PAGO_YAPE = 'YAPE'
+    PAGO_PLIN = 'PLIN'
 
     ESTADOS_PEDIDO = [
         (PENDIENTE, 'Pendiente'),
@@ -167,6 +189,7 @@ class Pedido(models.Model):
         (PAGO_PENDIENTE, 'Pendiente'),
         (PAGO_EFECTIVO, 'Efectivo'),
         (PAGO_YAPE, 'Yape'),
+        (PAGO_PLIN, 'Plin'),
     ]
 
     cliente = models.ForeignKey(
@@ -179,6 +202,14 @@ class Pedido(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL
+    )
+
+    lugar = models.ForeignKey(
+        Lugar,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pedidos'
     )
 
     fecha_pedido = models.DateTimeField(auto_now_add=True)

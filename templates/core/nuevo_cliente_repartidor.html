@@ -220,6 +220,16 @@
                     >
                 </div>
 
+                <div class="mb-3">
+                    <label class="form-label" for="lugar">Lugar / zona</label>
+                    <select id="lugar" name="lugar" class="form-select form-select-lg">
+                        <option value="">Sin asignar</option>
+                        {% for lugar in lugares %}
+                            <option value="{{ lugar.id }}">{{ lugar.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <div class="mb-4">
                     <label class="form-label" for="referencia">Referencia</label>
                     <textarea

@@ -53,7 +53,7 @@ from .cloudinary_images import (
     upload_client_reference_photo,
     validate_client_photo,
 )
-from .models import Cliente, FCMToken, Pedido, PedidoHistorial, PushSubscription
+from .models import Cliente, FCMToken, Lugar, Pedido, PedidoHistorial, PushSubscription
 from .push_notifications import (
     endpoint_for_log,
     send_order_assignment_push,
@@ -224,6 +224,7 @@ def resumen_pedido_historial(pedido):
         f"{pedido.cantidad_bidones} bidones, "
         f"S/ {pedido.total}, "
         f"pago {pedido.get_metodo_pago_display()}, "
+        f"lugar {pedido.lugar or 'Sin lugar'}, "
         f"estado {pedido.estado}, "
         f"programado {formato_fecha_historial(pedido.fecha_programada)}, "
         f"repartidor {nombre_repartidor_historial(pedido.repartidor)}"
@@ -321,6 +322,7 @@ def cambios_edicion_pedido(pedido, nuevos_valores):
         ('precio_unitario', 'Precio unitario'),
         ('total', 'Total'),
         ('metodo_pago', 'Metodo de pago'),
+        ('lugar', 'Lugar'),
         ('fecha_programada', 'Fecha programada'),
         ('observacion', 'Observación'),
     ]
@@ -910,11 +912,30 @@ def leer_metodo_pago_post(post_data, default=Pedido.PAGO_PENDIENTE):
     return metodo_pago
 
 
+def leer_lugar_activo_post(post_data, campo='lugar'):
+
+    lugar_id = post_data.get(campo, '').strip()
+
+    if not lugar_id:
+        return None, ''
+
+    if not lugar_id.isdigit():
+        return None, 'Lugar seleccionado inválido.'
+
+    lugar = Lugar.objects.filter(id=int(lugar_id), activo=True).first()
+
+    if not lugar:
+        return None, 'El lugar seleccionado no está activo.'
+
+    return lugar, ''
+
+
 def totales_por_metodo_pago(pedidos_entregados):
 
     montos = {
         Pedido.PAGO_EFECTIVO: Decimal('0.00'),
         Pedido.PAGO_YAPE: Decimal('0.00'),
+        Pedido.PAGO_PLIN: Decimal('0.00'),
         Pedido.PAGO_PENDIENTE: Decimal('0.00'),
     }
 
@@ -925,12 +946,47 @@ def totales_por_metodo_pago(pedidos_entregados):
     return {
         'efectivo': montos[Pedido.PAGO_EFECTIVO],
         'yape': montos[Pedido.PAGO_YAPE],
+        'plin': montos[Pedido.PAGO_PLIN],
         'pendiente': montos[Pedido.PAGO_PENDIENTE],
         'cobrado': (
             montos[Pedido.PAGO_EFECTIVO]
             + montos[Pedido.PAGO_YAPE]
+            + montos[Pedido.PAGO_PLIN]
         ),
     }
+
+
+def resumen_pagos_por_lugar(pedidos_entregados):
+
+    resumen = []
+    for lugar in Lugar.objects.order_by('orden', 'nombre'):
+        pedidos_lugar = pedidos_entregados.filter(lugar=lugar)
+        if pedidos_lugar.exists():
+            pagos_lugar = totales_por_metodo_pago(pedidos_lugar)
+            resumen.append({
+                'nombre': lugar.nombre,
+                'total': pedidos_lugar.aggregate(total=Sum('total'))['total'] or 0,
+                'bidones': pedidos_lugar.aggregate(
+                    total=Sum('cantidad_bidones')
+                )['total'] or 0,
+                'entregados': pedidos_lugar.count(),
+                **pagos_lugar,
+            })
+
+    pedidos_sin_lugar = pedidos_entregados.filter(lugar__isnull=True)
+    if pedidos_sin_lugar.exists():
+        pagos_sin_lugar = totales_por_metodo_pago(pedidos_sin_lugar)
+        resumen.append({
+            'nombre': 'Sin lugar asignado',
+            'total': pedidos_sin_lugar.aggregate(total=Sum('total'))['total'] or 0,
+            'bidones': pedidos_sin_lugar.aggregate(
+                total=Sum('cantidad_bidones')
+            )['total'] or 0,
+            'entregados': pedidos_sin_lugar.count(),
+            **pagos_sin_lugar,
+        })
+
+    return resumen
 
 
 def actualizar_estados_clientes():
@@ -1446,20 +1502,38 @@ def reporte_semanal(request):
 
     inicio_semana = fecha_referencia - timedelta(days=fecha_referencia.weekday())
     fin_semana = inicio_semana + timedelta(days=6)
+    lugares = Lugar.objects.order_by('orden', 'nombre')
+    lugar_actual = None
+    lugar_id = request.GET.get('lugar', '').strip()
+
+    if lugar_id.isdigit():
+        lugar_actual = lugares.filter(id=int(lugar_id)).first()
+
     pedidos_entregados = Pedido.objects.filter(
         estado=Pedido.ENTREGADO,
         fecha_entrega__date__range=(inicio_semana, fin_semana)
-    ).select_related('cliente').order_by('-fecha_entrega')
+    ).select_related('cliente', 'lugar').order_by('-fecha_entrega')
+
+    if lugar_actual:
+        pedidos_entregados = pedidos_entregados.filter(lugar=lugar_actual)
+
     total_cancelados = Pedido.objects.filter(
         estado=Pedido.CANCELADO,
         fecha_cancelacion__date__range=(inicio_semana, fin_semana)
-    ).count()
+    )
+
+    if lugar_actual:
+        total_cancelados = total_cancelados.filter(lugar=lugar_actual)
+
+    total_cancelados = total_cancelados.count()
     pagos_semana = totales_por_metodo_pago(pedidos_entregados)
 
     context = {
         'hoy': hoy,
         'inicio_semana': inicio_semana,
         'fin_semana': fin_semana,
+        'lugares': lugares,
+        'lugar_actual': lugar_actual,
         'pedidos_entregados': pedidos_entregados,
         'total_ventas': pedidos_entregados.aggregate(total=Sum('total'))['total'] or 0,
         'total_bidones': pedidos_entregados.aggregate(
@@ -1469,6 +1543,7 @@ def reporte_semanal(request):
         'total_cancelados': total_cancelados,
         'efectivo': pagos_semana['efectivo'],
         'yape': pagos_semana['yape'],
+        'plin': pagos_semana['plin'],
         'pendiente': pagos_semana['pendiente'],
         'cobrado': pagos_semana['cobrado'],
     }
@@ -1499,6 +1574,13 @@ def pagos(request):
         inicio_periodo = fecha_referencia
         fin_periodo = fecha_referencia
 
+    lugares = Lugar.objects.order_by('orden', 'nombre')
+    lugar_actual = None
+    lugar_id = request.GET.get('lugar', '').strip()
+
+    if lugar_id.isdigit():
+        lugar_actual = lugares.filter(id=int(lugar_id)).first()
+
     entregados_hoy = Pedido.objects.filter(
         estado=Pedido.ENTREGADO,
         fecha_entrega__date=hoy
@@ -1506,7 +1588,11 @@ def pagos(request):
     entregados_periodo = Pedido.objects.filter(
         estado=Pedido.ENTREGADO,
         fecha_entrega__date__range=(inicio_periodo, fin_periodo)
-    ).select_related('cliente').order_by('-fecha_entrega')
+    ).select_related('cliente', 'lugar').order_by('-fecha_entrega')
+
+    if lugar_actual:
+        entregados_periodo = entregados_periodo.filter(lugar=lugar_actual)
+
     pagos_hoy = totales_por_metodo_pago(entregados_hoy)
     pagos_periodo = totales_por_metodo_pago(entregados_periodo)
     pendientes_pago = entregados_periodo.filter(
@@ -1519,18 +1605,98 @@ def pagos(request):
         'periodo': periodo,
         'inicio_periodo': inicio_periodo,
         'fin_periodo': fin_periodo,
+        'lugares': lugares,
+        'lugar_actual': lugar_actual,
         'efectivo_hoy': pagos_hoy['efectivo'],
         'yape_hoy': pagos_hoy['yape'],
+        'plin_hoy': pagos_hoy['plin'],
         'total_cobrado_hoy': pagos_hoy['cobrado'],
         'efectivo_periodo': pagos_periodo['efectivo'],
         'yape_periodo': pagos_periodo['yape'],
+        'plin_periodo': pagos_periodo['plin'],
         'pendiente_periodo': pagos_periodo['pendiente'],
         'total_cobrado_periodo': pagos_periodo['cobrado'],
         'pendientes_pago': pendientes_pago,
         'total_pendientes_pago': pendientes_pago.count(),
+        'resumen_lugares': resumen_pagos_por_lugar(entregados_periodo),
     }
 
     return render(request, 'core/pagos.html', context)
+
+
+@login_required
+@secretaria_required
+def lugares(request):
+
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', '').strip()
+        orden = request.POST.get('orden', '0').strip()
+
+        if not nombre:
+            messages.error(request, 'El nombre del lugar es obligatorio.')
+            return redirect('lugares')
+
+        try:
+            orden = max(0, int(orden or 0))
+        except ValueError:
+            messages.error(request, 'El orden debe ser un número válido.')
+            return redirect('lugares')
+
+        if Lugar.objects.filter(nombre__iexact=nombre).exists():
+            messages.error(request, 'Ya existe un lugar con ese nombre.')
+            return redirect('lugares')
+
+        Lugar.objects.create(nombre=nombre, orden=orden)
+        messages.success(request, 'Lugar registrado correctamente.')
+        return redirect('lugares')
+
+    return render(
+        request,
+        'core/lugares.html',
+        {'lugares': Lugar.objects.order_by('orden', 'nombre')}
+    )
+
+
+@login_required
+@secretaria_required
+@require_POST
+def editar_lugar(request, lugar_id):
+
+    lugar = get_object_or_404(Lugar, id=lugar_id)
+    nombre = request.POST.get('nombre', '').strip()
+    orden = request.POST.get('orden', '0').strip()
+
+    if not nombre:
+        messages.error(request, 'El nombre del lugar es obligatorio.')
+        return redirect('lugares')
+
+    try:
+        orden = max(0, int(orden or 0))
+    except ValueError:
+        messages.error(request, 'El orden debe ser un número válido.')
+        return redirect('lugares')
+
+    if Lugar.objects.filter(nombre__iexact=nombre).exclude(id=lugar.id).exists():
+        messages.error(request, 'Ya existe un lugar con ese nombre.')
+        return redirect('lugares')
+
+    lugar.nombre = nombre
+    lugar.orden = orden
+    lugar.save(update_fields=['nombre', 'orden'])
+    messages.success(request, 'Lugar actualizado correctamente.')
+    return redirect('lugares')
+
+
+@login_required
+@secretaria_required
+@require_POST
+def cambiar_estado_lugar(request, lugar_id):
+
+    lugar = get_object_or_404(Lugar, id=lugar_id)
+    lugar.activo = not lugar.activo
+    lugar.save(update_fields=['activo'])
+    messages.success(request, 'Estado del lugar actualizado correctamente.')
+    return redirect('lugares')
 
 
 @login_required
@@ -1544,7 +1710,7 @@ def detalle_cliente(request, cliente_id):
 
     pedidos = Pedido.objects.filter(
         cliente=cliente
-    ).order_by('-fecha_pedido')
+    ).select_related('lugar').order_by('-fecha_pedido')
 
     total_pedidos = pedidos.count()
     pedidos_recientes = pedidos[:HISTORIAL_CLIENTE_LIMITE]
@@ -1639,6 +1805,13 @@ def editar_cliente(request, cliente_id):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
+        lugar_id_post = request.POST.get('lugar', '').strip()
+        if 'lugar' not in request.POST or (
+            cliente.lugar_id and lugar_id_post == str(cliente.lugar_id)
+        ):
+            lugar, error_lugar = cliente.lugar, ''
+        else:
+            lugar, error_lugar = leer_lugar_activo_post(request.POST)
         foto_referencia = request.FILES.get('foto_referencia')
         eliminar_foto_referencia = (
             request.POST.get('eliminar_foto_referencia') == '1'
@@ -1646,6 +1819,10 @@ def editar_cliente(request, cliente_id):
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
             leer_ubicacion_cliente_post(request.POST)
         )
+
+        if error_lugar:
+            messages.error(request, error_lugar)
+            return redirect('editar_cliente', cliente_id=cliente.id)
 
         if error_ubicacion:
             messages.error(request, error_ubicacion)
@@ -1709,6 +1886,7 @@ def editar_cliente(request, cliente_id):
         cliente.telefono = telefono
         cliente.direccion = direccion
         cliente.referencia = referencia
+        cliente.lugar = lugar
         cliente.latitud = latitud
         cliente.longitud = longitud
         cliente.referencia_ubicacion = referencia_ubicacion
@@ -1768,7 +1946,8 @@ def editar_cliente(request, cliente_id):
         )
 
     context = {
-        'cliente': cliente
+        'cliente': cliente,
+        'lugares': Lugar.objects.filter(activo=True).order_by('orden', 'nombre')
     }
 
     return render(
@@ -1786,10 +1965,15 @@ def registrar_cliente(request):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
+        lugar, error_lugar = leer_lugar_activo_post(request.POST)
         foto_referencia = request.FILES.get('foto_referencia')
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
             leer_ubicacion_cliente_post(request.POST)
         )
+
+        if error_lugar:
+            messages.error(request, error_lugar)
+            return redirect('registrar_cliente')
 
         if error_ubicacion:
             messages.error(request, error_ubicacion)
@@ -1834,6 +2018,7 @@ def registrar_cliente(request):
             telefono=telefono,
             direccion=direccion,
             referencia=referencia,
+            lugar=lugar,
             latitud=latitud,
             longitud=longitud,
             referencia_ubicacion=referencia_ubicacion
@@ -1864,7 +2049,11 @@ def registrar_cliente(request):
         messages.success(request, 'Cliente registrado correctamente.')
         return redirect('lista_clientes')
 
-    return render(request, 'core/registrar_cliente.html')
+    return render(
+        request,
+        'core/registrar_cliente.html',
+        {'lugares': Lugar.objects.filter(activo=True).order_by('orden', 'nombre')}
+    )
 
 @login_required
 @secretaria_required
@@ -1887,6 +2076,7 @@ def registrar_pedido(request):
         )
     ).order_by('nombre')
     repartidores = repartidores_disponibles()
+    lugares = Lugar.objects.filter(activo=True).order_by('orden', 'nombre')
     cliente_preseleccionado = None
     cliente_preseleccionado_id = request.GET.get('cliente', '').strip()
 
@@ -1902,6 +2092,7 @@ def registrar_pedido(request):
         cantidad_bidones = request.POST.get('cantidad_bidones', '').strip()
         precio_unitario = request.POST.get('precio_unitario', '').strip()
         metodo_pago = leer_metodo_pago_post(request.POST)
+        lugar, error_lugar = leer_lugar_activo_post(request.POST)
         estado = request.POST.get('estado', '').strip()
         observacion = request.POST.get('observacion', '').strip()
         fecha_programada = request.POST.get('fecha_programada', '').strip()
@@ -1928,6 +2119,10 @@ def registrar_pedido(request):
 
         if metodo_pago is None:
             messages.error(request, 'Método de pago inválido.')
+            return redirect('registrar_pedido')
+
+        if error_lugar:
+            messages.error(request, error_lugar)
             return redirect('registrar_pedido')
 
         if not cantidad_bidones or not precio_unitario:
@@ -2012,6 +2207,9 @@ def registrar_pedido(request):
             messages.error(request, 'Un pedido asignado debe tener repartidor.')
             return redirect('registrar_pedido')
 
+        if lugar is None:
+            lugar = cliente.lugar
+
         if estado == Pedido.REPROGRAMADO and fecha_programada_valor <= timezone.localdate():
             messages.error(request, 'Un pedido reprogramado debe tener fecha futura.')
             return redirect('registrar_pedido')
@@ -2024,6 +2222,7 @@ def registrar_pedido(request):
                 precio_unitario=precio_unitario,
                 total=total,
                 metodo_pago=metodo_pago,
+                lugar=lugar,
                 observacion=observacion,
                 fecha_programada=fecha_programada_valor,
             )
@@ -2050,6 +2249,7 @@ def registrar_pedido(request):
         'repartidores': repartidores,
         'hoy': timezone.localdate(),
         'cliente_preseleccionado': cliente_preseleccionado,
+        'lugares': lugares,
     }
 
     return render(request, 'core/registrar_pedido.html', context)
@@ -2066,7 +2266,8 @@ def editar_pedido(request, pedido_id):
     pedido = get_object_or_404(
         Pedido.objects.select_related(
             'cliente',
-            'repartidor'
+            'repartidor',
+            'lugar'
         ),
         id=pedido_id
     )
@@ -2075,6 +2276,7 @@ def editar_pedido(request, pedido_id):
         or request.GET.get('origen', '').strip()
     )
     repartidores = repartidores_disponibles()
+    lugares = Lugar.objects.filter(activo=True).order_by('orden', 'nombre')
 
     if not pedido.esta_activo():
         messages.error(
@@ -2090,6 +2292,13 @@ def editar_pedido(request, pedido_id):
             request.POST,
             pedido.metodo_pago
         )
+        lugar_id_post = request.POST.get('lugar', '').strip()
+        if 'lugar' not in request.POST or (
+            pedido.lugar_id and lugar_id_post == str(pedido.lugar_id)
+        ):
+            lugar, error_lugar = pedido.lugar, ''
+        else:
+            lugar, error_lugar = leer_lugar_activo_post(request.POST)
         fecha_programada = request.POST.get('fecha_programada', '').strip()
         observacion = request.POST.get('observacion', '').strip()
         repartidor_id = request.POST.get('repartidor', '').strip()
@@ -2103,6 +2312,10 @@ def editar_pedido(request, pedido_id):
 
         if metodo_pago is None:
             messages.error(request, 'Método de pago inválido.')
+            return redirect('editar_pedido', pedido_id=pedido.id)
+
+        if error_lugar:
+            messages.error(request, error_lugar)
             return redirect('editar_pedido', pedido_id=pedido.id)
 
         try:
@@ -2180,6 +2393,7 @@ def editar_pedido(request, pedido_id):
             'precio_unitario': precio_unitario,
             'total': nuevo_total,
             'metodo_pago': metodo_pago,
+            'lugar': lugar,
             'fecha_programada': fecha_programada_valor,
             'observacion': observacion,
         }
@@ -2195,6 +2409,7 @@ def editar_pedido(request, pedido_id):
         pedido.precio_unitario = precio_unitario
         pedido.total = nuevo_total
         pedido.metodo_pago = metodo_pago
+        pedido.lugar = lugar
         pedido.fecha_programada = fecha_programada_valor
         pedido.observacion = observacion
         pedido.repartidor = repartidor
@@ -2210,6 +2425,7 @@ def editar_pedido(request, pedido_id):
                 'precio_unitario',
                 'total',
                 'metodo_pago',
+                'lugar',
                 'fecha_programada',
                 'observacion',
                 'repartidor',
@@ -2284,6 +2500,7 @@ def editar_pedido(request, pedido_id):
         'repartidores': repartidores,
         'origen': origen,
         'hoy': timezone.localdate(),
+        'lugares': lugares,
     }
 
     return render(
@@ -2302,7 +2519,8 @@ def lista_pedidos(request, template_name='core/pedidos.html'):
 
     pedidos = Pedido.objects.select_related(
         'cliente',
-        'repartidor'
+        'repartidor',
+        'lugar'
     ).annotate(
         prioridad_operativa=Case(
             When(
@@ -2470,7 +2688,8 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
         estado__in=estados_activos_repartidor(),
         repartidor=request.user
     ).select_related(
-        'cliente'
+        'cliente',
+        'lugar'
     ).annotate(
         cliente_entregados=Count(
             'cliente__pedido',
@@ -2849,6 +3068,7 @@ def nuevo_pedido_repartidor(request):
     clientes = Cliente.objects.filter(
         activo=True
     ).order_by('nombre')
+    lugares = Lugar.objects.filter(activo=True).order_by('orden', 'nombre')
     cliente_preseleccionado = None
     cliente_preseleccionado_id = request.GET.get('cliente', '').strip()
 
@@ -2863,6 +3083,7 @@ def nuevo_pedido_repartidor(request):
         cantidad_bidones = request.POST.get('cantidad_bidones', '').strip()
         precio_unitario = request.POST.get('precio_unitario', '').strip()
         metodo_pago = leer_metodo_pago_post(request.POST)
+        lugar, error_lugar = leer_lugar_activo_post(request.POST)
         fecha_programada = request.POST.get('fecha_programada', '').strip()
         observacion = request.POST.get('observacion', '').strip()
         entregar_ahora = request.POST.get('entregar_ahora') == 'on'
@@ -2895,6 +3116,10 @@ def nuevo_pedido_repartidor(request):
 
         if metodo_pago is None:
             messages.error(request, 'Método de pago inválido.')
+            return redirect('nuevo_pedido_repartidor')
+
+        if error_lugar:
+            messages.error(request, error_lugar)
             return redirect('nuevo_pedido_repartidor')
 
         if precio_unitario < Decimal('1.00'):
@@ -2930,6 +3155,9 @@ def nuevo_pedido_repartidor(request):
             messages.error(request, 'El cliente seleccionado no existe o está inactivo.')
             return redirect('nuevo_pedido_repartidor')
 
+        if lugar is None:
+            lugar = cliente.lugar
+
         total = cantidad_bidones * precio_unitario
         estado = Pedido.ENTREGADO if entregar_ahora else Pedido.ASIGNADO
 
@@ -2941,6 +3169,7 @@ def nuevo_pedido_repartidor(request):
                 precio_unitario=precio_unitario,
                 total=total,
                 metodo_pago=metodo_pago,
+                lugar=lugar,
                 observacion=observacion,
                 fecha_programada=fecha_programada_valor,
             )
@@ -2977,6 +3206,7 @@ def nuevo_pedido_repartidor(request):
         'precio_sugerido': precio_unitario_rapido(None),
         'hoy': timezone.localdate(),
         'cliente_preseleccionado': cliente_preseleccionado,
+        'lugares': lugares,
     }
 
     return render(
@@ -2996,10 +3226,15 @@ def nuevo_cliente_repartidor(request):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         referencia = request.POST.get('referencia', '').strip()
+        lugar, error_lugar = leer_lugar_activo_post(request.POST)
         foto_referencia = request.FILES.get('foto_referencia')
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
             leer_ubicacion_cliente_post(request.POST)
         )
+
+        if error_lugar:
+            messages.error(request, error_lugar)
+            return redirect('nuevo_cliente_repartidor')
 
         if error_ubicacion:
             messages.error(request, error_ubicacion)
@@ -3056,6 +3291,7 @@ def nuevo_cliente_repartidor(request):
             telefono=telefono,
             direccion=direccion,
             referencia=referencia,
+            lugar=lugar,
             latitud=latitud,
             longitud=longitud,
             referencia_ubicacion=referencia_ubicacion
@@ -3091,7 +3327,8 @@ def nuevo_cliente_repartidor(request):
 
     return render(
         request,
-        'core/nuevo_cliente_repartidor.html'
+        'core/nuevo_cliente_repartidor.html',
+        {'lugares': Lugar.objects.filter(activo=True).order_by('orden', 'nombre')}
     )
 
 

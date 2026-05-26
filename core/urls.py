@@ -159,6 +159,24 @@ urlpatterns = [
     ),
 
     path(
+        'lugares/',
+        views.lugares,
+        name='lugares'
+    ),
+
+    path(
+        'lugares/<int:lugar_id>/editar/',
+        views.editar_lugar,
+        name='editar_lugar'
+    ),
+
+    path(
+        'lugares/<int:lugar_id>/estado/',
+        views.cambiar_estado_lugar,
+        name='cambiar_estado_lugar'
+    ),
+
+    path(
         'pedidos/repartidor/',
         views.pedidos_repartidor,
         name='pedidos_repartidor'

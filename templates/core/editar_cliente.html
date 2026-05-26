@@ -65,6 +65,23 @@ Editar cliente
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label" for="lugar">Lugar / zona</label>
+                        <select id="lugar" name="lugar" class="form-select">
+                            <option value="">Sin asignar</option>
+                            {% if cliente.lugar and not cliente.lugar.activo %}
+                                <option value="{{ cliente.lugar.id }}" selected>
+                                    {{ cliente.lugar.nombre }} (inactivo)
+                                </option>
+                            {% endif %}
+                            {% for lugar in lugares %}
+                                <option value="{{ lugar.id }}" {% if cliente.lugar_id == lugar.id %}selected{% endif %}>
+                                    {{ lugar.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label">
                             Referencia
                         </label>

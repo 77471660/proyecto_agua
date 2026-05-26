@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import Cliente, FCMToken, Pedido, PedidoHistorial, PushSubscription
+from .models import Cliente, FCMToken, Lugar, Pedido, PedidoHistorial, PushSubscription
+
+
+@admin.register(Lugar)
+class LugarAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'activo', 'orden', 'fecha_creacion')
+    list_filter = ('activo',)
+    search_fields = ('nombre',)
+    ordering = ('orden', 'nombre')
 
 
 @admin.register(Cliente)
@@ -8,6 +16,7 @@ class ClienteAdmin(admin.ModelAdmin):
         'nombre',
         'telefono',
         'direccion',
+        'lugar',
         'latitud',
         'longitud',
         'foto_referencia_url',
@@ -24,7 +33,7 @@ class ClienteAdmin(admin.ModelAdmin):
         'referencia_ubicacion',
         'foto_referencia_public_id',
     )
-    list_filter = ('estado', 'activo')
+    list_filter = ('lugar', 'estado', 'activo')
     ordering = ('nombre',)
 
 
@@ -34,6 +43,7 @@ class PedidoAdmin(admin.ModelAdmin):
         'id',
         'cliente',
         'repartidor',
+        'lugar',
         'fecha_pedido',
         'cantidad_bidones',
         'precio_unitario',
@@ -43,7 +53,7 @@ class PedidoAdmin(admin.ModelAdmin):
         'usuario_estado_actualizado',
     )
     search_fields = ('cliente__nombre', 'repartidor__username')
-    list_filter = ('estado', 'repartidor', 'fecha_pedido', 'fecha_estado_actualizado')
+    list_filter = ('lugar', 'metodo_pago', 'estado', 'repartidor', 'fecha_pedido', 'fecha_estado_actualizado')
     ordering = ('-fecha_pedido',)
 
 

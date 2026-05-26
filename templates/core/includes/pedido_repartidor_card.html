@@ -88,6 +88,11 @@
             </div>
 
             <div class="col-6">
+                <div class="order-label">Lugar</div>
+                <div class="order-value">{{ pedido.lugar|default:"Sin asignar" }}</div>
+            </div>
+
+            <div class="col-6">
                 <div class="order-label">Fecha programada</div>
                 <div class="order-value">
                     {{ pedido.fecha_programada_texto }}
@@ -177,6 +182,7 @@
                             <option value="PENDIENTE" selected>Pago pendiente</option>
                             <option value="EFECTIVO">Efectivo</option>
                             <option value="YAPE">Yape</option>
+                            <option value="PLIN">Plin</option>
                         </select>
                     {% endif %}
                     <button type="submit" class="btn btn-primary w-100 action-button">

@@ -24,6 +24,17 @@ Pagos - AquaSmart CRM
             <label class="form-label mb-1" for="fecha">Fecha de referencia</label>
             <input type="date" id="fecha" name="fecha" class="form-control" value="{{ fecha_referencia|date:'Y-m-d' }}">
         </div>
+        <div>
+            <label class="form-label mb-1" for="lugar">Lugar</label>
+            <select id="lugar" name="lugar" class="form-select">
+                <option value="">Todos</option>
+                {% for lugar in lugares %}
+                    <option value="{{ lugar.id }}" {% if lugar_actual.id == lugar.id %}selected{% endif %}>
+                        {{ lugar.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
         <button type="submit" class="btn btn-primary">Filtrar</button>
     </form>
 </div>
@@ -34,7 +45,7 @@ Pagos - AquaSmart CRM
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
+    <div class="col-sm-6 col-lg-3">
         <div class="card metric-card h-100">
             <div class="card-body">
                 <h6 class="metric-label">Efectivo hoy</h6>
@@ -42,7 +53,7 @@ Pagos - AquaSmart CRM
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-sm-6 col-lg-3">
         <div class="card metric-card metric-info h-100">
             <div class="card-body">
                 <h6 class="metric-label">Yape hoy</h6>
@@ -50,7 +61,15 @@ Pagos - AquaSmart CRM
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Plin hoy</h6>
+                <div class="metric-value">S/ {{ plin_hoy|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
         <div class="card metric-card metric-success h-100">
             <div class="card-body">
                 <h6 class="metric-label">Total cobrado hoy</h6>
@@ -70,31 +89,77 @@ Pagos - AquaSmart CRM
     </div>
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-sm-6 col-lg-3">
+            <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
                     <div class="text-muted small">Efectivo</div>
                     <div class="fs-4 fw-semibold">S/ {{ efectivo_periodo|floatformat:2 }}</div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
+            <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
                     <div class="text-muted small">Yape</div>
                     <div class="fs-4 fw-semibold">S/ {{ yape_periodo|floatformat:2 }}</div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
+            <div class="col-sm-6 col-xl">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Plin</div>
+                    <div class="fs-4 fw-semibold">S/ {{ plin_periodo|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
                     <div class="text-muted small">Por confirmar</div>
                     <div class="fs-4 fw-semibold">S/ {{ pendiente_periodo|floatformat:2 }}</div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
+            <div class="col-sm-6 col-xl">
                 <div class="form-section mb-0 h-100">
                     <div class="text-muted small">Total cobrado</div>
                     <div class="fs-4 fw-semibold text-success">S/ {{ total_cobrado_periodo|floatformat:2 }}</div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="card content-card mb-4">
+    <div class="card-header bg-white">Ventas por lugar</div>
+    <div class="card-body">
+        {% if resumen_lugares %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Lugar</th>
+                            <th>Entregados</th>
+                            <th>Bidones</th>
+                            <th>Efectivo</th>
+                            <th>Yape</th>
+                            <th>Plin</th>
+                            <th>Pendiente</th>
+                            <th class="text-end">Total vendido</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in resumen_lugares %}
+                            <tr>
+                                <td>{{ fila.nombre }}</td>
+                                <td>{{ fila.entregados }}</td>
+                                <td>{{ fila.bidones }}</td>
+                                <td>S/ {{ fila.efectivo|floatformat:2 }}</td>
+                                <td>S/ {{ fila.yape|floatformat:2 }}</td>
+                                <td>S/ {{ fila.plin|floatformat:2 }}</td>
+                                <td>S/ {{ fila.pendiente|floatformat:2 }}</td>
+                                <td class="text-end fw-semibold">S/ {{ fila.total|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">No hay ventas entregadas para el per&iacute;odo y lugar seleccionados.</div>
+        {% endif %}
     </div>
 </div>
 

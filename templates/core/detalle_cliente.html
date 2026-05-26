@@ -170,6 +170,11 @@ Detalle del cliente
                 </p>
 
                 <p>
+                    <strong>Lugar / zona:</strong><br>
+                    {{ cliente.lugar|default:"Sin asignar" }}
+                </p>
+
+                <p>
                     <strong>Referencia:</strong><br>
                     {{ cliente.referencia|default:"No registrada" }}
                 </p>
@@ -313,6 +318,9 @@ Detalle del cliente
                     <small class="d-block text-muted">
                         Pago: {{ pedido.get_metodo_pago_display }}
                     </small>
+                    <small class="d-block text-muted">
+                        Lugar: {{ pedido.lugar|default:"Sin asignar" }}
+                    </small>
                 </td>
 
                 <td>
@@ -365,6 +373,7 @@ Detalle del cliente
                                                 <option value="PENDIENTE" selected>Pago pendiente</option>
                                                 <option value="EFECTIVO">Efectivo</option>
                                                 <option value="YAPE">Yape</option>
+                                                <option value="PLIN">Plin</option>
                                             </select>
                                         {% endif %}
                                         <button

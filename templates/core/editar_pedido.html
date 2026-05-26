@@ -92,6 +92,24 @@ Editar pedido
                             <option value="PENDIENTE" {% if pedido.metodo_pago == 'PENDIENTE' %}selected{% endif %}>Pendiente</option>
                             <option value="EFECTIVO" {% if pedido.metodo_pago == 'EFECTIVO' %}selected{% endif %}>Efectivo</option>
                             <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
+                            <option value="PLIN" {% if pedido.metodo_pago == 'PLIN' %}selected{% endif %}>Plin</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="lugar">Lugar / zona de entrega</label>
+                        <select id="lugar" name="lugar" class="form-select">
+                            <option value="">Sin asignar</option>
+                            {% if pedido.lugar and not pedido.lugar.activo %}
+                                <option value="{{ pedido.lugar.id }}" selected>
+                                    {{ pedido.lugar.nombre }} (inactivo)
+                                </option>
+                            {% endif %}
+                            {% for lugar in lugares %}
+                                <option value="{{ lugar.id }}" {% if pedido.lugar_id == lugar.id %}selected{% endif %}>
+                                    {{ lugar.nombre }}
+                                </option>
+                            {% endfor %}
                         </select>
                     </div>
 
