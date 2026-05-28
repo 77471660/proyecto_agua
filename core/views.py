@@ -1739,7 +1739,7 @@ def reporte_diario(request):
         (Pedido.PAGO_YAPE, 'Yape'),
         (Pedido.PAGO_PLIN, 'Plin'),
         (Pedido.PAGO_TRANSFERENCIA, 'Transferencia'),
-        (Pedido.PAGO_FIADO, 'Fiado'),
+        (Pedido.PAGO_FIADO, 'Crédito'),
         ('SIN_METODO', 'Sin metodo registrado'),
     ]
     opciones_estado = [
@@ -1810,7 +1810,7 @@ def reporte_diario(request):
             if pedido.metodo_pago_final:
                 pedido.pago_operativo = f'Cobrado ({pedido.get_metodo_pago_final_display()})'
             else:
-                pedido.pago_operativo = 'Fiado pendiente'
+                pedido.pago_operativo = 'Crédito pendiente'
         elif pedido.metodo_pago == Pedido.PAGO_PENDIENTE:
             pedido.pago_operativo = 'Sin metodo registrado'
         else:
@@ -1827,6 +1827,7 @@ def reporte_diario(request):
         'efectivo_cobrado_hoy': cobros_hoy['efectivo'],
         'digital_cobrado_hoy': digital_cobrado_hoy,
         'fiado_hoy': pagos_hoy['fiado'],
+        'credito_otorgado_hoy': pagos_hoy['fiado'],
         'total_por_cobrar': total_por_cobrar,
         'egresos_hoy': egresos_hoy,
         'total_egresos_hoy': total_egresos_hoy,

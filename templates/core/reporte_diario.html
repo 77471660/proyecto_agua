@@ -20,19 +20,29 @@ Reporte Diario - AquaSmart CRM
     <div class="col-sm-6 col-xl-3">
         <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="metric-label">Ventas de hoy</h6>
-                <div class="metric-value">S/ {{ ventas_hoy|floatformat:2 }}</div>
-                <small class="text-muted">Por fecha de entrega</small>
+                <h6 class="metric-label">Cobrado hoy</h6>
+                <div class="metric-value">S/ {{ cobrado_hoy|floatformat:2 }}</div>
+                <small class="text-muted">Dinero realmente cobrado</small>
             </div>
         </div>
     </div>
 
     <div class="col-sm-6 col-xl-3">
-        <div class="card metric-card metric-success h-100">
+        <div class="card metric-card metric-warning h-100">
             <div class="card-body">
-                <h6 class="metric-label">Cobrado hoy</h6>
-                <div class="metric-value">S/ {{ cobrado_hoy|floatformat:2 }}</div>
-                <small class="text-muted">Por fecha de cobro</small>
+                <h6 class="metric-label">Cr&eacute;dito otorgado hoy</h6>
+                <div class="metric-value">S/ {{ credito_otorgado_hoy|floatformat:2 }}</div>
+                <small class="text-muted">Entregado sin cobro inmediato</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card metric-card metric-warning h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Por cobrar</h6>
+                <div class="metric-value">S/ {{ total_por_cobrar|floatformat:2 }}</div>
+                <small class="text-muted">Cr&eacute;ditos pendientes</small>
             </div>
         </div>
     </div>
@@ -43,16 +53,6 @@ Reporte Diario - AquaSmart CRM
                 <h6 class="metric-label">Pedidos de hoy</h6>
                 <div class="metric-value">{{ total_pedidos_hoy }}</div>
                 <small class="text-muted">Registrados durante el dia</small>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-sm-6 col-xl-3">
-        <div class="card metric-card metric-warning h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Fiado hoy</h6>
-                <div class="metric-value">S/ {{ fiado_hoy|floatformat:2 }}</div>
-                <small class="text-muted">Venta no cobrada</small>
             </div>
         </div>
     </div>
@@ -106,7 +106,7 @@ Reporte Diario - AquaSmart CRM
         <div class="d-flex flex-wrap gap-2 small text-muted mb-3">
             <span class="badge text-bg-light border">Efectivo: S/ {{ efectivo_cobrado_hoy|floatformat:2 }}</span>
             <span class="badge text-bg-light border">Digital: S/ {{ digital_cobrado_hoy|floatformat:2 }}</span>
-            <span class="badge text-bg-light border">Fiado: S/ {{ fiado_hoy|floatformat:2 }}</span>
+            <span class="badge text-bg-light border">Cr&eacute;dito: S/ {{ credito_otorgado_hoy|floatformat:2 }}</span>
             <span class="badge text-bg-light border">Egresos: S/ {{ total_egresos_hoy|floatformat:2 }}</span>
             <span class="badge text-bg-light border">Egresos en efectivo: S/ {{ egresos_efectivo_hoy|floatformat:2 }}</span>
             <span class="badge text-bg-light border">Por cobrar: S/ {{ total_por_cobrar|floatformat:2 }}</span>
@@ -271,7 +271,7 @@ Reporte Diario - AquaSmart CRM
         <div class="small text-muted mb-3">
             {{ total_pedidos_filtrados }} pedidos · S/ {{ total_filtrado|floatformat:2 }} · {{ bidones_filtrados }} bidones
             {% if fiado_filtrado %}
-                · S/ {{ fiado_filtrado|floatformat:2 }} fiado pendiente
+                · S/ {{ fiado_filtrado|floatformat:2 }} cr&eacute;dito pendiente
             {% endif %}
             {% if filtros_activos %}
                 · filtro: {{ filtros_activos|join:" + " }}

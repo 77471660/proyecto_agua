@@ -2724,8 +2724,15 @@ class PermisosRolesTests(TestCase):
             {'metodo_pago': Pedido.PAGO_FIADO}
         )
 
-        self.assertContains(fiado_response, 'Fiado pendiente')
+        self.assertContains(fiado_response, 'Cr\u00e9dito pendiente')
+        self.assertContains(fiado_response, 'Cr\u00e9dito')
+        self.assertNotContains(fiado_response, 'Ventas de hoy')
+        self.assertNotContains(fiado_response, 'Fiado hoy')
         self.assertEqual(fiado_response.context['ventas_hoy'], Decimal('42.00'))
+        self.assertEqual(
+            fiado_response.context['credito_otorgado_hoy'],
+            Decimal('28.00')
+        )
         self.assertEqual(fiado_response.context['total_pedidos_filtrados'], 1)
         self.assertEqual(fiado_response.context['fiado_filtrado'], Decimal('14.00'))
 
