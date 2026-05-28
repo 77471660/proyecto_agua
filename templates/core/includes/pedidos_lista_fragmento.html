@@ -47,7 +47,17 @@
                             <td class="text-center col-order-qty">{{ pedido.cantidad_bidones }}</td>
                             <td class="text-end money-cell col-order-total">S/ {{ pedido.total|floatformat:2 }}</td>
                             <td class="col-order-payment">
-                                <span class="text-muted small">{{ pedido.get_metodo_pago_display }}</span>
+                                <span class="text-muted small">
+                                    {% if pedido.metodo_pago == 'FIADO' %}
+                                        {% if pedido.metodo_pago_final %}
+                                            Cobrado ({{ pedido.get_metodo_pago_final_display }})
+                                        {% else %}
+                                            Cr&eacute;dito pendiente
+                                        {% endif %}
+                                    {% else %}
+                                        {{ pedido.get_metodo_pago_display }}
+                                    {% endif %}
+                                </span>
                             </td>
                             <td class="col-order-place">
                                 <span class="text-muted small">{{ pedido.lugar|default:"Sin lugar asignado" }}</span>
@@ -113,7 +123,7 @@
                                                 <form
                                                     method="POST"
                                                     action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}"
-                                                    onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')"
+                                                    onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar a cr\u00e9dito? Este pedido quedar\u00e1 como saldo por cobrar.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')"
                                                     class="order-management-form order-management-deliver"
                                                 >
                                                     {% csrf_token %}
@@ -133,7 +143,7 @@
                                                                 <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
                                                                 <option value="PLIN" {% if pedido.metodo_pago == 'PLIN' %}selected{% endif %}>Plin</option>
                                                                 <option value="TRANSFERENCIA" {% if pedido.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>Transferencia</option>
-                                                                <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Fiado</option>
+                                                                <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Cr&eacute;dito</option>
                                                             </select>
                                                         </div>
                                                         <div class="order-management-submit">
