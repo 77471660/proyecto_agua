@@ -210,6 +210,49 @@ class PermisosRolesTests(TestCase):
             'Selecciona una zona v\u00e1lida para el cliente.'
         )
 
+    def test_registrar_cliente_duplica_solo_telefono_exacto_normalizado(self):
+        Cliente.objects.create(
+            nombre='Cliente Existente',
+            telefono='999 111-333',
+            direccion='Av. Misma 1',
+            lugar=self.lugar_operativo
+        )
+        self.client.force_login(self.secretaria)
+
+        duplicado = self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente Nuevo',
+                'telefono': '999111333',
+                'direccion': 'Av. Nueva 2',
+                'lugar': str(self.lugar_operativo.id),
+            },
+            follow=True
+        )
+
+        self.assertContains(duplicado, 'Ya existe un cliente con ese tel\u00e9fono.')
+        self.assertFalse(
+            Cliente.objects.filter(nombre='Cliente Nuevo').exists()
+        )
+
+        permitido = self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente Existente',
+                'telefono': '9991113339',
+                'direccion': 'Av. Misma 1',
+                'lugar': str(self.lugar_operativo.id),
+            }
+        )
+
+        self.assertRedirects(
+            permitido,
+            reverse('lista_clientes'),
+            fetch_redirect_response=False
+        )
+        cliente = Cliente.objects.get(telefono='9991113339')
+        self.assertEqual(cliente.nombre, 'Cliente Existente')
+
     def test_registrar_cliente_muestra_una_sola_referencia_visible(self):
         self.client.force_login(self.secretaria)
 
@@ -649,6 +692,46 @@ class PermisosRolesTests(TestCase):
         self.cliente.refresh_from_db()
         self.assertEqual(self.cliente.referencia, 'Casa verde al fondo')
 
+    def test_editar_cliente_duplica_solo_telefono_exacto_normalizado(self):
+        otro_cliente = Cliente.objects.create(
+            nombre='Cliente Dos',
+            telefono='999 222-333',
+            direccion='Av. Dos 2',
+            lugar=self.lugar_operativo
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('editar_cliente', kwargs={'cliente_id': self.cliente.id}),
+            {
+                'nombre': self.cliente.nombre,
+                'telefono': '999222333',
+                'direccion': self.cliente.direccion,
+            },
+            follow=True
+        )
+
+        self.assertContains(response, 'Ya existe otro cliente con ese tel\u00e9fono.')
+        self.cliente.refresh_from_db()
+        self.assertNotEqual(self.cliente.telefono, '999222333')
+
+        permitido = self.client.post(
+            reverse('editar_cliente', kwargs={'cliente_id': self.cliente.id}),
+            {
+                'nombre': otro_cliente.nombre,
+                'telefono': '9992223339',
+                'direccion': otro_cliente.direccion,
+            }
+        )
+
+        self.assertRedirects(
+            permitido,
+            reverse('detalle_cliente', kwargs={'cliente_id': self.cliente.id}),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertEqual(self.cliente.telefono, '9992223339')
+
     @override_settings(
         CLOUDINARY_CLOUD_NAME='demo',
         CLOUDINARY_API_KEY='key',
@@ -942,6 +1025,10 @@ class PermisosRolesTests(TestCase):
         self.assertContains(response, 'pedido-row-atrasado')
         self.assertContains(response, 'pedido-row-manana')
         self.assertContains(response, 'badge-manana')
+        self.assertContains(response, 'href="/pedidos/?filtro=atrasados"')
+        self.assertContains(response, 'href="/pedidos/?filtro=hoy"')
+        self.assertNotContains(response, 'filtro=entregados')
+        self.assertNotContains(response, 'filtro=cancelados')
 
     def test_vistas_operativas_principales_renderizan(self):
         self.crear_pedido(self.repartidor)
@@ -1030,6 +1117,10 @@ class PermisosRolesTests(TestCase):
 
     def test_pedidos_refresca_fragmento_y_mantiene_permiso_secretaria(self):
         pedido = self.crear_pedido(self.repartidor)
+        pedido_credito = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_credito.pk).update(
+            metodo_pago=Pedido.PAGO_FIADO
+        )
         self.client.force_login(self.secretaria)
 
         page = self.client.get(reverse('lista_pedidos'))
@@ -1048,6 +1139,9 @@ class PermisosRolesTests(TestCase):
         self.assertContains(fragment, 'Gestionar pedido')
         self.assertContains(fragment, 'Entregar')
         self.assertContains(fragment, 'Cancelar')
+        self.assertContains(fragment, 'Cr&eacute;dito pendiente')
+        self.assertContains(fragment, 'Cr&eacute;dito')
+        self.assertNotContains(fragment, 'Fiado')
         self.assertNotContains(fragment, 'Acciones &#9662;')
         self.assertNotContains(fragment, '<html')
 

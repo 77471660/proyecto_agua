@@ -22,7 +22,7 @@ from django.db.models import (
     DateTimeField,
     F,
 )
-from django.db.models.functions import TruncDate
+from django.db.models.functions import Replace, TruncDate
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from calendar import monthrange
@@ -663,6 +663,28 @@ def estados_activos_repartidor():
 def limpiar_telefono(telefono):
 
     return re.sub(r'\D', '', telefono or '')
+
+
+def normalizar_telefono_cliente(telefono):
+
+    return re.sub(r'[\s-]+', '', (telefono or '').strip())
+
+
+def cliente_con_telefono_exacto(telefono, excluir_cliente_id=None):
+
+    telefono_normalizado = normalizar_telefono_cliente(telefono)
+    clientes = Cliente.objects.annotate(
+        telefono_normalizado=Replace(
+            Replace('telefono', Value(' '), Value('')),
+            Value('-'),
+            Value('')
+        )
+    ).filter(telefono_normalizado=telefono_normalizado)
+
+    if excluir_cliente_id:
+        clientes = clientes.exclude(id=excluir_cliente_id)
+
+    return clientes.exists()
 
 
 def telefono_whatsapp_peru(telefono):
@@ -2274,7 +2296,7 @@ def editar_cliente(request, cliente_id):
     if request.method == 'POST':
 
         nombre = request.POST.get('nombre', '').strip()
-        telefono = request.POST.get('telefono', '').strip()
+        telefono = normalizar_telefono_cliente(request.POST.get('telefono', ''))
         direccion = request.POST.get('direccion', '').strip()
         referencia = (cliente.referencia or '').strip()
         lugar_id_post = request.POST.get('lugar', '').strip()
@@ -2330,13 +2352,7 @@ def editar_cliente(request, cliente_id):
                 cliente_id=cliente.id
             )
 
-        telefono_duplicado = Cliente.objects.filter(
-            telefono=telefono
-        ).exclude(
-            id=cliente.id
-        ).exists()
-
-        if telefono_duplicado:
+        if cliente_con_telefono_exacto(telefono, excluir_cliente_id=cliente.id):
             messages.error(request, 'Ya existe otro cliente con ese teléfono.')
             return redirect(
                 'editar_cliente',
@@ -2434,7 +2450,7 @@ def registrar_cliente(request):
     if request.method == 'POST':
 
         nombre = request.POST.get('nombre', '').strip()
-        telefono = request.POST.get('telefono', '').strip()
+        telefono = normalizar_telefono_cliente(request.POST.get('telefono', ''))
         direccion = request.POST.get('direccion', '').strip()
         referencia = ''
         lugar, error_lugar = leer_lugar_activo_post(request.POST)
@@ -2473,7 +2489,7 @@ def registrar_cliente(request):
             messages.error(request, 'El teléfono debe tener al menos 6 caracteres.')
             return redirect('registrar_cliente')
 
-        if Cliente.objects.filter(telefono=telefono).exists():
+        if cliente_con_telefono_exacto(telefono):
             messages.error(request, 'Ya existe un cliente con ese teléfono.')
             return redirect('registrar_cliente')
 
