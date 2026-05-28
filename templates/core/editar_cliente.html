@@ -81,18 +81,10 @@ Editar cliente
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">
-                            Referencia
-                        </label>
-
-                        <textarea name="referencia"
-                                  class="form-control"
-                                  maxlength="255"
-                                  rows="3">{{ cliente.referencia }}</textarea>
-                    </div>
-
+                    <div class="form-section">
+                        <div class="form-section-title">Ubicaci&oacute;n y referencia para llegar</div>
                     {% include 'core/includes/cliente_ubicacion_fields.html' %}
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label" for="foto_referencia">

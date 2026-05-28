@@ -1,4 +1,4 @@
-{% load static %}
+﻿{% load static %}
 {% load phone_format %}
 <!DOCTYPE html>
 <html lang="es">
@@ -189,7 +189,7 @@
                         type="search"
                         id="cliente_busqueda"
                         class="form-control form-control-lg"
-                        placeholder="Buscar por nombre, teléfono o dirección..."
+                        placeholder="Buscar por nombre, telÃ©fono o direcciÃ³n..."
                         autocomplete="off"
                         data-client-input
                         value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.nombre }} - {{ cliente_preseleccionado.telefono|format_phone_display }}{% endif %}"
@@ -208,11 +208,11 @@
                         {% if cliente_preseleccionado %}
                             <strong>{{ cliente_preseleccionado.nombre }}</strong><br>
                             <span>{{ cliente_preseleccionado.telefono|format_phone_display }}</span><br>
-                            <small>{{ cliente_preseleccionado.direccion|default:"Sin dirección registrada" }}</small>
+                            <small>{{ cliente_preseleccionado.direccion|default:"Sin direcciÃ³n registrada" }}</small>
                         {% endif %}
                     </div>
                     <div id="cliente_error" class="text-danger small mt-2 d-none" data-client-error>
-                        Selecciona un cliente válido de la lista.
+                        Selecciona un cliente vÃ¡lido de la lista.
                     </div>
                 </div>
 
@@ -262,7 +262,7 @@
 
                 <div class="mb-3">
                     <label class="form-label" for="observacion">
-                        Observación opcional
+                        ObservaciÃ³n opcional
                     </label>
                     <textarea
                         id="observacion"
@@ -271,24 +271,6 @@
                         rows="3"
                     ></textarea>
                 </div>
-
-                {% comment %}
-                <div class="mb-3 d-none">
-                    <label class="form-label" for="fecha_programada">
-                        Fecha programada
-                    </label>
-                    <input
-                        type="date"
-                        id="fecha_programada"
-                        name="fecha_programada"
-                        class="form-control form-control-lg"
-                        min="{{ hoy|date:'Y-m-d' }}"
-                    >
-                    <small class="text-muted">
-                        Déjalo vacío si el pedido será entregado hoy.
-                    </small>
-                </div>
-                {% endcomment %}
 
                 <div class="mb-3">
                     <label class="form-label" for="metodo_pago">

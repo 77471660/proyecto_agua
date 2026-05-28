@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
 
-from .models import Cliente, Lugar, Pedido, PedidoHistorial
+from .models import CierreCajaDiario, Cliente, Egreso, Lugar, Pedido, PedidoHistorial
 from .templatetags.phone_format import format_phone_display
 from .views import repartidores_disponibles
 
@@ -173,6 +173,7 @@ class PermisosRolesTests(TestCase):
                 'telefono': '999888776',
                 'direccion': 'Jr. Simple 456',
                 'referencia': 'Sin referencia real',
+                'lugar': str(self.lugar_operativo.id),
             }
         )
 
@@ -185,6 +186,39 @@ class PermisosRolesTests(TestCase):
         self.assertIsNone(cliente.latitud)
         self.assertIsNone(cliente.longitud)
         self.assertFalse(cliente.foto_referencia_url)
+        self.assertEqual(cliente.lugar, self.lugar_operativo)
+        self.assertEqual(cliente.referencia, '')
+
+    def test_registrar_cliente_exige_lugar_valido(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente Sin Zona',
+                'telefono': '999888775',
+                'direccion': 'Jr. Sin Zona 456',
+            },
+            follow=True
+        )
+
+        self.assertFalse(
+            Cliente.objects.filter(telefono='999888775').exists()
+        )
+        self.assertContains(
+            response,
+            'Selecciona una zona v\u00e1lida para el cliente.'
+        )
+
+    def test_registrar_cliente_muestra_una_sola_referencia_visible(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('registrar_cliente'))
+
+        self.assertContains(response, 'Referencia para llegar')
+        self.assertContains(response, 'name="referencia_ubicacion"')
+        self.assertNotContains(response, 'Referencia de entrega')
+        self.assertNotContains(response, 'name="referencia"')
 
     def test_registrar_cliente_bloquea_gps_sin_foto(self):
         self.client.force_login(self.secretaria)
@@ -196,6 +230,7 @@ class PermisosRolesTests(TestCase):
                 'telefono': '999888777',
                 'direccion': 'Jr. Rio 456',
                 'referencia': 'Casa azul',
+                'lugar': str(self.lugar_operativo.id),
                 'latitud': '-12.046374',
                 'longitud': '-77.042793',
                 'referencia_ubicacion': 'Frente al parque',
@@ -221,6 +256,7 @@ class PermisosRolesTests(TestCase):
                 'telefono': '999888778',
                 'direccion': 'Jr. Rio 789',
                 'referencia': 'Casa azul',
+                'lugar': str(self.lugar_operativo.id),
                 'foto_referencia': self.crear_foto_prueba(),
             }
         )
@@ -287,6 +323,7 @@ class PermisosRolesTests(TestCase):
                 'telefono': '999777555',
                 'direccion': 'Av. Foto 123',
                 'referencia': 'Fachada blanca',
+                'lugar': str(self.lugar_operativo.id),
                 'latitud': '-12.046374',
                 'longitud': '-77.042793',
                 'referencia_ubicacion': 'Frente al parque',
@@ -302,6 +339,8 @@ class PermisosRolesTests(TestCase):
         cliente = Cliente.objects.get(telefono='999777555')
         self.assertEqual(cliente.latitud, Decimal('-12.046374'))
         self.assertEqual(cliente.longitud, Decimal('-77.042793'))
+        self.assertEqual(cliente.lugar, self.lugar_operativo)
+        self.assertEqual(cliente.referencia, '')
         self.assertEqual(
             cliente.foto_referencia_url,
             'https://res.cloudinary.com/demo/clientes/foto.jpg'
@@ -326,6 +365,7 @@ class PermisosRolesTests(TestCase):
                 'telefono': '999777444',
                 'direccion': 'Av. Archivo 123',
                 'referencia': '',
+                'lugar': str(self.lugar_operativo.id),
                 'latitud': '-12.046374',
                 'longitud': '-77.042793',
                 'referencia_ubicacion': 'Frente al parque',
@@ -587,6 +627,28 @@ class PermisosRolesTests(TestCase):
             'aquasmart/clientes/old'
         )
 
+    def test_editar_cliente_conserva_referencia_historica_oculta(self):
+        self.cliente.referencia = 'Casa verde al fondo'
+        self.cliente.save(update_fields=['referencia'])
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('editar_cliente', kwargs={'cliente_id': self.cliente.id}),
+            {
+                'nombre': self.cliente.nombre,
+                'telefono': self.cliente.telefono,
+                'direccion': self.cliente.direccion,
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('detalle_cliente', kwargs={'cliente_id': self.cliente.id}),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertEqual(self.cliente.referencia, 'Casa verde al fondo')
+
     @override_settings(
         CLOUDINARY_CLOUD_NAME='demo',
         CLOUDINARY_API_KEY='key',
@@ -653,6 +715,7 @@ class PermisosRolesTests(TestCase):
                         'nombre': 'Cliente Foto Fallida',
                         'telefono': '999444555',
                         'direccion': 'Av. Error 1',
+                        'lugar': str(self.lugar_operativo.id),
                         'latitud': '-12.050000',
                         'longitud': '-77.030000',
                         'foto_referencia': self.crear_foto_prueba(),
@@ -1104,7 +1167,7 @@ class PermisosRolesTests(TestCase):
         pedido = Pedido.objects.latest('id')
         self.assertEqual(pedido.fecha_programada, timezone.localdate())
 
-    def test_registrar_pedido_respeta_fecha_programada_futura(self):
+    def test_registrar_pedido_ignora_fecha_programada_futura_en_alta(self):
         self.client.force_login(self.secretaria)
         fecha_futura = timezone.localdate() + timedelta(days=2)
 
@@ -1127,7 +1190,7 @@ class PermisosRolesTests(TestCase):
             fetch_redirect_response=False
         )
         pedido = Pedido.objects.latest('id')
-        self.assertEqual(pedido.fecha_programada, fecha_futura)
+        self.assertEqual(pedido.fecha_programada, timezone.localdate())
 
     def test_nuevo_pedido_repartidor_sin_fecha_programada_usa_fecha_local_de_hoy(self):
         self.client.force_login(self.repartidor)
@@ -1152,7 +1215,7 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(pedido.fecha_programada, timezone.localdate())
         self.assertEqual(pedido.repartidor, self.repartidor)
 
-    def test_nuevo_pedido_repartidor_respeta_fecha_programada_futura(self):
+    def test_nuevo_pedido_repartidor_ignora_fecha_programada_futura_en_alta(self):
         self.client.force_login(self.repartidor)
         fecha_futura = timezone.localdate() + timedelta(days=2)
 
@@ -1173,7 +1236,7 @@ class PermisosRolesTests(TestCase):
             fetch_redirect_response=False
         )
         pedido = Pedido.objects.latest('id')
-        self.assertEqual(pedido.fecha_programada, fecha_futura)
+        self.assertEqual(pedido.fecha_programada, timezone.localdate())
         self.assertEqual(pedido.repartidor, self.repartidor)
 
     def test_nuevo_pedido_repartidor_rechaza_cantidad_mayor_a_100(self):
@@ -1246,7 +1309,6 @@ class PermisosRolesTests(TestCase):
         self.assertIn(pedido_atrasado, response.context['pedidos_hoy'])
         self.assertIn(pedido_hoy, response.context['pedidos_hoy'])
         self.assertIn(pedido_manana, response.context['pedidos_hoy'])
-        self.assertEqual(response.context['pedidos_programados'], [])
         self.assertEqual(
             list(response.context['pedidos_hoy'])[:3],
             [pedido_atrasado, pedido_hoy, pedido_manana]
@@ -1286,7 +1348,6 @@ class PermisosRolesTests(TestCase):
             pedido_programado,
             response.context['pedidos_asignados']
         )
-        self.assertEqual(response.context['pedidos_programados'], [])
         self.assertContains(response, 'Entrega posterior')
         self.assertNotContains(response, 'Pedidos programados futuros')
 
@@ -2461,7 +2522,7 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(reporte_cobrado.context['cobrado'], Decimal('14.00'))
 
     def test_pagos_y_reporte_semanal_mantienen_permiso_administrativo(self):
-        for route_name in ('pagos', 'reporte_semanal', 'lugares'):
+        for route_name in ('pagos', 'reporte_semanal', 'lugares', 'egresos'):
             response = self.client.get(reverse(route_name))
             self.assertEqual(response.status_code, 302)
 
@@ -2477,6 +2538,127 @@ class PermisosRolesTests(TestCase):
 
         self.client.force_login(self.jefe_reparto)
         self.assertEqual(self.client.get(reverse('pagos')).status_code, 200)
+
+    def test_egresos_registra_y_valida_monto_obligatorio(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('egresos'),
+            {
+                'monto': '0',
+                'categoria': Egreso.CATEGORIA_MANTENIMIENTO,
+                'metodo_pago': Egreso.PAGO_EFECTIVO,
+                'concepto': 'Reparacion de tuberia',
+            },
+            follow=True
+        )
+
+        self.assertFalse(Egreso.objects.exists())
+        self.assertContains(response, 'El monto debe ser mayor a 0.')
+
+        self.client.post(
+            reverse('egresos'),
+            {
+                'monto': '25.50',
+                'categoria': Egreso.CATEGORIA_MANTENIMIENTO,
+                'metodo_pago': Egreso.PAGO_EFECTIVO,
+                'concepto': 'Reparacion de tuberia',
+                'observacion': 'Plomero',
+            }
+        )
+
+        egreso = Egreso.objects.get()
+        self.assertEqual(egreso.monto, Decimal('25.50'))
+        self.assertEqual(egreso.usuario_registro, self.secretaria)
+
+    def test_reporte_diario_calcula_cierre_sin_restar_egresos_digitales(self):
+        pedido_efectivo = self.crear_pedido(self.repartidor)
+        pedido_yape = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_efectivo.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_EFECTIVO
+        )
+        Pedido.objects.filter(pk=pedido_yape.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_YAPE
+        )
+        Egreso.objects.create(
+            monto=Decimal('5.00'),
+            categoria=Egreso.CATEGORIA_MOVILIDAD,
+            metodo_pago=Egreso.PAGO_EFECTIVO,
+            concepto='Combustible',
+            usuario_registro=self.secretaria
+        )
+        Egreso.objects.create(
+            monto=Decimal('3.00'),
+            categoria=Egreso.CATEGORIA_COMPRAS,
+            metodo_pago=Egreso.PAGO_YAPE,
+            concepto='Materiales',
+            usuario_registro=self.secretaria
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('reporte_diario'))
+
+        self.assertContains(response, 'Cierre de caja del dia')
+        self.assertEqual(response.context['cobrado_hoy'], Decimal('28.00'))
+        self.assertEqual(response.context['efectivo_cobrado_hoy'], Decimal('14.00'))
+        self.assertEqual(response.context['digital_cobrado_hoy'], Decimal('14.00'))
+        self.assertEqual(response.context['total_egresos_hoy'], Decimal('8.00'))
+        self.assertEqual(response.context['egresos_efectivo_hoy'], Decimal('5.00'))
+        self.assertEqual(response.context['efectivo_esperado'], Decimal('9.00'))
+
+        self.client.post(
+            reverse('registrar_cierre_caja_diario'),
+            {
+                'efectivo_contado': '8.00',
+                'observacion_cierre': 'Falta revisar vuelto',
+            }
+        )
+        faltante = self.client.get(reverse('reporte_diario'))
+        self.assertEqual(faltante.context['estado_caja'], 'Faltante')
+        self.assertEqual(faltante.context['diferencia_caja'], Decimal('-1.00'))
+
+        self.client.post(
+            reverse('registrar_cierre_caja_diario'),
+            {
+                'efectivo_contado': '9.00',
+                'observacion_cierre': 'Cuadre revisado',
+            }
+        )
+        cierre = CierreCajaDiario.objects.get(fecha=timezone.localdate())
+        cuadrado = self.client.get(reverse('reporte_diario'))
+
+        self.assertEqual(CierreCajaDiario.objects.count(), 1)
+        self.assertEqual(cierre.efectivo_contado, Decimal('9.00'))
+        self.assertEqual(cuadrado.context['estado_caja'], 'Cuadra')
+        self.assertEqual(cuadrado.context['diferencia_caja'], Decimal('0.00'))
+
+    def test_reporte_semanal_incluye_egresos_y_neto(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_TRANSFERENCIA
+        )
+        Egreso.objects.create(
+            monto=Decimal('4.00'),
+            categoria=Egreso.CATEGORIA_MATERIALES,
+            metodo_pago=Egreso.PAGO_TRANSFERENCIA,
+            concepto='Cinta teflon',
+            usuario_registro=self.secretaria
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('reporte_semanal'))
+
+        self.assertContains(response, 'Resumen financiero semanal')
+        self.assertContains(response, 'Materiales')
+        self.assertEqual(response.context['cobrado'], Decimal('14.00'))
+        self.assertEqual(response.context['total_egresos_semana'], Decimal('4.00'))
+        self.assertEqual(response.context['neto_semanal'], Decimal('10.00'))
 
     def test_dashboard_y_reporte_diario_contabilizan_por_fecha_entrega(self):
         pedido = self.crear_pedido(self.repartidor)

@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Egresos - AquaSmart CRM
+{% endblock %}
+
+{% block content %}
+
+<div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+        <h2>Egresos</h2>
+        <small class="text-muted">Registro simple de salidas de dinero del negocio.</small>
+    </div>
+    <a href="{% url 'reporte_diario' %}" class="btn btn-outline-secondary btn-sm">
+        Ver cierre diario
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card content-card h-100">
+            <div class="card-header bg-white">Registrar egreso</div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="monto" class="form-label">Monto</label>
+                        <input
+                            type="number"
+                            id="monto"
+                            name="monto"
+                            class="form-control"
+                            min="0.01"
+                            step="0.01"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="categoria" class="form-label">Categoria</label>
+                        <select id="categoria" name="categoria" class="form-select" required>
+                            <option value="" selected disabled>Selecciona categoria</option>
+                            {% for valor, etiqueta in categorias_egreso %}
+                                <option value="{{ valor }}">{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="metodo_pago" class="form-label">Metodo de pago</label>
+                        <select id="metodo_pago" name="metodo_pago" class="form-select" required>
+                            <option value="" selected disabled>Selecciona metodo</option>
+                            {% for valor, etiqueta in metodos_pago_egreso %}
+                                <option value="{{ valor }}">{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="concepto" class="form-label">Concepto</label>
+                        <input
+                            type="text"
+                            id="concepto"
+                            name="concepto"
+                            class="form-control"
+                            maxlength="160"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="observacion" class="form-label">Observacion</label>
+                        <textarea
+                            id="observacion"
+                            name="observacion"
+                            class="form-control"
+                            rows="2"
+                        ></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        Guardar egreso
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card content-card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span>Egresos de hoy</span>
+                <span class="fw-semibold">S/ {{ total_egresos_hoy|floatformat:2 }}</span>
+            </div>
+            <div class="card-body">
+                {% if resumen_categorias_hoy %}
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        {% for item in resumen_categorias_hoy %}
+                            <span class="badge text-bg-light border">
+                                {{ item.nombre }}: S/ {{ item.total|floatformat:2 }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if egresos_hoy %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Hora</th>
+                                    <th>Categoria</th>
+                                    <th>Concepto</th>
+                                    <th>Metodo</th>
+                                    <th class="text-end">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for egreso in egresos_hoy %}
+                                    <tr>
+                                        <td>{{ egreso.fecha_hora|date:"H:i" }}</td>
+                                        <td>{{ egreso.get_categoria_display }}</td>
+                                        <td>
+                                            {{ egreso.concepto }}
+                                            {% if egreso.observacion %}
+                                                <small class="text-muted d-block">{{ egreso.observacion|truncatechars:70 }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ egreso.get_metodo_pago_display }}</td>
+                                        <td class="text-end fw-semibold">S/ {{ egreso.monto|floatformat:2 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">No hay egresos registrados hoy.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-header bg-white">Ultimos egresos</div>
+    <div class="card-body">
+        {% if egresos_recientes %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Categoria</th>
+                            <th>Concepto</th>
+                            <th>Metodo</th>
+                            <th>Usuario</th>
+                            <th class="text-end">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for egreso in egresos_recientes %}
+                            <tr>
+                                <td>{{ egreso.fecha_hora|date:"d/m/Y H:i" }}</td>
+                                <td>{{ egreso.get_categoria_display }}</td>
+                                <td>{{ egreso.concepto }}</td>
+                                <td>{{ egreso.get_metodo_pago_display }}</td>
+                                <td>{{ egreso.usuario_registro|default:"-" }}</td>
+                                <td class="text-end fw-semibold">S/ {{ egreso.monto|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">Aun no hay egresos registrados.</div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

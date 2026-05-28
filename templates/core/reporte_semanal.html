@@ -118,6 +118,44 @@ Reporte Semanal - AquaSmart CRM
 {% endif %}
 
 <div class="card content-card mb-4">
+    <div class="card-header bg-white">Resumen financiero semanal</div>
+    <div class="card-body">
+        <div class="row g-2 mb-3">
+            <div class="col-sm-4">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Ingresos cobrados semana</div>
+                    <div class="fs-5 fw-semibold">S/ {{ cobrado|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Egresos semana</div>
+                    <div class="fs-5 fw-semibold">S/ {{ total_egresos_semana|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Neto semanal</div>
+                    <div class="fs-5 fw-semibold">S/ {{ neto_semanal|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+
+        {% if resumen_egresos_categoria_semana %}
+            <div class="d-flex flex-wrap gap-2">
+                {% for item in resumen_egresos_categoria_semana %}
+                    <span class="badge text-bg-light border">
+                        {{ item.nombre }}: S/ {{ item.total|floatformat:2 }}
+                    </span>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">No hay egresos registrados en la semana seleccionada.</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card content-card mb-4">
     <div class="card-header bg-white">Cobros por metodo</div>
     <div class="card-body">
         <div class="row g-3">

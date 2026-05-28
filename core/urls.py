@@ -153,6 +153,18 @@ urlpatterns = [
     ),
 
     path(
+        'egresos/',
+        views.egresos,
+        name='egresos'
+    ),
+
+    path(
+        'cierre-caja/diario/',
+        views.registrar_cierre_caja_diario,
+        name='registrar_cierre_caja_diario'
+    ),
+
+    path(
         'pagos/',
         views.pagos,
         name='pagos'

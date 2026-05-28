@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
+from decimal import Decimal
 import logging
 import re
 from urllib.parse import quote_plus
@@ -449,6 +450,109 @@ class PedidoHistorial(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_accion_display()} - Pedido #{self.pedido_id}"
+
+
+class Egreso(models.Model):
+
+    CATEGORIA_MANTENIMIENTO = 'MANTENIMIENTO'
+    CATEGORIA_MOVILIDAD = 'MOVILIDAD'
+    CATEGORIA_PERSONAL = 'PERSONAL'
+    CATEGORIA_MATERIALES = 'MATERIALES'
+    CATEGORIA_SERVICIOS = 'SERVICIOS'
+    CATEGORIA_COMPRAS = 'COMPRAS'
+    CATEGORIA_OTROS = 'OTROS'
+
+    CATEGORIAS = [
+        (CATEGORIA_MANTENIMIENTO, 'Mantenimiento'),
+        (CATEGORIA_MOVILIDAD, 'Movilidad'),
+        (CATEGORIA_PERSONAL, 'Personal'),
+        (CATEGORIA_MATERIALES, 'Materiales'),
+        (CATEGORIA_SERVICIOS, 'Servicios'),
+        (CATEGORIA_COMPRAS, 'Compras'),
+        (CATEGORIA_OTROS, 'Otros'),
+    ]
+
+    PAGO_EFECTIVO = 'EFECTIVO'
+    PAGO_YAPE = 'YAPE'
+    PAGO_PLIN = 'PLIN'
+    PAGO_TRANSFERENCIA = 'TRANSFERENCIA'
+    PAGO_OTRO = 'OTRO'
+
+    METODOS_PAGO = [
+        (PAGO_EFECTIVO, 'Efectivo'),
+        (PAGO_YAPE, 'Yape'),
+        (PAGO_PLIN, 'Plin'),
+        (PAGO_TRANSFERENCIA, 'Transferencia'),
+        (PAGO_OTRO, 'Otro'),
+    ]
+
+    fecha_hora = models.DateTimeField(default=timezone.now)
+    monto = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.01'), message='El monto debe ser mayor a 0.')
+        ]
+    )
+    categoria = models.CharField(max_length=30, choices=CATEGORIAS)
+    concepto = models.CharField(max_length=160)
+    observacion = models.TextField(blank=True)
+    metodo_pago = models.CharField(max_length=20, choices=METODOS_PAGO)
+    usuario_registro = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='egresos_registrados'
+    )
+
+    class Meta:
+        ordering = ['-fecha_hora', '-id']
+
+    def clean(self):
+        super().clean()
+
+        if not self.categoria:
+            raise ValidationError({'categoria': 'Selecciona una categoria.'})
+
+        if not (self.concepto or '').strip():
+            raise ValidationError({'concepto': 'Ingresa el concepto del egreso.'})
+
+        if not self.metodo_pago:
+            raise ValidationError({'metodo_pago': 'Selecciona el metodo de pago.'})
+
+    def __str__(self):
+        return f"{self.get_categoria_display()} - S/ {self.monto}"
+
+
+class CierreCajaDiario(models.Model):
+
+    fecha = models.DateField(unique=True)
+    efectivo_contado = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(
+                Decimal('0.00'),
+                message='El efectivo contado no puede ser negativo.'
+            )
+        ]
+    )
+    observacion_cierre = models.TextField(blank=True)
+    usuario_registro = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='cierres_caja_registrados'
+    )
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"Cierre de caja {self.fecha}"
 
 
 class PushSubscription(models.Model):

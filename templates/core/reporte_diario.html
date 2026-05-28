@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}
 Reporte Diario - AquaSmart CRM
@@ -112,6 +113,155 @@ Reporte Diario - AquaSmart CRM
             </tr>
         </tbody>
     </table>
+</div>
+
+<div class="card content-card mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>Cierre de caja del dia</span>
+        <a href="{% url 'egresos' %}" class="btn btn-outline-primary btn-sm">
+            Registrar egreso
+        </a>
+    </div>
+
+    <div class="card-body">
+        <div class="row g-2 mb-3">
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Cobrado hoy</div>
+                    <div class="fs-5 fw-semibold">S/ {{ cobrado_hoy|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Efectivo cobrado hoy</div>
+                    <div class="fs-5 fw-semibold">S/ {{ efectivo_cobrado_hoy|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Digital cobrado hoy</div>
+                    <div class="fs-5 fw-semibold">S/ {{ digital_cobrado_hoy|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Fiado hoy</div>
+                    <div class="fs-5 fw-semibold">S/ {{ fiado_hoy|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Por cobrar</div>
+                    <div class="fs-5 fw-semibold">S/ {{ total_por_cobrar|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Egresos del dia</div>
+                    <div class="fs-5 fw-semibold">S/ {{ total_egresos_hoy|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Egresos en efectivo</div>
+                    <div class="fs-5 fw-semibold">S/ {{ egresos_efectivo_hoy|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="form-section mb-0 h-100">
+                    <div class="text-muted small">Efectivo esperado</div>
+                    <div class="fs-5 fw-semibold">S/ {{ efectivo_esperado|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" action="{% url 'registrar_cierre_caja_diario' %}" class="row g-2 align-items-end mb-3">
+            {% csrf_token %}
+            <div class="col-sm-6 col-lg-3">
+                <label for="efectivo_contado" class="form-label small text-muted mb-1">
+                    Efectivo contado
+                </label>
+                <input
+                    type="number"
+                    id="efectivo_contado"
+                    name="efectivo_contado"
+                    class="form-control form-control-sm"
+                    min="0"
+                    step="0.01"
+                    value="{% if cierre_caja %}{{ efectivo_contado|unlocalize }}{% endif %}"
+                    required
+                >
+            </div>
+            <div class="col-sm-6 col-lg-5">
+                <label for="observacion_cierre" class="form-label small text-muted mb-1">
+                    Observacion
+                </label>
+                <input
+                    type="text"
+                    id="observacion_cierre"
+                    name="observacion_cierre"
+                    class="form-control form-control-sm"
+                    value="{% if cierre_caja %}{{ cierre_caja.observacion_cierre }}{% endif %}"
+                >
+            </div>
+            <div class="col-sm-6 col-lg-auto">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    Guardar cierre
+                </button>
+            </div>
+            <div class="col-sm-6 col-lg-auto small text-muted">
+                Estado:
+                <span class="fw-semibold">{{ estado_caja }}</span>
+                {% if cierre_caja %}
+                    · Diferencia S/ {{ diferencia_caja|floatformat:2 }}
+                {% endif %}
+            </div>
+        </form>
+
+        {% if resumen_egresos_categoria_hoy %}
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {% for item in resumen_egresos_categoria_hoy %}
+                    <span class="badge text-bg-light border">
+                        {{ item.nombre }}: S/ {{ item.total|floatformat:2 }}
+                    </span>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if egresos_hoy %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Hora</th>
+                            <th>Categoria</th>
+                            <th>Concepto</th>
+                            <th>Metodo</th>
+                            <th class="text-end">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for egreso in egresos_hoy %}
+                            <tr>
+                                <td>{{ egreso.fecha_hora|date:"H:i" }}</td>
+                                <td>{{ egreso.get_categoria_display }}</td>
+                                <td>
+                                    {{ egreso.concepto }}
+                                    {% if egreso.observacion %}
+                                        <small class="text-muted d-block">{{ egreso.observacion|truncatechars:70 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ egreso.get_metodo_pago_display }}</td>
+                                <td class="text-end fw-semibold">S/ {{ egreso.monto|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">No hay egresos registrados para el cierre de hoy.</div>
+        {% endif %}
+    </div>
 </div>
 
 <div class="card content-card mb-4">

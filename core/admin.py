@@ -1,5 +1,14 @@
 from django.contrib import admin
-from .models import Cliente, FCMToken, Lugar, Pedido, PedidoHistorial, PushSubscription
+from .models import (
+    CierreCajaDiario,
+    Cliente,
+    Egreso,
+    FCMToken,
+    Lugar,
+    Pedido,
+    PedidoHistorial,
+    PushSubscription,
+)
 
 
 @admin.register(Lugar)
@@ -66,6 +75,34 @@ class PedidoHistorialAdmin(admin.ModelAdmin):
     search_fields = ('pedido__cliente__nombre', 'usuario__username', 'descripcion')
     list_filter = ('tipo_accion', 'fecha')
     ordering = ('-fecha', '-id')
+
+
+@admin.register(Egreso)
+class EgresoAdmin(admin.ModelAdmin):
+    list_display = (
+        'fecha_hora',
+        'categoria',
+        'concepto',
+        'metodo_pago',
+        'monto',
+        'usuario_registro',
+    )
+    search_fields = ('concepto', 'observacion', 'usuario_registro__username')
+    list_filter = ('categoria', 'metodo_pago', 'fecha_hora')
+    ordering = ('-fecha_hora', '-id')
+
+
+@admin.register(CierreCajaDiario)
+class CierreCajaDiarioAdmin(admin.ModelAdmin):
+    list_display = (
+        'fecha',
+        'efectivo_contado',
+        'usuario_registro',
+        'actualizado_en',
+    )
+    search_fields = ('observacion_cierre', 'usuario_registro__username')
+    list_filter = ('fecha',)
+    ordering = ('-fecha',)
 
 
 @admin.register(PushSubscription)

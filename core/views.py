@@ -54,7 +54,16 @@ from .cloudinary_images import (
     upload_client_reference_photo,
     validate_client_photo,
 )
-from .models import Cliente, FCMToken, Lugar, Pedido, PedidoHistorial, PushSubscription
+from .models import (
+    CierreCajaDiario,
+    Cliente,
+    Egreso,
+    FCMToken,
+    Lugar,
+    Pedido,
+    PedidoHistorial,
+    PushSubscription,
+)
 from .push_notifications import (
     endpoint_for_log,
     send_order_assignment_push,
@@ -696,43 +705,6 @@ def tiempo_pedido_panel(pedido):
     return tiempo_esperando_pedido(pedido)
 
 
-def texto_programacion_pedido(pedido):
-
-    hoy = timezone.localdate()
-    manana = hoy + timedelta(days=1)
-
-    if not pedido.fecha_programada:
-        return 'Hoy'
-
-    if pedido.fecha_programada < hoy:
-        return 'Atrasado'
-
-    if pedido.fecha_programada == hoy:
-        return 'Hoy'
-
-    if pedido.fecha_programada == manana:
-        return 'Mañana'
-
-    return pedido.fecha_programada.strftime('%d/%m/%Y')
-
-
-def clase_badge_programacion_pedido(pedido):
-
-    hoy = timezone.localdate()
-    manana = hoy + timedelta(days=1)
-
-    if not pedido.fecha_programada or pedido.fecha_programada == hoy:
-        return 'badge-hoy'
-
-    if pedido.fecha_programada < hoy:
-        return 'badge-atrasado'
-
-    if pedido.fecha_programada == manana:
-        return 'badge-manana'
-
-    return 'badge-muted'
-
-
 def clase_badge_tiempo_panel(pedido):
 
     clase_espera = clase_tiempo_esperando_pedido(pedido)
@@ -753,8 +725,6 @@ def preparar_pedido_panel_jefe(pedido):
 
     pedido.tiempo_panel = tiempo_pedido_panel(pedido)
     pedido.badge_tiempo_panel = clase_badge_tiempo_panel(pedido)
-    pedido.programacion_panel = texto_programacion_pedido(pedido)
-    pedido.badge_programacion_panel = clase_badge_programacion_pedido(pedido)
 
     return pedido
 
@@ -764,14 +734,9 @@ def preparar_pedido_lista(pedido):
     hoy = timezone.localdate()
     manana = hoy + timedelta(days=1)
 
-    pedido.programacion_texto = ''
-    pedido.programacion_clase = 'badge-muted'
     pedido.fila_prioridad_clase = ''
 
     if pedido.esta_activo():
-        pedido.programacion_texto = texto_programacion_pedido(pedido)
-        pedido.programacion_clase = clase_badge_programacion_pedido(pedido)
-
         if pedido.fecha_programada and pedido.fecha_programada < hoy:
             pedido.fila_prioridad_clase = 'pedido-row-atrasado'
         elif not pedido.fecha_programada or pedido.fecha_programada == hoy:
@@ -817,8 +782,6 @@ def preparar_pedido_repartidor(pedido):
     pedido.tiempo_esperando = tiempo_esperando_pedido(pedido)
     pedido.tiempo_esperando_clase = clase_tiempo_esperando_pedido(pedido)
 
-    pedido.fecha_programada_texto = texto_programacion_pedido(pedido)
-    pedido.fecha_programada_clase = clase_badge_programacion_pedido(pedido)
     pedido.es_atrasado = (
         pedido.fecha_programada
         and pedido.fecha_programada < hoy
@@ -1057,6 +1020,54 @@ def fiados_por_cobrar(lugar=None):
         pedidos = pedidos.filter(lugar=lugar)
 
     return pedidos
+
+
+def total_decimal(queryset, campo='monto'):
+
+    return queryset.aggregate(total=Sum(campo))['total'] or Decimal('0.00')
+
+
+def egresos_en_rango(inicio_periodo, fin_periodo):
+
+    return Egreso.objects.filter(
+        fecha_hora__date__range=(inicio_periodo, fin_periodo)
+    ).select_related('usuario_registro')
+
+
+def resumen_egresos_por_categoria(egresos_queryset):
+
+    categorias = dict(Egreso.CATEGORIAS)
+    resumen = []
+
+    for item in egresos_queryset.values('categoria').annotate(
+        total=Sum('monto')
+    ).order_by('categoria'):
+        resumen.append({
+            'categoria': item['categoria'],
+            'nombre': categorias.get(item['categoria'], item['categoria']),
+            'total': item['total'] or Decimal('0.00'),
+        })
+
+    return resumen
+
+
+def estado_cierre_caja(diferencia):
+
+    if diferencia == Decimal('0.00'):
+        return 'Cuadra'
+
+    if diferencia < Decimal('0.00'):
+        return 'Faltante'
+
+    return 'Sobrante'
+
+
+def decimal_post(valor):
+
+    try:
+        return Decimal((valor or '').strip())
+    except (InvalidOperation, ValueError):
+        return None
 
 
 def resumen_pagos_por_lugar(pedidos_entregados):
@@ -1523,6 +1534,95 @@ def buscar_clientes(request):
 
 @login_required
 @secretaria_required
+def egresos(request):
+
+    hoy = timezone.localdate()
+
+    if request.method == 'POST':
+        monto = decimal_post(request.POST.get('monto'))
+        categoria = request.POST.get('categoria', '').strip().upper()
+        metodo_pago = request.POST.get('metodo_pago', '').strip().upper()
+        concepto = request.POST.get('concepto', '').strip()
+        observacion = request.POST.get('observacion', '').strip()
+
+        egreso = Egreso(
+            monto=monto if monto is not None else Decimal('0.00'),
+            categoria=categoria,
+            concepto=concepto,
+            observacion=observacion,
+            metodo_pago=metodo_pago,
+            usuario_registro=request.user,
+        )
+
+        try:
+            egreso.full_clean()
+            egreso.save()
+        except ValidationError as error:
+            messages.error(request, mensaje_validacion_modelo(error))
+            return redirect('egresos')
+
+        messages.success(request, 'Egreso registrado correctamente.')
+        return redirect('egresos')
+
+    egresos_hoy = egresos_en_rango(hoy, hoy)
+    egresos_recientes = Egreso.objects.select_related(
+        'usuario_registro'
+    ).order_by('-fecha_hora', '-id')[:30]
+
+    context = {
+        'hoy': hoy,
+        'categorias_egreso': Egreso.CATEGORIAS,
+        'metodos_pago_egreso': Egreso.METODOS_PAGO,
+        'egresos_hoy': egresos_hoy,
+        'egresos_recientes': egresos_recientes,
+        'total_egresos_hoy': total_decimal(egresos_hoy),
+        'resumen_categorias_hoy': resumen_egresos_por_categoria(egresos_hoy),
+    }
+
+    return render(request, 'core/egresos.html', context)
+
+
+@login_required
+@secretaria_required
+@require_POST
+def registrar_cierre_caja_diario(request):
+
+    hoy = timezone.localdate()
+    efectivo_contado = decimal_post(request.POST.get('efectivo_contado'))
+    observacion_cierre = request.POST.get('observacion_cierre', '').strip()
+
+    if efectivo_contado is None:
+        messages.error(request, 'Ingresa un efectivo contado válido.')
+        return redirect('reporte_diario')
+
+    cierre = CierreCajaDiario(
+        fecha=hoy,
+        efectivo_contado=efectivo_contado,
+        observacion_cierre=observacion_cierre,
+        usuario_registro=request.user,
+    )
+
+    try:
+        cierre.full_clean(validate_unique=False)
+    except ValidationError as error:
+        messages.error(request, mensaje_validacion_modelo(error))
+        return redirect('reporte_diario')
+
+    CierreCajaDiario.objects.update_or_create(
+        fecha=hoy,
+        defaults={
+            'efectivo_contado': efectivo_contado,
+            'observacion_cierre': observacion_cierre,
+            'usuario_registro': request.user,
+        }
+    )
+
+    messages.success(request, 'Cierre de caja actualizado.')
+    return redirect('reporte_diario')
+
+
+@login_required
+@secretaria_required
 def reporte_diario(request):
 
     hoy = timezone.localdate()
@@ -1591,6 +1691,30 @@ def reporte_diario(request):
         )
     )
     cobros_hoy = totales_cobros_periodo(hoy, hoy)
+    digital_cobrado_hoy = (
+        cobros_hoy['yape']
+        + cobros_hoy['plin']
+        + cobros_hoy['transferencia']
+    )
+    total_por_cobrar = fiados_por_cobrar().aggregate(
+        total=Sum('total')
+    )['total'] or Decimal('0.00')
+    egresos_hoy = egresos_en_rango(hoy, hoy)
+    total_egresos_hoy = total_decimal(egresos_hoy)
+    egresos_efectivo_hoy = total_decimal(
+        egresos_hoy.filter(metodo_pago=Egreso.PAGO_EFECTIVO)
+    )
+    efectivo_esperado = cobros_hoy['efectivo'] - egresos_efectivo_hoy
+    cierre_caja = CierreCajaDiario.objects.filter(fecha=hoy).first()
+    efectivo_contado = None
+    diferencia_caja = None
+    estado_caja = 'Sin cierre'
+
+    if cierre_caja:
+        efectivo_contado = cierre_caja.efectivo_contado
+        diferencia_caja = efectivo_contado - efectivo_esperado
+        estado_caja = estado_cierre_caja(diferencia_caja)
+
     pedidos_hoy = Pedido.objects.filter(
         fecha_pedido__date=hoy
     ).select_related(
@@ -1700,7 +1824,19 @@ def reporte_diario(request):
         'pedidos_entregados_hoy': comparativo_ventas[0]['pedidos'],
         'cancelados_hoy': cancelados_hoy,
         'cobrado_hoy': cobros_hoy['cobrado'],
+        'efectivo_cobrado_hoy': cobros_hoy['efectivo'],
+        'digital_cobrado_hoy': digital_cobrado_hoy,
         'fiado_hoy': pagos_hoy['fiado'],
+        'total_por_cobrar': total_por_cobrar,
+        'egresos_hoy': egresos_hoy,
+        'total_egresos_hoy': total_egresos_hoy,
+        'egresos_efectivo_hoy': egresos_efectivo_hoy,
+        'efectivo_esperado': efectivo_esperado,
+        'cierre_caja': cierre_caja,
+        'efectivo_contado': efectivo_contado,
+        'diferencia_caja': diferencia_caja,
+        'estado_caja': estado_caja,
+        'resumen_egresos_categoria_hoy': resumen_egresos_por_categoria(egresos_hoy),
         'comparativo_ventas': comparativo_ventas,
         'lectura_comparativo': lectura_comparativo,
         'detalle_diario_mes': detalle_diario_mes,
@@ -1776,6 +1912,9 @@ def reporte_semanal(request):
         metodo_pago=Pedido.PAGO_FIADO,
         fecha_pago__isnull=True
     ).aggregate(total=Sum('total'))['total'] or 0
+    egresos_semana = egresos_en_rango(inicio_semana, fin_semana)
+    total_egresos_semana = total_decimal(egresos_semana)
+    neto_semanal = cobros_semana['cobrado'] - total_egresos_semana
 
     context = {
         'hoy': hoy,
@@ -1798,6 +1937,12 @@ def reporte_semanal(request):
         'pendiente': pagos_semana['pendiente'],
         'cobrado': cobros_semana['cobrado'],
         'cuentas_por_cobrar': cuentas_por_cobrar,
+        'egresos_semana': egresos_semana,
+        'total_egresos_semana': total_egresos_semana,
+        'neto_semanal': neto_semanal,
+        'resumen_egresos_categoria_semana': resumen_egresos_por_categoria(
+            egresos_semana
+        ),
     }
 
     return render(request, 'core/reporte_semanal.html', context)
@@ -2130,7 +2275,7 @@ def editar_cliente(request, cliente_id):
         nombre = request.POST.get('nombre', '').strip()
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
-        referencia = request.POST.get('referencia', '').strip()
+        referencia = (cliente.referencia or '').strip()
         lugar_id_post = request.POST.get('lugar', '').strip()
         if 'lugar' not in request.POST or (
             cliente.lugar_id and lugar_id_post == str(cliente.lugar_id)
@@ -2290,15 +2435,15 @@ def registrar_cliente(request):
         nombre = request.POST.get('nombre', '').strip()
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
-        referencia = request.POST.get('referencia', '').strip()
+        referencia = ''
         lugar, error_lugar = leer_lugar_activo_post(request.POST)
         foto_referencia = request.FILES.get('foto_referencia')
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
             leer_ubicacion_cliente_post(request.POST)
         )
 
-        if error_lugar:
-            messages.error(request, error_lugar)
+        if error_lugar or lugar is None:
+            messages.error(request, 'Selecciona una zona válida para el cliente.')
             return redirect('registrar_cliente')
 
         if error_ubicacion:
@@ -2421,7 +2566,6 @@ def registrar_pedido(request):
         lugar, error_lugar = leer_lugar_activo_post(request.POST)
         estado = request.POST.get('estado', '').strip()
         observacion = request.POST.get('observacion', '').strip()
-        fecha_programada = request.POST.get('fecha_programada', '').strip()
 
         estados_validos = [
             Pedido.PENDIENTE,
@@ -2489,16 +2633,6 @@ def registrar_pedido(request):
             return redirect('registrar_pedido')
 
         fecha_programada_valor = timezone.localdate()
-
-        if fecha_programada:
-            try:
-                fecha_programada_valor = datetime.strptime(
-                    fecha_programada,
-                    '%Y-%m-%d'
-                ).date()
-            except ValueError:
-                messages.error(request, 'Fecha programada inválida.')
-                return redirect('registrar_pedido')
 
         if fecha_programada_valor < timezone.localdate():
             messages.error(request, 'La fecha programada no puede ser anterior a hoy.')
@@ -3092,8 +3226,6 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
     context = {
         'pedidos': pedidos_hoy,
         'pedidos_hoy': pedidos_hoy,
-        'pedidos_programados': [],
-        'total_pedidos_programados': 0,
         'entregas_hoy': entregas_hoy,
         'cancelados_hoy': cancelados_hoy,
         'total_bidones_hoy': total_bidones_hoy,
@@ -3199,15 +3331,12 @@ def panel_jefe_repartidores(request):
     context = {
         'pedidos_sin_asignar': pedidos_sin_asignar,
         'pedidos_asignados': pedidos_asignados,
-        'pedidos_programados': [],
         'repartidores': repartidores,
         'resumen_repartidores': resumen_repartidores,
         'total_pedidos_sin_asignar': total_pedidos_sin_asignar,
         'total_pedidos_asignados': total_pedidos_asignados,
-        'total_pedidos_programados': 0,
         'hay_mas_sin_asignar': total_pedidos_sin_asignar > PANEL_JEFE_LIMITE_PEDIDOS,
         'hay_mas_asignados': total_pedidos_asignados > PANEL_JEFE_LIMITE_PEDIDOS,
-        'hay_mas_programados': False,
         'hoy': hoy,
     }
 
@@ -3400,7 +3529,6 @@ def nuevo_pedido_repartidor(request):
         precio_unitario = request.POST.get('precio_unitario', '').strip()
         metodo_pago = leer_metodo_pago_post(request.POST)
         lugar, error_lugar = leer_lugar_activo_post(request.POST)
-        fecha_programada = request.POST.get('fecha_programada', '').strip()
         observacion = request.POST.get('observacion', '').strip()
         entregar_ahora = request.POST.get('entregar_ahora') == 'on'
 
@@ -3457,16 +3585,6 @@ def nuevo_pedido_repartidor(request):
             return redirect('nuevo_pedido_repartidor')
 
         fecha_programada_valor = timezone.localdate()
-
-        if fecha_programada and not entregar_ahora:
-            try:
-                fecha_programada_valor = datetime.strptime(
-                    fecha_programada,
-                    '%Y-%m-%d'
-                ).date()
-            except ValueError:
-                messages.error(request, 'Fecha programada inválida.')
-                return redirect('nuevo_pedido_repartidor')
 
         if fecha_programada_valor < timezone.localdate():
             messages.error(request, 'La fecha programada no puede ser anterior a hoy.')
@@ -3913,7 +4031,6 @@ def cambiar_estado_pedido(request, pedido_id, nuevo_estado):
             update_fields = ['lugar', *update_fields]
 
     if nuevo_estado == Pedido.REPROGRAMADO:
-        fecha_programada = request.POST.get('fecha_programada', '').strip()
 
         if not fecha_programada:
             messages.error(
