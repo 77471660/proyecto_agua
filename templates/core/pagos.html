@@ -60,9 +60,9 @@ Pagos - AquaSmart CRM
     <div class="col-md-4">
         <div class="card metric-card metric-warning h-100">
             <div class="card-body">
-                <h6 class="metric-label">Total por cobrar</h6>
+                <h6 class="metric-label">Saldo por cobrar</h6>
                 <div class="metric-value">S/ {{ total_por_cobrar|floatformat:2 }}</div>
-                <small class="text-muted">Fiados pendientes</small>
+                <small class="text-muted">Cr&eacute;ditos pendientes</small>
             </div>
         </div>
     </div>
@@ -71,9 +71,9 @@ Pagos - AquaSmart CRM
         <div class="col-md-4">
             <div class="card metric-card metric-warning h-100">
                 <div class="card-body">
-                    <h6 class="metric-label">Fiado del periodo</h6>
+                    <h6 class="metric-label">Cr&eacute;dito del periodo</h6>
                     <div class="metric-value">S/ {{ fiado_periodo|floatformat:2 }}</div>
-                    <small class="text-muted">Entregado como credito</small>
+                    <small class="text-muted">Entregado sin cobro inmediato</small>
                 </div>
             </div>
         </div>
@@ -96,7 +96,7 @@ Pagos - AquaSmart CRM
     <div class="alert alert-info mb-4">
         Hoy se cobro <strong>S/ {{ total_cobrado_hoy|floatformat:2 }}</strong>
         {% if fiado_hoy %}
-            y se entrego fiado por <strong>S/ {{ fiado_hoy|floatformat:2 }}</strong>.
+            y se otorgo credito por <strong>S/ {{ fiado_hoy|floatformat:2 }}</strong>.
         {% else %}
             .
         {% endif %}
@@ -114,41 +114,32 @@ Pagos - AquaSmart CRM
     <div class="card-body">
         <div class="row g-3">
             {% if efectivo_periodo %}
-                <div class="col-sm-6 col-xl-3">
+                <div class="col-md-4">
                     <div class="form-section mb-0 h-100">
-                        <div class="text-muted small">Efectivo</div>
+                        <div class="text-muted small">Cobrado en efectivo</div>
                         <div class="fs-4 fw-semibold">S/ {{ efectivo_periodo|floatformat:2 }}</div>
                     </div>
                 </div>
             {% endif %}
-            {% if yape_periodo %}
-                <div class="col-sm-6 col-xl-3">
+            {% if yape_periodo or plin_periodo or transferencia_periodo %}
+                <div class="col-md-4">
                     <div class="form-section mb-0 h-100">
-                        <div class="text-muted small">Yape</div>
-                        <div class="fs-4 fw-semibold">S/ {{ yape_periodo|floatformat:2 }}</div>
-                    </div>
-                </div>
-            {% endif %}
-            {% if plin_periodo %}
-                <div class="col-sm-6 col-xl-3">
-                    <div class="form-section mb-0 h-100">
-                        <div class="text-muted small">Plin</div>
-                        <div class="fs-4 fw-semibold">S/ {{ plin_periodo|floatformat:2 }}</div>
-                    </div>
-                </div>
-            {% endif %}
-            {% if transferencia_periodo %}
-                <div class="col-sm-6 col-xl-3">
-                    <div class="form-section mb-0 h-100">
-                        <div class="text-muted small">Transferencia</div>
-                        <div class="fs-4 fw-semibold">S/ {{ transferencia_periodo|floatformat:2 }}</div>
+                        <div class="text-muted small">Cobrado digital</div>
+                        <div class="fs-4 fw-semibold">
+                            S/ {{ yape_periodo|add:plin_periodo|add:transferencia_periodo|floatformat:2 }}
+                        </div>
+                        <small class="text-muted">
+                            Yape S/ {{ yape_periodo|floatformat:2 }} ·
+                            Plin S/ {{ plin_periodo|floatformat:2 }} ·
+                            Transferencia S/ {{ transferencia_periodo|floatformat:2 }}
+                        </small>
                     </div>
                 </div>
             {% endif %}
             {% if fiado_periodo %}
-                <div class="col-sm-6 col-xl-3">
+                <div class="col-md-4">
                     <div class="form-section mb-0 h-100">
-                        <div class="text-muted small">Fiado entregado</div>
+                        <div class="text-muted small">Cr&eacute;dito otorgado</div>
                         <div class="fs-4 fw-semibold">S/ {{ fiado_periodo|floatformat:2 }}</div>
                     </div>
                 </div>
@@ -172,7 +163,7 @@ Pagos - AquaSmart CRM
 
 <div class="card content-card mb-4">
     <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span>Fiados / cuentas por cobrar ({{ total_fiados_pendientes }})</span>
+        <span>Cr&eacute;ditos / saldo por cobrar ({{ total_fiados_pendientes }})</span>
         <span class="fw-semibold text-warning">S/ {{ total_por_cobrar|floatformat:2 }}</span>
     </div>
     <div class="card-body">
@@ -206,7 +197,7 @@ Pagos - AquaSmart CRM
                                         method="POST"
                                         action="{% url 'marcar_fiado_pagado' pedido.id %}"
                                         class="d-flex gap-2 align-items-center"
-                                        onsubmit="return confirm('\u00bfConfirmas registrar el pago de este fiado?')"
+                                        onsubmit="return confirm('\u00bfConfirmas registrar el pago de este cr&eacute;dito?')"
                                     >
                                         {% csrf_token %}
                                         <select name="metodo_pago_final" class="form-select form-select-sm" required aria-label="Metodo de cobro final">
@@ -274,13 +265,9 @@ Pagos - AquaSmart CRM
                             <th>Lugar</th>
                             <th>Entregados</th>
                             <th>Bidones</th>
-                            <th>Efectivo</th>
-                            <th>Yape</th>
-                            <th>Plin</th>
-                            <th>Transferencia</th>
-                            <th>Fiado</th>
-                            <th>Sin m&eacute;todo registrado</th>
-                            <th class="text-end">Total vendido</th>
+                            <th>Cobrado</th>
+                            <th>Cr&eacute;dito</th>
+                            <th class="text-end">Total del periodo</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -289,12 +276,21 @@ Pagos - AquaSmart CRM
                                 <td>{{ fila.nombre }}</td>
                                 <td>{{ fila.entregados }}</td>
                                 <td>{{ fila.bidones }}</td>
-                                <td>S/ {{ fila.efectivo|floatformat:2 }}</td>
-                                <td>S/ {{ fila.yape|floatformat:2 }}</td>
-                                <td>S/ {{ fila.plin|floatformat:2 }}</td>
-                                <td>S/ {{ fila.transferencia|floatformat:2 }}</td>
-                                <td>S/ {{ fila.fiado|floatformat:2 }}</td>
-                                <td>S/ {{ fila.pendiente|floatformat:2 }}</td>
+                                <td>
+                                    <span class="fw-semibold">S/ {{ fila.cobrado|floatformat:2 }}</span>
+                                    <small class="text-muted d-block">
+                                        Efectivo S/ {{ fila.efectivo|floatformat:2 }} ·
+                                        Digital S/ {{ fila.yape|add:fila.plin|add:fila.transferencia|floatformat:2 }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold">S/ {{ fila.fiado|floatformat:2 }}</span>
+                                    {% if fila.pendiente %}
+                                        <small class="text-muted d-block">
+                                            Sin m&eacute;todo S/ {{ fila.pendiente|floatformat:2 }}
+                                        </small>
+                                    {% endif %}
+                                </td>
                                 <td class="text-end fw-semibold">S/ {{ fila.total|floatformat:2 }}</td>
                             </tr>
                         {% endfor %}
