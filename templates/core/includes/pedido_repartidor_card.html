@@ -10,14 +10,6 @@
                     <span class="badge-estado badge-atrasado">
                         Atrasado
                     </span>
-                {% elif pedido.fecha_programada == hoy %}
-                    <span class="badge-estado badge-hoy">
-                        Hoy
-                    </span>
-                {% else %}
-                    <span class="badge-estado {{ pedido.fecha_programada_clase }}">
-                        {{ pedido.fecha_programada_texto }}
-                    </span>
                 {% endif %}
             </div>
 
@@ -92,12 +84,14 @@
                 <div class="order-value">{{ pedido.lugar|default:"Sin lugar asignado" }}</div>
             </div>
 
-            <div class="col-6">
-                <div class="order-label">Fecha programada</div>
-                <div class="order-value">
-                    {{ pedido.fecha_programada_texto }}
+            {% if pedido.fecha_programada and pedido.fecha_programada > hoy %}
+                <div class="col-12">
+                    <div class="order-label">Nota</div>
+                    <div class="order-value text-muted">
+                        Entrega posterior
+                    </div>
                 </div>
-            </div>
+            {% endif %}
 
             {% if pedido.observacion %}
                 <div class="col-12">

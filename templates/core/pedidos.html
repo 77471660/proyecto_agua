@@ -167,7 +167,7 @@ Pedidos - AquaSmart CRM
     <div>
         <h2>Lista de pedidos</h2>
         <small class="text-muted">
-            Seguimiento de entregas, cancelaciones y pedidos programados.
+            Seguimiento de entregas, cancelaciones y pedidos pendientes.
         </small>
     </div>
 
@@ -217,9 +217,6 @@ Pedidos - AquaSmart CRM
                         Cancelado
                     </option>
 
-                    <option value="REPROGRAMADO" {% if estado_actual == 'REPROGRAMADO' %}selected{% endif %}>
-                        Reprogramado
-                    </option>
                 </select>
             </div>
 
@@ -248,13 +245,6 @@ Pedidos - AquaSmart CRM
                 class="btn btn-sm {% if filtro_actual == 'hoy' %}btn-primary{% else %}btn-outline-primary{% endif %}"
             >
                 Hoy
-            </a>
-
-            <a
-                href="/pedidos/?filtro=programados"
-                class="btn btn-sm {% if filtro_actual == 'programados' %}btn-info text-white{% else %}btn-outline-info{% endif %}"
-            >
-                Programados
             </a>
 
             <a

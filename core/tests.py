@@ -1062,6 +1062,23 @@ class PermisosRolesTests(TestCase):
             f'value="{self.cliente.id}"'
         )
 
+    def test_flujo_principal_oculta_programacion_visible(self):
+        pedido = self.crear_pedido(self.repartidor)
+        self.client.force_login(self.secretaria)
+
+        registrar = self.client.get(reverse('registrar_pedido'))
+        self.assertNotContains(registrar, 'Fecha programada')
+        self.assertNotContains(registrar, 'Reprogramado')
+
+        self.client.force_login(self.repartidor)
+        repartidor = self.client.get(reverse('nuevo_pedido_repartidor'))
+        self.assertNotContains(repartidor, 'Fecha programada')
+
+        self.client.force_login(self.secretaria)
+        editar = self.client.get(reverse('editar_pedido', kwargs={'pedido_id': pedido.id}))
+        self.assertContains(editar, 'Ajuste avanzado')
+        self.assertContains(editar, 'Cambiar fecha')
+
     def test_registrar_pedido_sin_fecha_programada_usa_fecha_local_de_hoy(self):
         self.client.force_login(self.secretaria)
 
@@ -1207,7 +1224,7 @@ class PermisosRolesTests(TestCase):
         self.assertContains(response, pedido_asignado.cliente.nombre)
         self.assertNotContains(response, cliente_otro.nombre)
 
-    def test_panel_repartidor_separa_pedidos_hoy_y_programados(self):
+    def test_panel_repartidor_muestra_futuros_historicos_en_flujo_discreto(self):
         hoy = timezone.localdate()
         pedido_atrasado = self.crear_pedido(
             self.repartidor,
@@ -1228,16 +1245,17 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(pedido_atrasado, response.context['pedidos_hoy'])
         self.assertIn(pedido_hoy, response.context['pedidos_hoy'])
-        self.assertIn(pedido_manana, response.context['pedidos_programados'])
-        self.assertNotIn(pedido_manana, response.context['pedidos_hoy'])
+        self.assertIn(pedido_manana, response.context['pedidos_hoy'])
+        self.assertEqual(response.context['pedidos_programados'], [])
         self.assertEqual(
-            list(response.context['pedidos_hoy'])[:2],
-            [pedido_atrasado, pedido_hoy]
+            list(response.context['pedidos_hoy'])[:3],
+            [pedido_atrasado, pedido_hoy, pedido_manana]
         )
         self.assertContains(response, 'Pedidos pendientes')
-        self.assertContains(response, 'Ver pedidos programados (1)')
+        self.assertContains(response, 'Entrega posterior')
+        self.assertNotContains(response, 'Ver pedidos programados')
 
-    def test_panel_jefe_separa_pedidos_prioritarios_y_programados(self):
+    def test_panel_jefe_muestra_futuros_historicos_en_flujo_discreto(self):
         hoy = timezone.localdate()
         pedido_sin_asignar_hoy = self.crear_pedido(
             repartidor=None,
@@ -1266,13 +1284,11 @@ class PermisosRolesTests(TestCase):
         )
         self.assertIn(
             pedido_programado,
-            response.context['pedidos_programados']
-        )
-        self.assertNotIn(
-            pedido_programado,
             response.context['pedidos_asignados']
         )
-        self.assertContains(response, 'Pedidos programados futuros')
+        self.assertEqual(response.context['pedidos_programados'], [])
+        self.assertContains(response, 'Entrega posterior')
+        self.assertNotContains(response, 'Pedidos programados futuros')
 
     def test_asignar_pedido_cambia_estado_y_registra_timestamp(self):
         pedido = self.crear_pedido(None)

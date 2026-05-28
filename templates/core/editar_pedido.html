@@ -84,7 +84,11 @@ Editar pedido
                         </div>
                     </div>
 
-                    <div class="mb-3">
+                    <details class="mb-3">
+                        <summary class="text-muted small">
+                            Ajuste avanzado
+                        </summary>
+                        <div class="mt-2">
                         <label class="form-label" for="metodo_pago">
                             M&eacute;todo de pago
                         </label>
@@ -96,7 +100,8 @@ Editar pedido
                             <option value="TRANSFERENCIA" {% if pedido.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>Transferencia</option>
                             <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Fiado</option>
                         </select>
-                    </div>
+                        </div>
+                    </details>
 
                     <div class="mb-3">
                         <label class="form-label" for="lugar">Lugar / zona de entrega</label>
@@ -117,7 +122,7 @@ Editar pedido
 
                     <div class="mb-3">
                         <label class="form-label" for="fecha_programada">
-                            Fecha programada
+                            Cambiar fecha
                         </label>
                         <input
                             type="date"

@@ -2428,7 +2428,6 @@ def registrar_pedido(request):
             Pedido.ASIGNADO,
             Pedido.ENTREGADO,
             Pedido.CANCELADO,
-            Pedido.REPROGRAMADO,
         ]
 
         if not cliente_id:
@@ -2554,10 +2553,6 @@ def registrar_pedido(request):
                 request,
                 'Selecciona el lugar del pedido antes de finalizar.'
             )
-            return redirect('registrar_pedido')
-
-        if estado == Pedido.REPROGRAMADO and fecha_programada_valor <= timezone.localdate():
-            messages.error(request, 'Un pedido reprogramado debe tener fecha futura.')
             return redirect('registrar_pedido')
 
         with transaction.atomic():
@@ -2696,9 +2691,9 @@ def editar_pedido(request, pedido_id):
             )
             return redirect('editar_pedido', pedido_id=pedido.id)
 
-        fecha_programada_valor = timezone.localdate()
+        fecha_programada_valor = pedido.fecha_programada or timezone.localdate()
 
-        if fecha_programada:
+        if 'fecha_programada' in request.POST and fecha_programada:
             try:
                 fecha_programada_valor = datetime.strptime(
                     fecha_programada,
@@ -2707,6 +2702,8 @@ def editar_pedido(request, pedido_id):
             except ValueError:
                 messages.error(request, 'Fecha programada inválida.')
                 return redirect('editar_pedido', pedido_id=pedido.id)
+        elif 'fecha_programada' in request.POST and not fecha_programada:
+            fecha_programada_valor = timezone.localdate()
 
         if fecha_programada_valor < timezone.localdate():
             messages.error(
@@ -2960,7 +2957,6 @@ def lista_pedidos(request, template_name='core/pedidos.html'):
     filtros_validos = [
         'hoy',
         'atrasados',
-        'programados',
         'entregados',
         'cancelados',
     ]
@@ -2977,11 +2973,6 @@ def lista_pedidos(request, template_name='core/pedidos.html'):
             pedidos = pedidos.filter(
                 estado__in=Pedido.ESTADOS_ACTIVOS,
                 fecha_programada__lt=hoy
-            )
-        elif filtro == 'programados':
-            pedidos = pedidos.filter(
-                estado__in=Pedido.ESTADOS_ACTIVOS,
-                fecha_programada__gt=hoy
             )
         elif filtro == 'entregados':
             pedidos = pedidos.filter(
@@ -3019,6 +3010,7 @@ def lista_pedidos(request, template_name='core/pedidos.html'):
         'busqueda': busqueda,
         'estado_actual': estado,
         'filtro_actual': filtro,
+        'hoy': hoy,
         'lugares': Lugar.objects.filter(activo=True).order_by('orden', 'nombre'),
     }
 
@@ -3044,10 +3036,7 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
         )
     )
 
-    pedidos_hoy = pedidos_base.filter(
-        Q(fecha_programada__lte=hoy)
-        | Q(fecha_programada__isnull=True)
-    ).order_by(
+    pedidos_hoy = pedidos_base.order_by(
         'fecha_programada',
         'fecha_pedido'
     )
@@ -3055,18 +3044,6 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
     pedidos_hoy = [
         preparar_pedido_repartidor(pedido)
         for pedido in pedidos_hoy
-    ]
-
-    pedidos_programados = pedidos_base.filter(
-        fecha_programada__gt=hoy
-    ).order_by(
-        'fecha_programada',
-        'fecha_pedido'
-    )
-
-    pedidos_programados = [
-        preparar_pedido_repartidor(pedido)
-        for pedido in pedidos_programados
     ]
 
     entregas_hoy = Pedido.objects.filter(
@@ -3115,8 +3092,8 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
     context = {
         'pedidos': pedidos_hoy,
         'pedidos_hoy': pedidos_hoy,
-        'pedidos_programados': pedidos_programados,
-        'total_pedidos_programados': len(pedidos_programados),
+        'pedidos_programados': [],
+        'total_pedidos_programados': 0,
         'entregas_hoy': entregas_hoy,
         'cancelados_hoy': cancelados_hoy,
         'total_bidones_hoy': total_bidones_hoy,
@@ -3144,9 +3121,6 @@ def panel_jefe_repartidores(request):
     pedidos_sin_asignar_queryset = Pedido.objects.filter(
         estado=Pedido.PENDIENTE,
         repartidor__isnull=True,
-    ).filter(
-        Q(fecha_programada__lte=hoy)
-        | Q(fecha_programada__isnull=True)
     ).select_related(
         'cliente'
     ).order_by(
@@ -3167,9 +3141,6 @@ def panel_jefe_repartidores(request):
             Pedido.REPROGRAMADO,
         ],
         repartidor__isnull=False,
-    ).filter(
-        Q(fecha_programada__lte=hoy)
-        | Q(fecha_programada__isnull=True)
     ).select_related(
         'cliente',
         'repartidor'
@@ -3184,30 +3155,10 @@ def panel_jefe_repartidores(request):
         pedidos_asignados_queryset[:PANEL_JEFE_LIMITE_PEDIDOS]
     )
 
-    pedidos_programados_queryset = Pedido.objects.filter(
-        estado__in=Pedido.ESTADOS_ACTIVOS,
-        fecha_programada__gt=hoy
-    ).select_related(
-        'cliente',
-        'repartidor'
-    ).order_by(
-        'fecha_programada',
-        'fecha_pedido',
-        'repartidor__username'
-    )
-
-    total_pedidos_programados = pedidos_programados_queryset.count()
-    pedidos_programados = list(
-        pedidos_programados_queryset[:PANEL_JEFE_LIMITE_PEDIDOS]
-    )
-
     for pedido in pedidos_sin_asignar:
         preparar_pedido_panel_jefe(pedido)
 
     for pedido in pedidos_asignados:
-        preparar_pedido_panel_jefe(pedido)
-
-    for pedido in pedidos_programados:
         preparar_pedido_panel_jefe(pedido)
 
     resumen_repartidores = []
@@ -3248,15 +3199,16 @@ def panel_jefe_repartidores(request):
     context = {
         'pedidos_sin_asignar': pedidos_sin_asignar,
         'pedidos_asignados': pedidos_asignados,
-        'pedidos_programados': pedidos_programados,
+        'pedidos_programados': [],
         'repartidores': repartidores,
         'resumen_repartidores': resumen_repartidores,
         'total_pedidos_sin_asignar': total_pedidos_sin_asignar,
         'total_pedidos_asignados': total_pedidos_asignados,
-        'total_pedidos_programados': total_pedidos_programados,
+        'total_pedidos_programados': 0,
         'hay_mas_sin_asignar': total_pedidos_sin_asignar > PANEL_JEFE_LIMITE_PEDIDOS,
         'hay_mas_asignados': total_pedidos_asignados > PANEL_JEFE_LIMITE_PEDIDOS,
-        'hay_mas_programados': total_pedidos_programados > PANEL_JEFE_LIMITE_PEDIDOS,
+        'hay_mas_programados': False,
+        'hoy': hoy,
     }
 
     return render(

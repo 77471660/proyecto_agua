@@ -213,7 +213,7 @@ Gestión de repartos - AquaSmart CRM
                         <th>Referencia</th>
                         <th>Bidones</th>
                         <th>Total</th>
-                        <th>Fecha programada</th>
+                        <th>Nota</th>
                         <th>Tiempo esperando</th>
                         <th>Asignar</th>
                         <th>Acciones</th>
@@ -235,7 +235,13 @@ Gestión de repartos - AquaSmart CRM
                             <td class="fw-semibold text-success">
                                 S/ {{ pedido.total|floatformat:2 }}
                             </td>
-                            <td>{{ pedido.fecha_programada|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if pedido.fecha_programada and pedido.fecha_programada > hoy %}
+                                    <span class="text-muted small">Entrega posterior</span>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <span class="badge-estado {{ pedido.badge_tiempo_panel }}">
                                     {{ pedido.tiempo_panel }}
@@ -399,7 +405,7 @@ Gestión de repartos - AquaSmart CRM
                         <th>Dirección</th>
                         <th>Bidones</th>
                         <th>Total</th>
-                        <th>Fecha programada</th>
+                        <th>Nota</th>
                         <th>Tiempo esperando</th>
                         <th>Reasignar</th>
                         <th>Acciones</th>
@@ -432,7 +438,13 @@ Gestión de repartos - AquaSmart CRM
                             <td class="fw-semibold text-success">
                                 S/ {{ pedido.total|floatformat:2 }}
                             </td>
-                            <td>{{ pedido.fecha_programada|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if pedido.fecha_programada and pedido.fecha_programada > hoy %}
+                                    <span class="text-muted small">Entrega posterior</span>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <span class="badge-estado {{ pedido.badge_tiempo_panel }}">
                                     {{ pedido.tiempo_panel }}
@@ -591,6 +603,7 @@ Gestión de repartos - AquaSmart CRM
     </div>
 </div>
 
+{% comment %}
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-info text-white">
         Pedidos programados futuros
@@ -706,6 +719,7 @@ Gestión de repartos - AquaSmart CRM
         {% endif %}
     </div>
 </div>
+{% endcomment %}
 
 </div>
 

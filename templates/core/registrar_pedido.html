@@ -54,7 +54,7 @@ Registrar pedido - AquaSmart CRM
 <div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3">
     <div>
         <h2>Registrar pedido</h2>
-        <small class="text-muted">Crear pedido, asignación y programación de entrega.</small>
+        <small class="text-muted">Crear pedido y asignar la atención operativa.</small>
     </div>
 </div>
 
@@ -278,24 +278,7 @@ Registrar pedido - AquaSmart CRM
                     </div>
 
                     <div class="form-section">
-                        <div class="form-section-title">Programación y estado</div>
-
-                        <div class="mb-3">
-                            <label class="form-label">
-                                Fecha programada
-                            </label>
-
-                            <input
-                                type="date"
-                                name="fecha_programada"
-                                class="form-control"
-                                min="{{ hoy|date:'Y-m-d' }}"
-                            >
-
-                            <small class="text-muted">
-                                Déjalo vacío si el pedido será entregado hoy.
-                            </small>
-                        </div>
+                        <div class="form-section-title">Estado y pago</div>
 
                         <div class="mb-0">
                             <label class="form-label">
@@ -323,9 +306,6 @@ Registrar pedido - AquaSmart CRM
                                     Cancelado
                                 </option>
 
-                                <option value="REPROGRAMADO">
-                                    Reprogramado
-                                </option>
                             </select>
                         </div>
 

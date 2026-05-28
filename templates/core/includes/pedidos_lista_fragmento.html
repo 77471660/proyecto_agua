@@ -38,12 +38,10 @@
                             <td class="order-date-cell col-order-date">
                                 <div>{{ pedido.fecha_pedido|date:"d/m/Y" }}</div>
                                 <small class="text-muted">{{ pedido.fecha_pedido|date:"H:i" }}</small>
-                                {% if pedido.programacion_texto %}
-                                    <div class="temporal-priority mt-1">
-                                        <span class="badge-estado {{ pedido.programacion_clase }}">
-                                            {{ pedido.programacion_texto }}
-                                        </span>
-                                    </div>
+                                {% if pedido.fecha_programada and pedido.fecha_programada > hoy %}
+                                    <small class="text-muted d-block mt-1">
+                                        Entrega posterior
+                                    </small>
                                 {% endif %}
                             </td>
                             <td class="text-center col-order-qty">{{ pedido.cantidad_bidones }}</td>

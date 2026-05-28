@@ -77,7 +77,7 @@
                 <h6 class="mb-1">Alerta operativa</h6>
                 {% if pedidos_urgentes %}
                     <p class="mb-0 text-muted">
-                        Hay {{ total_pedidos_urgentes }} pedido(s) atrasado(s) o programado(s) para hoy.
+                        Hay {{ total_pedidos_urgentes }} pedido(s) pendiente(s) que requieren atención.
                     </p>
                 {% elif recomendaciones %}
                     <p class="mb-0 text-muted">
@@ -108,7 +108,7 @@
 <!-- PEDIDOS URGENTES -->
 <div class="section-title">
     <h5>Pedidos urgentes</h5>
-    <small>Atrasados o programados para hoy</small>
+    <small>Pendientes que requieren atención</small>
 </div>
 
 <div class="card content-card mb-4">
@@ -120,7 +120,7 @@
                         <tr>
                             <th>Cliente</th>
                             <th>Telefono</th>
-                            <th>Fecha programada</th>
+                            <th>Fecha</th>
                             <th>Tiempo esperando</th>
                             <th>Bidones</th>
                             <th>Total</th>
