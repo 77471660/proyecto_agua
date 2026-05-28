@@ -2,37 +2,17 @@
 
 <!-- OPERACION DEL DIA -->
 <div class="section-title">
-    <h5>Operación de hoy</h5>
-    <small>Indicadores principales del día</small>
+    <h5>Operacion de hoy</h5>
+    <small>Indicadores principales del dia</small>
 </div>
 
 <div class="row mb-3">
     <div class="col-md-3 mb-3">
-        <div class="card metric-card h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Bidones vendidos hoy</h6>
-                <div class="metric-value">{{ bidones_hoy }}</div>
-                <small class="text-muted">Solo pedidos entregados</small>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3 mb-3">
         <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="metric-label">Ventas de hoy</h6>
+                <h6 class="metric-label">Vendido hoy</h6>
                 <div class="metric-value">S/ {{ ventas_hoy|floatformat:2 }}</div>
                 <small class="text-muted">Ventas entregadas hoy</small>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3 mb-3">
-        <div class="card metric-card metric-warning h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Pedidos registrados hoy</h6>
-                <div class="metric-value">{{ pedidos_hoy }}</div>
-                <small class="text-muted">Registrados hoy</small>
             </div>
         </div>
     </div>
@@ -46,46 +26,80 @@
             </div>
         </div>
     </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Bidones vendidos hoy</h6>
+                <div class="metric-value">{{ bidones_hoy }}</div>
+                <small class="text-muted">Solo pedidos entregados</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card metric-warning h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Pedidos registrados hoy</h6>
+                <div class="metric-value">{{ pedidos_hoy }}</div>
+                <small class="text-muted">Registrados hoy</small>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="row mb-3">
-    <div class="col-sm-6 col-xl mb-3">
-        <div class="card metric-card h-100">
-            <div class="card-body py-3">
-                <h6 class="metric-label">Efectivo hoy</h6>
-                <div class="metric-value">S/ {{ efectivo_hoy|floatformat:2 }}</div>
+<div class="card toolbar-card mb-4">
+    <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h6 class="mb-1">Finanzas de hoy</h6>
+                <small class="text-muted">Cobros y deuda pendiente</small>
+            </div>
+
+            <div class="d-flex flex-wrap gap-3">
+                <div>
+                    <small class="text-muted d-block">Cobrado hoy</small>
+                    <strong class="fs-5 text-success">S/ {{ total_cobrado_hoy|floatformat:2 }}</strong>
+                </div>
+                <div>
+                    <small class="text-muted d-block">Por cobrar</small>
+                    <strong class="fs-5 text-warning">S/ {{ total_por_cobrar|floatformat:2 }}</strong>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl mb-3">
-        <div class="card metric-card metric-info h-100">
-            <div class="card-body py-3">
-                <h6 class="metric-label">Yape hoy</h6>
-                <div class="metric-value">S/ {{ yape_hoy|floatformat:2 }}</div>
+</div>
+
+<div class="card content-card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h6 class="mb-1">Alerta operativa</h6>
+                {% if pedidos_urgentes %}
+                    <p class="mb-0 text-muted">
+                        Hay {{ total_pedidos_urgentes }} pedido(s) atrasado(s) o programado(s) para hoy.
+                    </p>
+                {% elif recomendaciones %}
+                    <p class="mb-0 text-muted">
+                        {{ recomendaciones.0 }}
+                    </p>
+                {% else %}
+                    <div class="empty-state mt-2">
+                        Sin alertas operativas por ahora.
+                    </div>
+                {% endif %}
             </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl mb-3">
-        <div class="card metric-card metric-warning h-100">
-            <div class="card-body py-3">
-                <h6 class="metric-label">Fiado hoy</h6>
-                <div class="metric-value">S/ {{ fiado_hoy|floatformat:2 }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl mb-3">
-        <div class="card metric-card metric-warning h-100">
-            <div class="card-body py-3">
-                <h6 class="metric-label">Total por cobrar</h6>
-                <div class="metric-value">S/ {{ total_por_cobrar|floatformat:2 }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl mb-3">
-        <div class="card metric-card metric-success h-100">
-            <div class="card-body py-3">
-                <h6 class="metric-label">Total cobrado hoy</h6>
-                <div class="metric-value">S/ {{ total_cobrado_hoy|floatformat:2 }}</div>
+
+            <div class="d-flex flex-wrap gap-2 justify-content-start justify-content-md-end">
+                {% if clientes_activos > 0 %}
+                    <span class="badge-estado badge-entregado">{{ clientes_activos }} activos</span>
+                {% endif %}
+                {% if clientes_riesgo > 0 %}
+                    <span class="badge-estado badge-pendiente">{{ clientes_riesgo }} en riesgo</span>
+                {% endif %}
+                {% if clientes_abandonados > 0 %}
+                    <span class="badge-estado badge-atrasado">{{ clientes_abandonados }} abandonados</span>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -105,7 +119,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>Cliente</th>
-                            <th>Teléfono</th>
+                            <th>Telefono</th>
                             <th>Fecha programada</th>
                             <th>Tiempo esperando</th>
                             <th>Bidones</th>

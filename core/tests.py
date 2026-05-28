@@ -932,10 +932,21 @@ class PermisosRolesTests(TestCase):
             fragment,
             'core/includes/dashboard_admin_fragmento.html'
         )
+        self.assertContains(fragment, 'Vendido hoy')
+        self.assertContains(fragment, 'Pendientes por atender')
+        self.assertContains(fragment, 'Bidones vendidos hoy')
+        self.assertContains(fragment, 'Pedidos registrados hoy')
+        self.assertContains(fragment, 'Cobrado hoy')
+        self.assertContains(fragment, 'Por cobrar')
+        self.assertContains(fragment, 'Alerta operativa')
         self.assertContains(fragment, 'Pedidos urgentes')
-        self.assertContains(fragment, 'Resumen general')
-        self.assertContains(fragment, 'Ranking de clientes frecuentes')
-        self.assertContains(fragment, 'Lectura inteligente simple')
+        self.assertNotContains(fragment, 'Resumen general')
+        self.assertNotContains(fragment, 'Estado de pedidos')
+        self.assertNotContains(fragment, 'Estado de clientes')
+        self.assertNotContains(fragment, 'Ranking de clientes frecuentes')
+        self.assertNotContains(fragment, 'Lectura inteligente simple')
+        self.assertNotContains(fragment, 'Sin historial')
+        self.assertNotContains(fragment, 'eco_agua_banner_dashboard')
         self.assertNotContains(fragment, 'Buscar cliente')
 
     def test_clientes_refresca_fragmento_con_clientes_actuales(self):
@@ -2475,7 +2486,7 @@ class PermisosRolesTests(TestCase):
 
         self.assertEqual(response.context['efectivo_hoy'], Decimal('14.00'))
         self.assertEqual(response.context['yape_hoy'], Decimal('0.00'))
-        self.assertContains(response, 'Total cobrado hoy')
+        self.assertContains(response, 'Cobrado hoy')
 
     def test_dashboard_diario_y_pagos_usan_fecha_local_cerca_de_medianoche(self):
         hoy = timezone.localdate()
