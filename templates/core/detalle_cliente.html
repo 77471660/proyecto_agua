@@ -175,11 +175,6 @@ Detalle del cliente
                 </p>
 
                 <p>
-                    <strong>Referencia:</strong><br>
-                    {{ cliente.referencia|default:"No registrada" }}
-                </p>
-
-                <p>
                     <strong>Referencia para llegar:</strong><br>
                     {{ cliente.referencia_ubicacion|default:"No registrada" }}
                 </p>
@@ -316,9 +311,15 @@ Detalle del cliente
                 <td>
                     S/ {{ pedido.total|floatformat:2 }}
                     <small class="d-block text-muted">
-                        Pago: {{ pedido.get_metodo_pago_display }}
-                        {% if pedido.metodo_pago == 'FIADO' and pedido.fecha_pago %}
-                            - cobrado por {{ pedido.get_metodo_pago_final_display }}
+                        Pago:
+                        {% if pedido.metodo_pago == 'FIADO' %}
+                            {% if pedido.fecha_pago %}
+                                Cobrado ({{ pedido.get_metodo_pago_final_display }})
+                            {% else %}
+                                Cr&eacute;dito pendiente
+                            {% endif %}
+                        {% else %}
+                            {{ pedido.get_metodo_pago_display }}
                         {% endif %}
                     </small>
                     <small class="d-block text-muted">
@@ -368,7 +369,7 @@ Detalle del cliente
                                     <form
                                         method="POST"
                                         action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}"
-                                        onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')"
+                                        onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar a cr\u00e9dito? Este pedido quedar\u00e1 como saldo por cobrar.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')"
                                     >
                                         {% csrf_token %}
                                         {% include 'core/includes/lugar_para_finalizar.html' with accion='entregar' %}
@@ -378,7 +379,7 @@ Detalle del cliente
                                             <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
                                             <option value="PLIN" {% if pedido.metodo_pago == 'PLIN' %}selected{% endif %}>Plin</option>
                                             <option value="TRANSFERENCIA" {% if pedido.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>Transferencia</option>
-                                            <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Fiado</option>
+                                            <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Cr&eacute;dito</option>
                                         </select>
                                         <button
                                             type="submit"
@@ -525,10 +526,22 @@ Detalle del cliente
                                             {% endif %}
                                         </td>
                                         <td class="client-history-description">
-                                            <div>{{ item.descripcion }}</div>
+                                            <div>
+                                                {% if item.descripcion == 'Cobro posterior de pedido fiado registrado.' %}
+                                                    Cobro posterior de cr&eacute;dito registrado.
+                                                {% else %}
+                                                    {{ item.descripcion }}
+                                                {% endif %}
+                                            </div>
                                             {% if item.valor_anterior or item.valor_nuevo %}
                                                 <small class="text-muted client-history-values">
-                                                    Antes: {{ item.valor_anterior|default:"-" }}<br>
+                                                    Antes:
+                                                    {% if item.valor_anterior == 'Fiado pendiente' %}
+                                                        Cr&eacute;dito pendiente
+                                                    {% else %}
+                                                        {{ item.valor_anterior|default:"-" }}
+                                                    {% endif %}
+                                                    <br>
                                                     Ahora: {{ item.valor_nuevo|default:"-" }}
                                                 </small>
                                             {% endif %}

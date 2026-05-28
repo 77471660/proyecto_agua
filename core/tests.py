@@ -149,6 +149,21 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(self.cliente.maps_label, 'Sin ubicaci\u00f3n')
         self.assertEqual(self.cliente.obtener_maps_url(), '')
 
+    def test_detalle_cliente_muestra_solo_referencia_para_llegar(self):
+        self.cliente.referencia = 'Referencia antigua'
+        self.cliente.referencia_ubicacion = 'Porton negro'
+        self.cliente.save(update_fields=['referencia', 'referencia_ubicacion'])
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(
+            reverse('detalle_cliente', kwargs={'cliente_id': self.cliente.id})
+        )
+
+        self.assertContains(response, 'Referencia para llegar')
+        self.assertContains(response, 'Porton negro')
+        self.assertNotContains(response, '<strong>Referencia:</strong>', html=False)
+        self.assertNotContains(response, 'Referencia antigua')
+
     def test_cliente_valida_rango_de_coordenadas(self):
         self.cliente.latitud = Decimal('91.000000')
         self.cliente.longitud = Decimal('-77.042793')
