@@ -6,13 +6,14 @@
                     <tr>
                         <th class="col-order-id">ID</th>
                         <th class="col-order-client">Cliente</th>
-                        <th class="col-order-driver">Repartidor</th>
-                        <th class="col-order-date">Fecha / prioridad</th>
-                        <th class="text-center col-order-qty">Cantidad</th>
-                        <th class="text-end col-order-total">Total</th>
                         <th>Estado</th>
-                        <th class="col-order-notes">Observaci&oacute;n</th>
-                        <th class="col-order-actions">Acciones</th>
+                        <th class="col-order-date">Fecha / prioridad</th>
+                        <th class="text-center col-order-qty">Cant.</th>
+                        <th class="text-end col-order-total">Total</th>
+                        <th class="col-order-payment">Pago</th>
+                        <th class="col-order-place">Lugar</th>
+                        <th class="col-order-driver">Repartidor</th>
+                        <th class="col-order-actions">Gestion</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -23,6 +24,35 @@
                                 <div class="fw-semibold order-client-name" title="{{ pedido.cliente.nombre }}">
                                     {{ pedido.cliente.nombre }}
                                 </div>
+                                {% if pedido.observacion %}
+                                    <small class="order-note-compact d-block" title="{{ pedido.observacion }}">
+                                        {{ pedido.observacion }}
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge-estado {{ pedido.badge_estado_clase }}">
+                                    {{ pedido.get_estado_display }}
+                                </span>
+                            </td>
+                            <td class="order-date-cell col-order-date">
+                                <div>{{ pedido.fecha_pedido|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ pedido.fecha_pedido|date:"H:i" }}</small>
+                                {% if pedido.programacion_texto %}
+                                    <div class="temporal-priority mt-1">
+                                        <span class="badge-estado {{ pedido.programacion_clase }}">
+                                            {{ pedido.programacion_texto }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center col-order-qty">{{ pedido.cantidad_bidones }}</td>
+                            <td class="text-end money-cell col-order-total">S/ {{ pedido.total|floatformat:2 }}</td>
+                            <td class="col-order-payment">
+                                <span class="text-muted small">{{ pedido.get_metodo_pago_display }}</span>
+                            </td>
+                            <td class="col-order-place">
+                                <span class="text-muted small">{{ pedido.lugar|default:"Sin lugar asignado" }}</span>
                             </td>
                             <td class="col-order-driver">
                                 {% if pedido.repartidor %}
@@ -37,77 +67,114 @@
                                     <span class="badge-estado badge-muted">Sin asignar</span>
                                 {% endif %}
                             </td>
-                            <td class="order-date-cell col-order-date">
-                                <div>{{ pedido.fecha_pedido|date:"d/m/Y" }}</div>
-                                <small class="text-muted">{{ pedido.fecha_pedido|date:"H:i" }}</small>
-                                {% if pedido.programacion_texto %}
-                                    <div class="temporal-priority mt-1">
-                                        <span class="temporal-label">Prioridad</span>
-                                        <span class="badge-estado {{ pedido.programacion_clase }}">
-                                            {{ pedido.programacion_texto }}
-                                        </span>
-                                    </div>
-                                {% endif %}
-                            </td>
-                            <td class="text-center col-order-qty">{{ pedido.cantidad_bidones }}</td>
-                            <td class="text-end money-cell col-order-total">S/ {{ pedido.total|floatformat:2 }}</td>
-                            <td>
-                                <span class="badge-estado {{ pedido.badge_estado_clase }}">
-                                    {{ pedido.get_estado_display }}
-                                </span>
-                                <small class="d-block text-muted mt-1">
-                                    Pago: {{ pedido.get_metodo_pago_display }}
-                                </small>
-                                <small class="d-block text-muted">
-                                    Lugar: {{ pedido.lugar|default:"Sin lugar asignado" }}
-                                </small>
-                            </td>
-                            <td class="col-order-notes">
-                                {% if pedido.observacion %}
-                                    <span class="order-note-compact" title="{{ pedido.observacion }}">{{ pedido.observacion }}</span>
-                                {% else %}
-                                    <span class="order-note-empty">Sin obs.</span>
-                                {% endif %}
-                            </td>
                             <td class="col-order-actions">
                                 {% if pedido.esta_activo %}
-                                    <details class="order-actions-menu" data-refresh-key="pedido-admin-{{ pedido.id }}">
-                                        <summary class="btn btn-sm btn-outline-secondary">Acciones &#9662;</summary>
-                                        <div class="order-actions-panel">
-                                            {% if pedido.estado != 'EN_RUTA' %}
-                                                <form method="POST" action="{% url 'cambiar_estado_pedido' pedido.id 'EN_RUTA' %}" data-confirm="Marcar en ruta?">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="btn btn-sm btn-outline-primary">En ruta</button>
-                                                </form>
-                                            {% endif %}
-                                            <form method="POST" action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}" onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')">
-                                                {% csrf_token %}
-                                                {% include 'core/includes/lugar_para_finalizar.html' with accion='entregar' %}
-                                                <select name="metodo_pago" class="form-select form-select-sm mb-2" aria-label="Metodo de pago" required>
-                                                    <option value="" {% if pedido.metodo_pago == 'PENDIENTE' %}selected{% endif %} disabled>Selecciona pago</option>
-                                                    <option value="EFECTIVO" {% if pedido.metodo_pago == 'EFECTIVO' %}selected{% endif %}>Efectivo</option>
-                                                    <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
-                                                    <option value="PLIN" {% if pedido.metodo_pago == 'PLIN' %}selected{% endif %}>Plin</option>
-                                                    <option value="TRANSFERENCIA" {% if pedido.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>Transferencia</option>
-                                                    <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Fiado</option>
-                                                </select>
-                                                <button type="submit" class="btn btn-sm btn-success">Entregar</button>
-                                            </form>
-                                            <form method="POST" action="{% url 'cambiar_estado_pedido' pedido.id 'CANCELADO' %}" onsubmit="return confirm('\u00bfSeguro que deseas cancelar este pedido?')">
-                                                {% csrf_token %}
-                                                {% include 'core/includes/lugar_para_finalizar.html' with accion='cancelar' %}
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
-                                            </form>
-                                        </div>
-                                    </details>
+                                    <button
+                                        class="btn btn-sm btn-outline-secondary"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#gestion-pedido-{{ pedido.id }}"
+                                        aria-expanded="false"
+                                        aria-controls="gestion-pedido-{{ pedido.id }}"
+                                    >
+                                        Gestionar
+                                    </button>
                                 {% else %}
                                     <span class="text-muted small">Sin acciones</span>
                                 {% endif %}
                             </td>
                         </tr>
+
+                        {% if pedido.esta_activo %}
+                            <tr class="order-management-row">
+                                <td colspan="10" class="p-0">
+                                    <div id="gestion-pedido-{{ pedido.id }}" class="collapse" data-refresh-key="pedido-admin-{{ pedido.id }}">
+                                        <div class="order-management-panel">
+                                            <div class="order-management-heading">
+                                                <strong>Gestionar pedido #{{ pedido.id }}</strong>
+                                                <span class="text-muted small">
+                                                    {{ pedido.cliente.nombre }}
+                                                </span>
+                                            </div>
+
+                                            <div class="order-management-actions">
+                                                {% if pedido.estado != 'EN_RUTA' %}
+                                                    <form
+                                                        method="POST"
+                                                        action="{% url 'cambiar_estado_pedido' pedido.id 'EN_RUTA' %}"
+                                                        data-confirm="Marcar en ruta?"
+                                                        class="order-management-form order-management-route"
+                                                    >
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                            En ruta
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+
+                                                <form
+                                                    method="POST"
+                                                    action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}"
+                                                    onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')"
+                                                    class="order-management-form order-management-deliver"
+                                                >
+                                                    {% csrf_token %}
+                                                    <div class="order-management-fields {% if pedido.lugar %}order-management-fields-compact{% endif %}">
+                                                        {% if not pedido.lugar %}
+                                                            <div>
+                                                                {% include 'core/includes/lugar_para_finalizar.html' with accion='entregar' %}
+                                                            </div>
+                                                        {% endif %}
+                                                        <div>
+                                                            <label class="form-label mb-1" for="metodo-pago-{{ pedido.id }}">
+                                                                Pago
+                                                            </label>
+                                                            <select id="metodo-pago-{{ pedido.id }}" name="metodo_pago" class="form-select form-select-sm" aria-label="Metodo de pago" required>
+                                                                <option value="" {% if pedido.metodo_pago == 'PENDIENTE' %}selected{% endif %} disabled>Selecciona pago</option>
+                                                                <option value="EFECTIVO" {% if pedido.metodo_pago == 'EFECTIVO' %}selected{% endif %}>Efectivo</option>
+                                                                <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
+                                                                <option value="PLIN" {% if pedido.metodo_pago == 'PLIN' %}selected{% endif %}>Plin</option>
+                                                                <option value="TRANSFERENCIA" {% if pedido.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>Transferencia</option>
+                                                                <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Fiado</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="order-management-submit">
+                                                            <button type="submit" class="btn btn-sm btn-success">
+                                                                Entregar
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+
+                                                <form
+                                                    method="POST"
+                                                    action="{% url 'cambiar_estado_pedido' pedido.id 'CANCELADO' %}"
+                                                    onsubmit="return confirm('\u00bfSeguro que deseas cancelar este pedido?')"
+                                                    class="order-management-form order-management-cancel"
+                                                >
+                                                    {% csrf_token %}
+                                                    <div class="order-management-fields {% if pedido.lugar %}order-management-fields-button{% endif %}">
+                                                        {% if not pedido.lugar %}
+                                                            <div>
+                                                                {% include 'core/includes/lugar_para_finalizar.html' with accion='cancelar' %}
+                                                            </div>
+                                                        {% endif %}
+                                                        <div class="order-management-submit">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                Cancelar
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
                     {% empty %}
                         <tr>
-                            <td colspan="9">
+                            <td colspan="10">
                                 <div class="empty-state">No se encontraron pedidos.</div>
                             </td>
                         </tr>

@@ -16,27 +16,28 @@ Pedidos - AquaSmart CRM
     }
 
     .orders-table .col-order-driver {
-        width: 8.5rem;
+        width: 8rem;
     }
 
     .orders-table .col-order-date {
-        width: 9rem;
+        width: 8.5rem;
     }
 
     .orders-table .col-order-qty {
-        width: 4.5rem;
+        width: 4rem;
     }
 
     .orders-table .col-order-total {
         width: 5.75rem;
     }
 
-    .orders-table .col-order-notes {
-        width: 5.75rem;
+    .orders-table .col-order-payment,
+    .orders-table .col-order-place {
+        width: 7rem;
     }
 
     .orders-table .col-order-actions {
-        width: 7.5rem;
+        width: 6.75rem;
     }
 
     .orders-table th,
@@ -61,7 +62,7 @@ Pedidos - AquaSmart CRM
 
     .order-note-compact {
         font-size: 0.78rem;
-        max-width: 5.75rem;
+        max-width: 10.5rem;
     }
 
     .order-note-empty {
@@ -70,40 +71,68 @@ Pedidos - AquaSmart CRM
         white-space: nowrap;
     }
 
-    .order-actions-menu {
-        display: inline-block;
-        min-width: 6.75rem;
+    .order-management-row td {
+        background: #f8fafc;
+        border-top: 0;
     }
 
-    .order-actions-menu summary {
-        cursor: pointer;
-        list-style: none;
-        white-space: nowrap;
-    }
-
-    .order-actions-menu summary::-webkit-details-marker {
-        display: none;
-    }
-
-    .order-actions-panel {
-        background: #fff;
-        border: 1px solid rgba(15, 23, 42, 0.12);
-        border-radius: 0.45rem;
-        box-shadow: 0 0.45rem 1.2rem rgba(15, 23, 42, 0.08);
+    .order-management-panel {
+        border-top: 1px solid rgba(15, 23, 42, 0.08);
         display: grid;
-        gap: 0.4rem;
-        margin-top: 0.45rem;
-        padding: 0.5rem;
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
     }
 
-    .order-actions-panel form,
-    .order-actions-panel .btn {
+    .order-management-heading {
+        align-items: baseline;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .order-management-actions {
+        align-items: end;
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: minmax(5.5rem, 0.4fr) minmax(18rem, 1.4fr) minmax(12rem, 0.8fr);
+    }
+
+    .order-management-form {
+        margin: 0;
+    }
+
+    .order-management-fields {
+        align-items: end;
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) auto;
+    }
+
+    .order-management-cancel .order-management-fields {
+        grid-template-columns: minmax(8rem, 1fr) auto;
+    }
+
+    .order-management-fields-compact {
+        grid-template-columns: minmax(8rem, 1fr) auto;
+    }
+
+    .order-management-fields-button {
+        grid-template-columns: minmax(7rem, 10rem);
+    }
+
+    .order-management-route .btn,
+    .order-management-submit .btn {
+        white-space: nowrap;
         width: 100%;
     }
 
-    .order-actions-panel .btn {
-        text-align: center;
-        white-space: nowrap;
+    .order-management-panel .form-label {
+        color: #64748b;
+        font-size: 0.78rem;
+    }
+
+    .order-management-panel .form-select {
+        min-height: 2rem;
     }
 
     @media (max-width: 1199.98px) {
@@ -120,6 +149,16 @@ Pedidos - AquaSmart CRM
         .orders-table .badge,
         .orders-table .badge-estado {
             font-size: 0.72rem;
+        }
+    }
+
+    @media (max-width: 991.98px) {
+        .order-management-actions,
+        .order-management-fields,
+        .order-management-fields-compact,
+        .order-management-fields-button,
+        .order-management-cancel .order-management-fields {
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -240,188 +279,7 @@ Pedidos - AquaSmart CRM
     data-refresh-url="{% url 'pedidos_fragmento' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
     data-refresh-ms="5000"
 >
-<div class="card content-card">
-    <div class="card-body">
-
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 orders-table">
-                <thead class="table-light">
-                    <tr>
-                        <th class="col-order-id">ID</th>
-                        <th class="col-order-client">Cliente</th>
-                        <th class="col-order-driver">Repartidor</th>
-                        <th class="col-order-date">Fecha / prioridad</th>
-                        <th class="text-center col-order-qty">Cantidad</th>
-                        <th class="text-end col-order-total">Total</th>
-                        <th>Estado</th>
-                        <th class="col-order-notes">Observaci&oacute;n</th>
-                        <th class="col-order-actions">Acciones</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for pedido in pedidos %}
-                        <tr class="{{ pedido.fila_prioridad_clase }}">
-                            <td>#{{ pedido.id }}</td>
-
-                            <td class="col-order-client">
-                                <div class="fw-semibold order-client-name" title="{{ pedido.cliente.nombre }}">
-                                    {{ pedido.cliente.nombre }}
-                                </div>
-                            </td>
-
-                            <td class="col-order-driver">
-                                {% if pedido.repartidor %}
-                                    <span class="badge bg-primary">
-                                        {% if pedido.repartidor.get_full_name %}
-                                            {{ pedido.repartidor.get_full_name }}
-                                        {% else %}
-                                            {{ pedido.repartidor.username }}
-                                        {% endif %}
-                                    </span>
-                                {% else %}
-                                    <span class="badge-estado badge-muted">
-                                        Sin asignar
-                                    </span>
-                                {% endif %}
-                            </td>
-
-                            <td class="order-date-cell col-order-date">
-                                <div>{{ pedido.fecha_pedido|date:"d/m/Y" }}</div>
-                                <small class="text-muted">
-                                    {{ pedido.fecha_pedido|date:"H:i" }}
-                                </small>
-
-                                {% if pedido.programacion_texto %}
-                                    <div class="temporal-priority mt-1">
-                                        <span class="temporal-label">Prioridad</span>
-                                        <span class="badge-estado {{ pedido.programacion_clase }}">
-                                            {{ pedido.programacion_texto }}
-                                        </span>
-                                    </div>
-                                {% endif %}
-                            </td>
-
-                            <td class="text-center col-order-qty">
-                                {{ pedido.cantidad_bidones }}
-                            </td>
-
-                            <td class="text-end money-cell col-order-total">
-                                S/ {{ pedido.total|floatformat:2 }}
-                            </td>
-
-                            <td>
-                                <span class="badge-estado {{ pedido.badge_estado_clase }}">
-                                    {{ pedido.get_estado_display }}
-                                </span>
-                                <small class="d-block text-muted mt-1">
-                                    Pago: {{ pedido.get_metodo_pago_display }}
-                                </small>
-                                <small class="d-block text-muted">
-                                    Lugar: {{ pedido.lugar|default:"Sin lugar asignado" }}
-                                </small>
-                            </td>
-
-                            <td class="col-order-notes">
-                                {% if pedido.observacion %}
-                                    <span class="order-note-compact" title="{{ pedido.observacion }}">
-                                        {{ pedido.observacion }}
-                                    </span>
-                                {% else %}
-                                    <span class="order-note-empty">Sin obs.</span>
-                                {% endif %}
-                            </td>
-
-                            <td class="col-order-actions">
-                                {% if pedido.esta_activo %}
-
-                                    <details class="order-actions-menu" data-refresh-key="pedido-admin-{{ pedido.id }}">
-                                        <summary class="btn btn-sm btn-outline-secondary">
-                                            Acciones &#9662;
-                                        </summary>
-
-                                        <div class="order-actions-panel">
-                                        {% if pedido.estado != 'EN_RUTA' %}
-                                            <form
-                                                method="POST"
-                                                action="{% url 'cambiar_estado_pedido' pedido.id 'EN_RUTA' %}"
-                                                data-confirm="Marcar en ruta?"
-                                            >
-                                                {% csrf_token %}
-                                                <button
-                                                    type="submit"
-                                                    class="btn btn-sm btn-outline-primary"
-                                                >
-                                                    En ruta
-                                                </button>
-                                            </form>
-                                        {% endif %}
-
-                                        <form
-                                            method="POST"
-                                            action="{% url 'cambiar_estado_pedido' pedido.id 'ENTREGADO' %}"
-                                            onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')"
-                                        >
-                                            {% csrf_token %}
-                                            {% include 'core/includes/lugar_para_finalizar.html' with accion='entregar' %}
-                                            <select name="metodo_pago" class="form-select form-select-sm mb-2" aria-label="Metodo de pago" required>
-                                                <option value="" {% if pedido.metodo_pago == 'PENDIENTE' %}selected{% endif %} disabled>Selecciona pago</option>
-                                                <option value="EFECTIVO" {% if pedido.metodo_pago == 'EFECTIVO' %}selected{% endif %}>Efectivo</option>
-                                                <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
-                                                <option value="PLIN" {% if pedido.metodo_pago == 'PLIN' %}selected{% endif %}>Plin</option>
-                                                <option value="TRANSFERENCIA" {% if pedido.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>Transferencia</option>
-                                                <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Fiado</option>
-                                            </select>
-                                            <button
-                                                type="submit"
-                                                class="btn btn-sm btn-success"
-                                            >
-                                                Entregar
-                                            </button>
-                                        </form>
-
-                                        <form
-                                            method="POST"
-                                            action="{% url 'cambiar_estado_pedido' pedido.id 'CANCELADO' %}"
-                                            onsubmit="return confirm('\u00bfSeguro que deseas cancelar este pedido?')"
-                                        >
-                                            {% csrf_token %}
-                                            {% include 'core/includes/lugar_para_finalizar.html' with accion='cancelar' %}
-                                            <button
-                                                type="submit"
-                                                class="btn btn-sm btn-outline-danger"
-                                            >
-                                                Cancelar
-                                            </button>
-                                        </form>
-                                        </div>
-                                    </details>
-
-                                {% else %}
-
-                                    <span class="text-muted small">Sin acciones</span>
-
-                                {% endif %}
-                            </td>
-                        </tr>
-
-                    {% empty %}
-                        <tr>
-                        <td colspan="9">
-                            <div class="empty-state">
-                                No se encontraron pedidos.
-                            </div>
-                        </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% include 'includes/pagination.html' %}
-
-    </div>
-</div>
+    {% include 'core/includes/pedidos_lista_fragmento.html' %}
 </div>
 
 {% endblock %}

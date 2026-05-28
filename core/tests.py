@@ -980,6 +980,12 @@ class PermisosRolesTests(TestCase):
             'core/includes/pedidos_lista_fragmento.html'
         )
         self.assertContains(fragment, pedido.cliente.nombre)
+        self.assertContains(fragment, 'Gestionar')
+        self.assertContains(fragment, 'gestion-pedido-')
+        self.assertContains(fragment, 'Gestionar pedido')
+        self.assertContains(fragment, 'Entregar')
+        self.assertContains(fragment, 'Cancelar')
+        self.assertNotContains(fragment, 'Acciones &#9662;')
         self.assertNotContains(fragment, '<html')
 
         self.client.force_login(self.repartidor)
