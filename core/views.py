@@ -1598,6 +1598,101 @@ def reporte_diario(request):
         'lugar',
         'repartidor'
     ).order_by('-fecha_pedido')
+    pedidos_tabla = pedidos_hoy
+    lugares = Lugar.objects.filter(activo=True).order_by('orden', 'nombre')
+    repartidores = repartidores_disponibles()
+    filtros = {
+        'metodo_pago': request.GET.get('metodo_pago', '').strip().upper(),
+        'lugar': request.GET.get('lugar', '').strip(),
+        'estado': request.GET.get('estado', '').strip().upper(),
+        'repartidor': request.GET.get('repartidor', '').strip(),
+    }
+    filtros_activos = []
+
+    opciones_metodo_pago = [
+        ('', 'Todos'),
+        (Pedido.PAGO_EFECTIVO, 'Efectivo'),
+        (Pedido.PAGO_YAPE, 'Yape'),
+        (Pedido.PAGO_PLIN, 'Plin'),
+        (Pedido.PAGO_TRANSFERENCIA, 'Transferencia'),
+        (Pedido.PAGO_FIADO, 'Fiado'),
+        ('SIN_METODO', 'Sin metodo registrado'),
+    ]
+    opciones_estado = [
+        ('', 'Todos'),
+        (Pedido.PENDIENTE, 'Pendiente'),
+        (Pedido.EN_RUTA, 'En ruta'),
+        (Pedido.ENTREGADO, 'Entregado'),
+        (Pedido.CANCELADO, 'Cancelado'),
+    ]
+
+    metodo_labels = dict(opciones_metodo_pago)
+    estado_labels = dict(opciones_estado)
+
+    if filtros['metodo_pago'] in {
+        Pedido.PAGO_EFECTIVO,
+        Pedido.PAGO_YAPE,
+        Pedido.PAGO_PLIN,
+        Pedido.PAGO_TRANSFERENCIA,
+    }:
+        pedidos_tabla = pedidos_tabla.filter(
+            Q(metodo_pago=filtros['metodo_pago'])
+            | Q(
+                metodo_pago=Pedido.PAGO_FIADO,
+                metodo_pago_final=filtros['metodo_pago'],
+            )
+        )
+        filtros_activos.append(metodo_labels[filtros['metodo_pago']])
+    elif filtros['metodo_pago'] == Pedido.PAGO_FIADO:
+        pedidos_tabla = pedidos_tabla.filter(
+            metodo_pago=Pedido.PAGO_FIADO,
+            metodo_pago_final__isnull=True,
+        )
+        filtros_activos.append(metodo_labels[filtros['metodo_pago']])
+    elif filtros['metodo_pago'] == 'SIN_METODO':
+        pedidos_tabla = pedidos_tabla.filter(metodo_pago=Pedido.PAGO_PENDIENTE)
+        filtros_activos.append(metodo_labels[filtros['metodo_pago']])
+
+    if filtros['lugar'].isdigit():
+        lugar_filtrado = lugares.filter(id=int(filtros['lugar'])).first()
+        if lugar_filtrado:
+            pedidos_tabla = pedidos_tabla.filter(lugar=lugar_filtrado)
+            filtros_activos.append(lugar_filtrado.nombre)
+
+    if filtros['estado'] in estado_labels and filtros['estado']:
+        pedidos_tabla = pedidos_tabla.filter(estado=filtros['estado'])
+        filtros_activos.append(estado_labels[filtros['estado']])
+
+    if filtros['repartidor'].isdigit():
+        repartidor_filtrado = repartidores.filter(id=int(filtros['repartidor'])).first()
+        if repartidor_filtrado:
+            pedidos_tabla = pedidos_tabla.filter(repartidor=repartidor_filtrado)
+            filtros_activos.append(repartidor_filtrado.get_username())
+
+    total_filtrado = pedidos_tabla.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    bidones_filtrados = (
+        pedidos_tabla.aggregate(total=Sum('cantidad_bidones'))['total'] or 0
+    )
+    fiado_filtrado = (
+        pedidos_tabla.filter(
+            metodo_pago=Pedido.PAGO_FIADO,
+            metodo_pago_final__isnull=True,
+        ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    )
+    pedidos_tabla = list(pedidos_tabla)
+
+    for pedido in pedidos_tabla:
+        if pedido.metodo_pago == Pedido.PAGO_FIADO:
+            if pedido.metodo_pago_final:
+                pedido.pago_operativo = f'Cobrado ({pedido.get_metodo_pago_final_display()})'
+            else:
+                pedido.pago_operativo = 'Fiado pendiente'
+        elif pedido.metodo_pago == Pedido.PAGO_PENDIENTE:
+            pedido.pago_operativo = 'Sin metodo registrado'
+        else:
+            pedido.pago_operativo = f'Cobrado ({pedido.get_metodo_pago_display()})'
+
+        pedido.observacion_corta = (pedido.observacion or '').strip()
 
     context = {
         'ventas_hoy': comparativo_ventas[0]['ingresos'],
@@ -1611,7 +1706,18 @@ def reporte_diario(request):
         'detalle_diario_mes': detalle_diario_mes,
         'detalle_diario_reciente': detalle_diario_mes[-7:],
         'pedidos_hoy': pedidos_hoy,
+        'pedidos_tabla': pedidos_tabla,
         'total_pedidos_hoy': pedidos_hoy.count(),
+        'total_pedidos_filtrados': len(pedidos_tabla),
+        'total_filtrado': total_filtrado,
+        'bidones_filtrados': bidones_filtrados,
+        'fiado_filtrado': fiado_filtrado,
+        'filtros': filtros,
+        'filtros_activos': filtros_activos,
+        'opciones_metodo_pago': opciones_metodo_pago,
+        'opciones_estado': opciones_estado,
+        'lugares': lugares,
+        'repartidores': repartidores,
         'hoy': hoy,
     }
 

@@ -98,36 +98,104 @@ Reporte Diario - AquaSmart CRM
     </div>
 </div>
 
-<div class="row mb-4">
-    {% for dia in comparativo_ventas %}
-        <div class="col-sm-6 col-lg-3 mb-3">
-            <div class="card metric-card h-100">
-                <div class="card-body py-3">
-                    <div class="mb-2">
-                        <h6 class="mb-0">{{ dia.etiqueta }}</h6>
-                        <small class="text-muted">{{ dia.fecha|date:"j \\d\\e F \\d\\e Y" }}</small>
-                    </div>
-
-                    <div class="fs-5 fw-bold text-success mb-1">
-                        S/ {{ dia.ingresos|floatformat:2 }}
-                    </div>
-
-                    <small class="text-muted">
-                        {{ dia.bidones }} bidones - {{ dia.pedidos }} pedidos entregados
-                    </small>
-                </div>
-            </div>
-        </div>
-    {% endfor %}
+<div class="table-responsive mb-4">
+    <table class="table table-sm align-middle mb-0">
+        <tbody>
+            <tr>
+                {% for dia in comparativo_ventas %}
+                    <td>
+                        <span class="fw-semibold">{{ dia.etiqueta }}</span>
+                        <span class="text-success ms-2">S/ {{ dia.ingresos|floatformat:2 }}</span>
+                        <small class="text-muted ms-2">{{ dia.bidones }} bidones</small>
+                    </td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
 </div>
 
 <div class="card content-card mb-4">
     <div class="card-header bg-white">
-        Pedidos registrados hoy
+        Cierre operativo del dia
     </div>
 
     <div class="card-body">
-        {% if pedidos_hoy %}
+        <form method="GET" class="row g-2 align-items-end mb-3">
+            <div class="col-sm-6 col-lg-2">
+                <label for="filtro-metodo-pago" class="form-label small text-muted mb-1">
+                    Metodo de pago
+                </label>
+                <select id="filtro-metodo-pago" name="metodo_pago" class="form-select form-select-sm">
+                    {% for valor, etiqueta in opciones_metodo_pago %}
+                        <option value="{{ valor }}" {% if filtros.metodo_pago == valor %}selected{% endif %}>
+                            {{ etiqueta }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-sm-6 col-lg-2">
+                <label for="filtro-lugar" class="form-label small text-muted mb-1">
+                    Lugar
+                </label>
+                <select id="filtro-lugar" name="lugar" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for lugar in lugares %}
+                        <option value="{{ lugar.id }}" {% if lugar.id|stringformat:"s" == filtros.lugar %}selected{% endif %}>
+                            {{ lugar.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-sm-6 col-lg-2">
+                <label for="filtro-estado" class="form-label small text-muted mb-1">
+                    Estado
+                </label>
+                <select id="filtro-estado" name="estado" class="form-select form-select-sm">
+                    {% for valor, etiqueta in opciones_estado %}
+                        <option value="{{ valor }}" {% if filtros.estado == valor %}selected{% endif %}>
+                            {{ etiqueta }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-sm-6 col-lg-2">
+                <label for="filtro-repartidor" class="form-label small text-muted mb-1">
+                    Repartidor
+                </label>
+                <select id="filtro-repartidor" name="repartidor" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for repartidor in repartidores %}
+                        <option value="{{ repartidor.id }}" {% if repartidor.id|stringformat:"s" == filtros.repartidor %}selected{% endif %}>
+                            {{ repartidor.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-sm-6 col-lg-auto">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    Filtrar
+                </button>
+                <a href="{% url 'reporte_diario' %}" class="btn btn-outline-secondary btn-sm">
+                    Limpiar filtros
+                </a>
+            </div>
+        </form>
+
+        <div class="small text-muted mb-3">
+            {{ total_pedidos_filtrados }} pedidos · S/ {{ total_filtrado|floatformat:2 }} · {{ bidones_filtrados }} bidones
+            {% if fiado_filtrado %}
+                · S/ {{ fiado_filtrado|floatformat:2 }} fiado pendiente
+            {% endif %}
+            {% if filtros_activos %}
+                · filtro: {{ filtros_activos|join:" + " }}
+            {% endif %}
+        </div>
+
+        {% if pedidos_tabla %}
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -136,12 +204,15 @@ Reporte Diario - AquaSmart CRM
                             <th>Cliente</th>
                             <th>Estado</th>
                             <th>Lugar</th>
+                            <th>Metodo de pago</th>
                             <th class="text-end">Total</th>
+                            <th>Repartidor</th>
+                            <th>Observacion</th>
                         </tr>
                     </thead>
 
                     <tbody>
-                        {% for pedido in pedidos_hoy %}
+                        {% for pedido in pedidos_tabla %}
                             <tr>
                                 <td>{{ pedido.fecha_pedido|date:"H:i" }}</td>
                                 <td>{{ pedido.cliente.nombre }}</td>
@@ -151,51 +222,24 @@ Reporte Diario - AquaSmart CRM
                                     </span>
                                 </td>
                                 <td>{{ pedido.lugar|default:"Sin lugar asignado" }}</td>
+                                <td>{{ pedido.pago_operativo }}</td>
                                 <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
+                                <td>{{ pedido.repartidor|default:"Sin asignar" }}</td>
+                                <td>
+                                    {% if pedido.observacion_corta %}
+                                        {{ pedido.observacion_corta|truncatechars:48 }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <div class="empty-state">No hay pedidos registrados hoy.</div>
+            <div class="empty-state">No hay pedidos para los filtros seleccionados.</div>
         {% endif %}
-    </div>
-</div>
-
-<div class="card content-card">
-    <div class="card-header bg-white">
-        Ritmo reciente
-    </div>
-
-    <div class="card-body">
-        <small class="text-muted d-block mb-3">
-            Vista compacta de los ultimos dias del mes para no recargar este panel.
-        </small>
-
-        <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Ventas del dia</th>
-                        <th>Bidones</th>
-                        <th>Entregados</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for dia in detalle_diario_reciente %}
-                        <tr>
-                            <td>{{ dia.fecha|date:"d/m/Y" }}</td>
-                            <td class="fw-semibold text-success">S/ {{ dia.ingresos|floatformat:2 }}</td>
-                            <td>{{ dia.bidones }}</td>
-                            <td>{{ dia.pedidos }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
     </div>
 </div>
 

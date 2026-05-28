@@ -2473,6 +2473,58 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(diario.context['ventas_hoy'], Decimal('14.00'))
         self.assertEqual(diario.context['bidones_hoy'], 2)
 
+    def test_reporte_diario_filtra_tabla_sin_cambiar_kpis_globales(self):
+        pedido_yape = self.crear_pedido(self.repartidor)
+        pedido_fiado_cobrado = self.crear_pedido(self.repartidor)
+        pedido_fiado_pendiente = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_yape.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_YAPE,
+            observacion='Cliente pidio entrega antes del cierre.'
+        )
+        Pedido.objects.filter(pk=pedido_fiado_cobrado.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO,
+            metodo_pago_final=Pedido.PAGO_YAPE,
+            fecha_pago=timezone.now()
+        )
+        Pedido.objects.filter(pk=pedido_fiado_pendiente.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(
+            reverse('reporte_diario'),
+            {'metodo_pago': Pedido.PAGO_YAPE}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Cierre operativo del dia')
+        self.assertContains(response, 'Metodo de pago')
+        self.assertContains(response, 'Repartidor')
+        self.assertContains(response, 'Observacion')
+        self.assertContains(response, 'Cobrado (Yape)')
+        self.assertContains(response, 'filtro: Yape')
+        self.assertNotContains(response, 'Ritmo reciente')
+        self.assertEqual(response.context['ventas_hoy'], Decimal('42.00'))
+        self.assertEqual(response.context['total_pedidos_filtrados'], 2)
+        self.assertEqual(response.context['total_filtrado'], Decimal('28.00'))
+        self.assertEqual(response.context['bidones_filtrados'], 4)
+
+        fiado_response = self.client.get(
+            reverse('reporte_diario'),
+            {'metodo_pago': Pedido.PAGO_FIADO}
+        )
+
+        self.assertContains(fiado_response, 'Fiado pendiente')
+        self.assertEqual(fiado_response.context['ventas_hoy'], Decimal('42.00'))
+        self.assertEqual(fiado_response.context['total_pedidos_filtrados'], 1)
+        self.assertEqual(fiado_response.context['fiado_filtrado'], Decimal('14.00'))
+
     def test_dashboard_resume_pagos_entregados_por_metodo(self):
         pedido = self.crear_pedido(self.repartidor)
         Pedido.objects.filter(pk=pedido.pk).update(
