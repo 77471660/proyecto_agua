@@ -219,6 +219,12 @@ urlpatterns = [
     ),
 
     path(
+        'pedidos/repartidor/creditos/<int:pedido_id>/cobrar/',
+        views.cobrar_credito_repartidor,
+        name='cobrar_credito_repartidor'
+    ),
+
+    path(
         'repartidor/pedidos/nuevo/',
         views.nuevo_pedido_repartidor,
         name='nuevo_pedido_repartidor'

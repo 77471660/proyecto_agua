@@ -1198,6 +1198,48 @@ class PermisosRolesTests(TestCase):
         self.assertNotContains(fragment, cliente_otro.nombre)
         self.assertNotContains(fragment, '<html')
 
+    def test_panel_repartidor_muestra_solo_creditos_pendientes_propios(self):
+        cliente_propio = Cliente.objects.create(
+            nombre='Cliente Credito Propio',
+            telefono='999333111',
+            direccion='Av. Cobro 123'
+        )
+        credito_propio = self.crear_pedido(
+            self.repartidor,
+            cliente=cliente_propio
+        )
+        Pedido.objects.filter(pk=credito_propio.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        cliente_ajeno = Cliente.objects.create(
+            nombre='Cliente Credito Ajeno',
+            telefono='999333222',
+            direccion='Av. Ajena 456'
+        )
+        credito_ajeno = self.crear_pedido(
+            self.otro_repartidor,
+            cliente=cliente_ajeno
+        )
+        Pedido.objects.filter(pk=credito_ajeno.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(reverse('pedidos_repartidor_fragmento'))
+
+        self.assertEqual(response.context['total_creditos_pendientes'], 1)
+        self.assertContains(response, 'Cr&eacute;ditos pendientes (1)')
+        self.assertContains(response, cliente_propio.nombre)
+        self.assertContains(response, 'Crédito pendiente')
+        self.assertContains(response, 'Cobrar')
+        self.assertContains(response, 'Abrir ubicaci&oacute;n')
+        self.assertNotContains(response, cliente_ajeno.nombre)
+        self.assertNotContains(response, 'Fiado')
+
     def test_repartidor_puede_ver_clientes_sin_acciones_administrativas(self):
         self.client.force_login(self.repartidor)
 
@@ -2513,6 +2555,85 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIsNone(pedido.fecha_pago)
         self.assertIsNone(pedido.metodo_pago_final)
+
+    def test_repartidor_puede_cobrar_credito_pendiente_propio(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse(
+                'cobrar_credito_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {'metodo_pago_final': Pedido.PAGO_YAPE}
+        )
+
+        pedido.refresh_from_db()
+        self.assertRedirects(response, reverse('pedidos_repartidor'))
+        self.assertEqual(pedido.metodo_pago, Pedido.PAGO_FIADO)
+        self.assertEqual(pedido.metodo_pago_final, Pedido.PAGO_YAPE)
+        self.assertIsNotNone(pedido.fecha_pago)
+        self.assertEqual(pedido.usuario_pago, self.repartidor)
+        self.assertTrue(
+            PedidoHistorial.objects.filter(
+                pedido=pedido,
+                usuario=self.repartidor,
+                descripcion='Cobro posterior de crédito registrado por repartidor.',
+                valor_anterior='Crédito pendiente',
+                valor_nuevo='Yape'
+            ).exists()
+        )
+
+    def test_repartidor_no_puede_cobrar_credito_de_otro_repartidor(self):
+        pedido = self.crear_pedido(self.otro_repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse(
+                'cobrar_credito_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {'metodo_pago_final': Pedido.PAGO_EFECTIVO}
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertIsNone(pedido.fecha_pago)
+        self.assertIsNone(pedido.metodo_pago_final)
+        self.assertIsNone(pedido.usuario_pago)
+
+    def test_repartidor_no_puede_cobrar_credito_con_metodo_invalido(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.repartidor)
+
+        response = self.client.post(
+            reverse(
+                'cobrar_credito_repartidor',
+                kwargs={'pedido_id': pedido.id}
+            ),
+            {'metodo_pago_final': Pedido.PAGO_FIADO}
+        )
+
+        pedido.refresh_from_db()
+        self.assertRedirects(response, reverse('pedidos_repartidor'))
+        self.assertIsNone(pedido.fecha_pago)
+        self.assertIsNone(pedido.metodo_pago_final)
+        self.assertIsNone(pedido.usuario_pago)
 
     def test_jefe_puede_cerrar_deuda_fiada(self):
         pedido = self.crear_pedido(self.repartidor)

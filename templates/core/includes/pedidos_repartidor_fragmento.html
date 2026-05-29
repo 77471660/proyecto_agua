@@ -35,6 +35,131 @@
     </div>
 {% endfor %}
 
+<details class="history-details" data-refresh-key="creditos-pendientes">
+    <summary class="history-summary credit">
+        Cr&eacute;ditos pendientes ({{ total_creditos_pendientes }})
+    </summary>
+
+    <div class="mt-3">
+        {% for credito in creditos_pendientes %}
+            <article class="card order-card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                        <div class="min-w-0">
+                            <h3 class="h6 mb-1">{{ credito.cliente.nombre }}</h3>
+                            <div class="small text-muted">
+                                {{ credito.cliente.telefono|default:"Sin telefono" }}
+                            </div>
+                        </div>
+
+                        <span class="badge-estado badge-pendiente">
+                            {{ credito.pago_operativo }}
+                        </span>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <div class="order-label">Monto pendiente</div>
+                            <div class="order-value">S/ {{ credito.total|floatformat:2 }}</div>
+                        </div>
+
+                        <div class="col-6">
+                            <div class="order-label">Fecha de entrega</div>
+                            <div class="order-value">
+                                {{ credito.fecha_entrega|date:"d/m/Y" }}
+                                {% if credito.hora_entrega_panel %}
+                                    &middot; {{ credito.hora_entrega_panel }}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="order-label">Lugar</div>
+                            <div class="order-value">{{ credito.lugar|default:"Sin lugar" }}</div>
+                        </div>
+                    </div>
+
+                    <div class="credit-actions mb-3">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                {% if credito.telefono_limpio %}
+                                    <a
+                                        href="tel:{{ credito.telefono_limpio }}"
+                                        class="btn btn-outline-primary w-100 action-button"
+                                    >
+                                        Llamar
+                                    </a>
+                                {% else %}
+                                    <button type="button" class="btn btn-outline-secondary w-100 action-button" disabled>
+                                        Sin tel&eacute;fono
+                                    </button>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-6">
+                                {% if credito.telefono_limpio %}
+                                    <a
+                                        href="{{ credito.whatsapp_url }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="btn btn-whatsapp w-100 action-button"
+                                        onclick="return confirm('\u00bfDeseas abrir WhatsApp para este cliente?')"
+                                    >
+                                        WhatsApp
+                                    </a>
+                                {% else %}
+                                    <button type="button" class="btn btn-outline-secondary w-100 action-button" disabled>
+                                        WhatsApp
+                                    </button>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-12">
+                                {% include 'core/includes/location_button.html' with cliente=credito.cliente button_class='btn-outline-primary w-100 action-button' hide_copy_button='1' %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <form
+                        method="post"
+                        action="{% url 'cobrar_credito_repartidor' credito.id %}"
+                        class="credit-collect-form mb-0"
+                        onsubmit="return confirm('\u00bfConfirmas registrar este cobro?')"
+                    >
+                        {% csrf_token %}
+                        <label class="order-label" for="metodo-cobro-{{ credito.id }}">
+                            M&eacute;todo de cobro
+                        </label>
+                        <select
+                            id="metodo-cobro-{{ credito.id }}"
+                            name="metodo_pago_final"
+                            class="form-select mobile-payment-select"
+                            required
+                        >
+                            <option value="" selected disabled>Selecciona m&eacute;todo</option>
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="YAPE">Yape</option>
+                            <option value="PLIN">Plin</option>
+                            <option value="TRANSFERENCIA">Transferencia</option>
+                        </select>
+                        <button type="submit" class="btn btn-success w-100 action-button">
+                            Cobrar
+                        </button>
+                    </form>
+                </div>
+            </article>
+        {% empty %}
+            <div class="card order-card">
+                <div class="card-body text-center py-4">
+                    <p class="text-muted mb-0">
+                        No tienes cr&eacute;ditos pendientes asignados a tu usuario.
+                    </p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</details>
+
 <details class="history-details" data-refresh-key="entregas-hoy">
     <summary class="history-summary delivered">
         Ver entregas de hoy

@@ -838,6 +838,24 @@ def preparar_pedido_repartidor(pedido):
     return pedido
 
 
+def preparar_credito_pendiente_repartidor(pedido):
+
+    numero = telefono_whatsapp_peru(pedido.cliente.telefono)
+    mensaje = (
+        'Hola, soy de Eco Agua. Le escribo por el saldo pendiente de '
+        f'su pedido por S/ {pedido.total}.'
+    )
+
+    pedido.whatsapp_url = (
+        f'https://wa.me/{numero}?text={quote(mensaje)}'
+    )
+    pedido.telefono_limpio = limpiar_telefono(pedido.cliente.telefono)
+    pedido.hora_entrega_panel = hora_panel(pedido.fecha_entrega)
+    pedido.pago_operativo = 'Crédito pendiente'
+
+    return pedido
+
+
 def precio_unitario_rapido(cliente):
 
     return Decimal('7.00')
@@ -918,6 +936,20 @@ def leer_metodo_pago_entrega_post(post_data):
         return None
 
     return metodo_pago
+
+
+def leer_metodo_cobro_final_post(post_data):
+
+    metodo_pago_final = post_data.get(
+        'metodo_pago_final',
+        ''
+    ).strip().upper()
+    metodos_cobro = {valor for valor, etiqueta in Pedido.METODOS_COBRO}
+
+    if metodo_pago_final not in metodos_cobro:
+        return None
+
+    return metodo_pago_final
 
 
 def leer_lugar_activo_post(post_data, campo='lugar'):
@@ -2096,10 +2128,9 @@ def marcar_fiado_pagado(request, pedido_id):
         metodo_pago=Pedido.PAGO_FIADO,
         fecha_pago__isnull=True
     )
-    metodo_pago_final = request.POST.get('metodo_pago_final', '').strip().upper()
-    metodos_cobro = {valor for valor, etiqueta in Pedido.METODOS_COBRO}
+    metodo_pago_final = leer_metodo_cobro_final_post(request.POST)
 
-    if metodo_pago_final not in metodos_cobro:
+    if metodo_pago_final is None:
         messages.error(request, 'Método de pago final inválido.')
         return redirect('pagos')
 
@@ -3236,6 +3267,24 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
     for cancelado in cancelados_hoy:
         cancelado.hora_cancelacion_panel = hora_panel(cancelado.fecha_cancelacion)
 
+    creditos_pendientes = Pedido.objects.filter(
+        estado=Pedido.ENTREGADO,
+        metodo_pago=Pedido.PAGO_FIADO,
+        fecha_pago__isnull=True,
+        repartidor=request.user
+    ).select_related(
+        'cliente',
+        'lugar'
+    ).order_by(
+        'fecha_entrega',
+        'fecha_pedido'
+    )
+
+    creditos_pendientes = [
+        preparar_credito_pendiente_repartidor(pedido)
+        for pedido in creditos_pendientes
+    ]
+
     total_bidones_hoy = sum(
         entrega.cantidad_bidones
         for entrega in entregas_hoy
@@ -3252,6 +3301,8 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
         'pedidos_hoy': pedidos_hoy,
         'entregas_hoy': entregas_hoy,
         'cancelados_hoy': cancelados_hoy,
+        'creditos_pendientes': creditos_pendientes,
+        'total_creditos_pendientes': len(creditos_pendientes),
         'total_bidones_hoy': total_bidones_hoy,
         'total_dinero_hoy': total_dinero_hoy,
         'total_pedidos_hoy': total_pedidos_hoy,
@@ -3493,6 +3544,50 @@ def marcar_pedido_entregado_repartidor(request, pedido_id):
     messages.success(
         request,
         'Pedido entregado correctamente.'
+    )
+
+    return redirect('pedidos_repartidor')
+
+
+@login_required
+@repartidor_required
+@require_POST
+@transaction.atomic
+def cobrar_credito_repartidor(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        estado=Pedido.ENTREGADO,
+        metodo_pago=Pedido.PAGO_FIADO,
+        fecha_pago__isnull=True,
+        repartidor=request.user
+    )
+    metodo_pago_final = leer_metodo_cobro_final_post(request.POST)
+
+    if metodo_pago_final is None:
+        messages.error(request, 'Selecciona un método de cobro válido.')
+        return redirect('pedidos_repartidor')
+
+    pedido.metodo_pago_final = metodo_pago_final
+    pedido.fecha_pago = timezone.now()
+    pedido.usuario_pago = request.user
+    pedido.save(update_fields=[
+        'metodo_pago_final',
+        'fecha_pago',
+        'usuario_pago',
+    ])
+    registrar_historial_pedido(
+        pedido,
+        request.user,
+        PedidoHistorial.EDITADO,
+        'Cobro posterior de crédito registrado por repartidor.',
+        valor_anterior='Crédito pendiente',
+        valor_nuevo=pedido.get_metodo_pago_final_display()
+    )
+    messages.success(
+        request,
+        f'Crédito cobrado ({pedido.get_metodo_pago_final_display()}).'
     )
 
     return redirect('pedidos_repartidor')
