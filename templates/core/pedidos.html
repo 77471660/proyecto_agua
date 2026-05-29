@@ -258,4 +258,59 @@ Pedidos - AquaSmart CRM
     {% include 'core/includes/pedidos_lista_fragmento.html' %}
 </div>
 
+<script>
+    (function () {
+        const container = document.getElementById('pedidos-live-container');
+        const autoHideMs = 5000;
+        const timers = new WeakMap();
+
+        if (!container || !window.bootstrap) {
+            return;
+        }
+
+        function clearAutoHide(collapse) {
+            const timer = timers.get(collapse);
+
+            if (timer) {
+                window.clearTimeout(timer);
+                timers.delete(collapse);
+            }
+        }
+
+        function scheduleAutoHide(collapse) {
+            clearAutoHide(collapse);
+
+            timers.set(collapse, window.setTimeout(function () {
+                if (collapse.contains(document.activeElement)) {
+                    scheduleAutoHide(collapse);
+                    return;
+                }
+
+                window.bootstrap.Collapse.getOrCreateInstance(
+                    collapse,
+                    { toggle: false }
+                ).hide();
+            }, autoHideMs));
+        }
+
+        container.addEventListener('shown.bs.collapse', function (event) {
+            scheduleAutoHide(event.target);
+        });
+
+        container.addEventListener('hidden.bs.collapse', function (event) {
+            clearAutoHide(event.target);
+        });
+
+        ['pointerdown', 'focusin', 'input', 'change'].forEach(function (eventName) {
+            container.addEventListener(eventName, function (event) {
+                const collapse = event.target.closest('.collapse.show');
+
+                if (collapse && container.contains(collapse)) {
+                    scheduleAutoHide(collapse);
+                }
+            });
+        });
+    })();
+</script>
+
 {% endblock %}

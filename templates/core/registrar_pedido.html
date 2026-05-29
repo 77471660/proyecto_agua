@@ -271,6 +271,7 @@ Registrar pedido - AquaSmart CRM
                                     name="precio_unitario"
                                     id="precio_unitario"
                                     class="form-control"
+                                    data-no-wheel-number
                                     required
                                 >
                             </div>
@@ -376,6 +377,14 @@ Registrar pedido - AquaSmart CRM
             precioUnitario.value = '';
             precioUnitario.focus();
         }
+    });
+
+    document.querySelectorAll('input[type="number"][data-no-wheel-number]').forEach(function (input) {
+        input.addEventListener('wheel', function (event) {
+            if (document.activeElement === input) {
+                event.preventDefault();
+            }
+        }, { passive: false });
     });
 </script>
 <script src="{% static 'js/client_search.js' %}"></script>

@@ -7,6 +7,77 @@ Pagos - AquaSmart CRM
 
 {% block content %}
 
+<style>
+    @media (max-width: 575.98px) {
+        .payments-location-table {
+            overflow: visible;
+        }
+
+        .payments-location-table table,
+        .payments-location-table tbody,
+        .payments-location-table tr,
+        .payments-location-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .payments-location-table thead {
+            display: none;
+        }
+
+        .payments-location-table tr {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 0.85rem;
+            padding: 0.78rem;
+        }
+
+        .payments-location-table td {
+            align-items: baseline;
+            border: 0;
+            display: grid;
+            gap: 0.45rem;
+            grid-template-columns: minmax(6.25rem, 0.9fr) minmax(0, 1.1fr);
+            padding: 0.4rem 0 !important;
+            text-align: right;
+        }
+
+        .payments-location-table td::before {
+            color: #64748b;
+            content: attr(data-label);
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-align: left;
+            text-transform: uppercase;
+        }
+
+        .payments-location-table td:first-child {
+            border-bottom: 1px solid #e2e8f0;
+            display: block;
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 0.35rem;
+            padding-bottom: 0.65rem !important;
+            text-align: left;
+        }
+
+        .payments-location-table td:first-child::before {
+            display: none;
+        }
+
+        .payments-location-table td:last-child {
+            border-top: 1px solid #e2e8f0;
+            margin-top: 0.35rem;
+            padding-top: 0.65rem !important;
+        }
+
+        .payments-location-table small {
+            line-height: 1.35;
+        }
+    }
+</style>
+
 <div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
     <div>
         <h2>Pagos</h2>
@@ -258,7 +329,7 @@ Pagos - AquaSmart CRM
     </div>
     <div class="card-body">
         {% if resumen_lugares %}
-            <div class="table-responsive">
+            <div class="table-responsive payments-location-table">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
@@ -273,17 +344,17 @@ Pagos - AquaSmart CRM
                     <tbody>
                         {% for fila in resumen_lugares %}
                             <tr>
-                                <td>{{ fila.nombre }}</td>
-                                <td>{{ fila.entregados }}</td>
-                                <td>{{ fila.bidones }}</td>
-                                <td>
+                                <td data-label="Lugar">{{ fila.nombre }}</td>
+                                <td data-label="Entregados">{{ fila.entregados }}</td>
+                                <td data-label="Bidones">{{ fila.bidones }}</td>
+                                <td data-label="Cobrado">
                                     <span class="fw-semibold">S/ {{ fila.cobrado|floatformat:2 }}</span>
                                     <small class="text-muted d-block">
                                         Efectivo S/ {{ fila.efectivo|floatformat:2 }} ·
                                         Digital S/ {{ fila.yape|add:fila.plin|add:fila.transferencia|floatformat:2 }}
                                     </small>
                                 </td>
-                                <td>
+                                <td data-label="Cr&eacute;dito">
                                     <span class="fw-semibold">S/ {{ fila.fiado|floatformat:2 }}</span>
                                     {% if fila.pendiente %}
                                         <small class="text-muted d-block">
@@ -291,7 +362,7 @@ Pagos - AquaSmart CRM
                                         </small>
                                     {% endif %}
                                 </td>
-                                <td class="text-end fw-semibold">S/ {{ fila.total|floatformat:2 }}</td>
+                                <td data-label="Total" class="text-end fw-semibold">S/ {{ fila.total|floatformat:2 }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>

@@ -15,6 +15,10 @@
     return Boolean(container.querySelector('details.action-details[open]'));
   }
 
+  function hasOpenCollapse(container) {
+    return Boolean(container.querySelector('.collapse.show'));
+  }
+
   function openDetailsKeys(container) {
     return Array.from(
       container.querySelectorAll('details[open][data-refresh-key]')
@@ -52,6 +56,7 @@
         || document.hidden
         || activeInputWithin(container)
         || hasOpenActionForm(container)
+        || hasOpenCollapse(container)
       ) {
         return;
       }
