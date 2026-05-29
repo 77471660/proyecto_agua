@@ -63,10 +63,10 @@
                             <div class="order-value">{{ entrega.cliente.direccion }}</div>
                         </div>
 
-                        {% if entrega.cliente.referencia %}
+                        {% if entrega.cliente.referencia_ubicacion %}
                             <div class="col-12">
-                                <div class="order-label">Referencia</div>
-                                <div class="order-value">{{ entrega.cliente.referencia }}</div>
+                                <div class="order-label">Referencia para llegar</div>
+                                <div class="order-value">{{ entrega.cliente.referencia_ubicacion }}</div>
                             </div>
                         {% endif %}
 

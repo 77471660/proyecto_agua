@@ -59,7 +59,7 @@ Reporte Semanal - AquaSmart CRM
             <div class="card-body">
                 <h6 class="metric-label">Cuentas por cobrar</h6>
                 <div class="metric-value">S/ {{ cuentas_por_cobrar|floatformat:2 }}</div>
-                <small class="text-muted">Fiados pendientes de esta semana</small>
+                <small class="text-muted">Cr&eacute;ditos pendientes de esta semana</small>
             </div>
         </div>
     </div>
@@ -77,9 +77,9 @@ Reporte Semanal - AquaSmart CRM
         <div class="col-md-4">
             <div class="card metric-card metric-warning h-100">
                 <div class="card-body">
-                    <h6 class="metric-label">Total fiado</h6>
+                    <h6 class="metric-label">Total cr&eacute;dito</h6>
                     <div class="metric-value">S/ {{ fiado|floatformat:2 }}</div>
-                    <small class="text-muted">Entregado como credito</small>
+                    <small class="text-muted">Entregado a cr&eacute;dito</small>
                 </div>
             </div>
         </div>
@@ -194,7 +194,7 @@ Reporte Semanal - AquaSmart CRM
             {% if fiado %}
                 <div class="col-sm-6 col-xl-3">
                     <div class="form-section mb-0 h-100">
-                        <div class="text-muted small">Fiado entregado</div>
+                        <div class="text-muted small">Cr&eacute;dito otorgado</div>
                         <div class="fs-4 fw-semibold">S/ {{ fiado|floatformat:2 }}</div>
                     </div>
                 </div>
@@ -230,7 +230,13 @@ Reporte Semanal - AquaSmart CRM
                                 <td>{{ pedido.fecha_entrega|date:"d/m/Y H:i" }}</td>
                                 <td>{{ pedido.cliente.nombre }}</td>
                                 <td>{{ pedido.cantidad_bidones }}</td>
-                                <td>{{ pedido.get_metodo_pago_display }}</td>
+                                <td>
+                                    {% if pedido.metodo_pago == 'FIADO' %}
+                                        Cr&eacute;dito
+                                    {% else %}
+                                        {{ pedido.get_metodo_pago_display }}
+                                    {% endif %}
+                                </td>
                                 <td>{{ pedido.lugar|default:"Sin asignar" }}</td>
                                 <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
                             </tr>

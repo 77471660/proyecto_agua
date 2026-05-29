@@ -337,7 +337,7 @@ class PermisosRolesTests(TestCase):
                 'nombre': 'Cliente Rapido',
                 'telefono': '999666333',
                 'direccion': 'Jr. Rapido 123',
-                'referencia': 'Puerta lateral',
+                'lugar': str(self.lugar_operativo.id),
             }
         )
 
@@ -350,6 +350,8 @@ class PermisosRolesTests(TestCase):
         self.assertIsNone(cliente.latitud)
         self.assertIsNone(cliente.longitud)
         self.assertFalse(cliente.foto_referencia_url)
+        self.assertEqual(cliente.lugar, self.lugar_operativo)
+        self.assertEqual(cliente.referencia, '')
 
     def test_lista_pedidos_no_muestra_botones_ubicacion_directos(self):
         self.crear_pedido(self.repartidor)
@@ -1166,6 +1168,10 @@ class PermisosRolesTests(TestCase):
 
     def test_panel_repartidor_refresca_fragmento_sin_exponer_otro_repartidor(self):
         pedido_asignado = self.crear_pedido(self.repartidor)
+        pedido_credito = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_credito.pk).update(
+            metodo_pago=Pedido.PAGO_FIADO
+        )
         cliente_otro = Cliente.objects.create(
             nombre='Cliente Fragmento Ajeno',
             telefono='999555444',
@@ -1187,6 +1193,8 @@ class PermisosRolesTests(TestCase):
             'core/includes/pedidos_repartidor_fragmento.html'
         )
         self.assertContains(fragment, pedido_asignado.cliente.nombre)
+        self.assertContains(fragment, 'Cr&eacute;dito')
+        self.assertNotContains(fragment, 'Fiado')
         self.assertNotContains(fragment, cliente_otro.nombre)
         self.assertNotContains(fragment, '<html')
 
@@ -1432,6 +1440,11 @@ class PermisosRolesTests(TestCase):
             repartidor=None,
             fecha_programada=hoy
         )
+        pedido_sin_asignar_hoy.cliente.referencia = 'Referencia antigua'
+        pedido_sin_asignar_hoy.cliente.referencia_ubicacion = 'Porton negro'
+        pedido_sin_asignar_hoy.cliente.save(
+            update_fields=['referencia', 'referencia_ubicacion']
+        )
         pedido_asignado_atrasado = self.crear_pedido(
             self.repartidor,
             fecha_programada=hoy - timedelta(days=1)
@@ -1458,6 +1471,9 @@ class PermisosRolesTests(TestCase):
             response.context['pedidos_asignados']
         )
         self.assertContains(response, 'Entrega posterior')
+        self.assertContains(response, 'Referencia para llegar')
+        self.assertContains(response, 'Porton negro')
+        self.assertNotContains(response, 'Referencia antigua')
         self.assertNotContains(response, 'Pedidos programados futuros')
 
     def test_asignar_pedido_cambia_estado_y_registra_timestamp(self):

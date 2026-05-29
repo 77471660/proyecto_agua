@@ -222,22 +222,12 @@
 
                 <div class="mb-3">
                     <label class="form-label" for="lugar">Lugar / zona</label>
-                    <select id="lugar" name="lugar" class="form-select form-select-lg">
-                        <option value="">Sin asignar</option>
+                    <select id="lugar" name="lugar" class="form-select form-select-lg" required>
+                        <option value="" selected disabled>Selecciona lugar / zona</option>
                         {% for lugar in lugares %}
                             <option value="{{ lugar.id }}">{{ lugar.nombre }}</option>
                         {% endfor %}
                     </select>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label" for="referencia">Referencia</label>
-                    <textarea
-                        id="referencia"
-                        name="referencia"
-                        class="form-control"
-                        rows="3"
-                    ></textarea>
                 </div>
 
                 {% include 'core/includes/cliente_ubicacion_fields.html' %}

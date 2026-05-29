@@ -174,7 +174,7 @@
         <div class="card-body">
             <form
                 method="post"
-                onsubmit="if (this.entregar_ahora.checked) { return this.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?'); } return true;"
+                onsubmit="if (this.entregar_ahora.checked) { return this.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar a cr\u00e9dito? Este pedido quedar\u00e1 como saldo por cobrar.') : confirm('\u00bfConfirmas marcar este pedido como entregado?'); } return true;"
             >
                 {% csrf_token %}
 
@@ -282,7 +282,7 @@
                         <option value="YAPE">Yape</option>
                         <option value="PLIN">Plin</option>
                         <option value="TRANSFERENCIA">Transferencia</option>
-                        <option value="FIADO">Fiado</option>
+                        <option value="FIADO">Cr&eacute;dito</option>
                     </select>
                     <small class="text-muted">
                         Selecciona el cobro si entregas ahora.

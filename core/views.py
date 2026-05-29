@@ -803,6 +803,13 @@ def preparar_pedido_repartidor(pedido):
     pedido.telefono_limpio = limpiar_telefono(pedido.cliente.telefono)
     pedido.tiempo_esperando = tiempo_esperando_pedido(pedido)
     pedido.tiempo_esperando_clase = clase_tiempo_esperando_pedido(pedido)
+    if pedido.metodo_pago == Pedido.PAGO_FIADO:
+        if pedido.metodo_pago_final:
+            pedido.pago_operativo = f'Cobrado ({pedido.get_metodo_pago_final_display()})'
+        else:
+            pedido.pago_operativo = 'Crédito'
+    else:
+        pedido.pago_operativo = pedido.get_metodo_pago_display()
 
     pedido.es_atrasado = (
         pedido.fecha_programada
@@ -3693,7 +3700,6 @@ def nuevo_cliente_repartidor(request):
         nombre = request.POST.get('nombre', '').strip()
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
-        referencia = request.POST.get('referencia', '').strip()
         lugar, error_lugar = leer_lugar_activo_post(request.POST)
         foto_referencia = request.FILES.get('foto_referencia')
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
@@ -3702,6 +3708,10 @@ def nuevo_cliente_repartidor(request):
 
         if error_lugar:
             messages.error(request, error_lugar)
+            return redirect('nuevo_cliente_repartidor')
+
+        if lugar is None:
+            messages.error(request, 'Selecciona un lugar / zona válido.')
             return redirect('nuevo_cliente_repartidor')
 
         if error_ubicacion:
@@ -3758,7 +3768,7 @@ def nuevo_cliente_repartidor(request):
             nombre=nombre,
             telefono=telefono,
             direccion=direccion,
-            referencia=referencia,
+            referencia='',
             lugar=lugar,
             latitud=latitud,
             longitud=longitud,

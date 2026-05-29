@@ -143,7 +143,7 @@ class WebPushTests(TestCase):
         )
         self.assertContains(
             response,
-            "confirm('\\u00bfConfirmas entregar como fiado? Este pedido quedar\\u00e1 como deuda pendiente.')"
+            "confirm('\\u00bfConfirmas entregar a cr\\u00e9dito? Este pedido quedar\\u00e1 como saldo por cobrar.')"
         )
         self.assertContains(
             response,

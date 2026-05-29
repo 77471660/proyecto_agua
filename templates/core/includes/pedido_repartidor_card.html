@@ -48,13 +48,6 @@
                 <div class="order-value">{{ pedido.cliente.direccion }}</div>
             </div>
 
-            <div class="col-12">
-                <div class="order-label">Referencia</div>
-                <div class="order-value">
-                    {{ pedido.cliente.referencia|default:"Sin referencia" }}
-                </div>
-            </div>
-
             {% if pedido.cliente.referencia_ubicacion %}
                 <div class="col-12">
                     <div class="order-label">Referencia para llegar</div>
@@ -76,7 +69,7 @@
 
             <div class="col-6">
                 <div class="order-label">Pago</div>
-                <div class="order-value">{{ pedido.get_metodo_pago_display }}</div>
+                <div class="order-value">{{ pedido.pago_operativo }}</div>
             </div>
 
             <div class="col-6">
@@ -168,7 +161,7 @@
                     method="post"
                     action="{% url 'marcar_pedido_entregado_repartidor' pedido.id %}"
                     class="mb-0"
-                    onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar como fiado? Este pedido quedar\u00e1 como deuda pendiente.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')"
+                    onsubmit="return this.elements.metodo_pago.value === 'FIADO' ? confirm('\u00bfConfirmas entregar a cr\u00e9dito? Este pedido quedar\u00e1 como saldo por cobrar.') : confirm('\u00bfConfirmas marcar este pedido como entregado?')"
                 >
                     {% csrf_token %}
                     {% include 'core/includes/lugar_para_finalizar.html' with accion='entregar' %}
@@ -183,7 +176,7 @@
                         <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
                         <option value="PLIN" {% if pedido.metodo_pago == 'PLIN' %}selected{% endif %}>Plin</option>
                         <option value="TRANSFERENCIA" {% if pedido.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>Transferencia</option>
-                        <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Fiado</option>
+                        <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Cr&eacute;dito</option>
                     </select>
                     <button type="submit" class="btn btn-primary w-100 action-button">
                         Marcar entregado
