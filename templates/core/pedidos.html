@@ -260,56 +260,83 @@ Pedidos - AquaSmart CRM
 
 <script>
     (function () {
-        const container = document.getElementById('pedidos-live-container');
         const autoHideMs = 5000;
         const timers = new WeakMap();
 
-        if (!container || !window.bootstrap) {
-            return;
-        }
+        function initOrderManagementAutoHide() {
+            const container = document.getElementById('pedidos-live-container');
 
-        function clearAutoHide(collapse) {
-            const timer = timers.get(collapse);
-
-            if (timer) {
-                window.clearTimeout(timer);
-                timers.delete(collapse);
+            if (!container || !window.bootstrap) {
+                return;
             }
-        }
 
-        function scheduleAutoHide(collapse) {
-            clearAutoHide(collapse);
+            function clearAutoHide(collapse) {
+                const timer = timers.get(collapse);
 
-            timers.set(collapse, window.setTimeout(function () {
-                if (collapse.contains(document.activeElement)) {
-                    scheduleAutoHide(collapse);
+                if (timer) {
+                    window.clearTimeout(timer);
+                    timers.delete(collapse);
+                }
+            }
+
+            function scheduleAutoHide(collapse) {
+                clearAutoHide(collapse);
+
+                timers.set(collapse, window.setTimeout(function () {
+                    if (collapse.contains(document.activeElement)) {
+                        scheduleAutoHide(collapse);
+                        return;
+                    }
+
+                    window.bootstrap.Collapse.getOrCreateInstance(
+                        collapse,
+                        { toggle: false }
+                    ).hide();
+                }, autoHideMs));
+            }
+
+            container.addEventListener('shown.bs.collapse', function (event) {
+                scheduleAutoHide(event.target);
+            });
+
+            container.addEventListener('hidden.bs.collapse', function (event) {
+                clearAutoHide(event.target);
+            });
+
+            container.addEventListener('click', function (event) {
+                const trigger = event.target.closest('[data-bs-toggle="collapse"][data-bs-target]');
+
+                if (!trigger) {
                     return;
                 }
 
-                window.bootstrap.Collapse.getOrCreateInstance(
-                    collapse,
-                    { toggle: false }
-                ).hide();
-            }, autoHideMs));
+                window.setTimeout(function () {
+                    const collapse = container.querySelector(trigger.getAttribute('data-bs-target'));
+
+                    if (collapse && collapse.classList.contains('show')) {
+                        scheduleAutoHide(collapse);
+                    }
+                }, 350);
+            });
+
+            ['pointerdown', 'focusin', 'input', 'change'].forEach(function (eventName) {
+                container.addEventListener(eventName, function (event) {
+                    const collapse = event.target.closest('.collapse.show');
+
+                    if (collapse && container.contains(collapse)) {
+                        scheduleAutoHide(collapse);
+                    }
+                });
+            });
+
+            container.dataset.orderManagementAutoHide = 'ready';
         }
 
-        container.addEventListener('shown.bs.collapse', function (event) {
-            scheduleAutoHide(event.target);
-        });
-
-        container.addEventListener('hidden.bs.collapse', function (event) {
-            clearAutoHide(event.target);
-        });
-
-        ['pointerdown', 'focusin', 'input', 'change'].forEach(function (eventName) {
-            container.addEventListener(eventName, function (event) {
-                const collapse = event.target.closest('.collapse.show');
-
-                if (collapse && container.contains(collapse)) {
-                    scheduleAutoHide(collapse);
-                }
-            });
-        });
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initOrderManagementAutoHide);
+        } else {
+            initOrderManagementAutoHide();
+        }
     })();
 </script>
 
