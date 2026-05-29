@@ -120,18 +120,6 @@
 
                 {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary w-100 action-button' hide_copy_button='1' %}
 
-                <a
-                    href="{% url 'actualizar_referencia_cliente_repartidor' pedido.cliente.id %}"
-                    class="btn btn-outline-secondary w-100 action-button"
-                    onclick="return confirm('\u00bfDeseas actualizar la referencia de este cliente?')"
-                >
-                    {% if pedido.cliente.tiene_coordenadas or pedido.cliente.foto_referencia_url %}
-                        Actualizar referencia de casa
-                    {% else %}
-                        Agregar ubicaci&oacute;n/foto
-                    {% endif %}
-                </a>
-
                 {% if pedido.cliente.foto_referencia_url %}
                     <a
                         href="{{ pedido.cliente.foto_referencia_url }}"
@@ -167,7 +155,7 @@
                     {% include 'core/includes/lugar_para_finalizar.html' with accion='entregar' %}
                     <select
                         name="metodo_pago"
-                        class="form-select mb-2"
+                        class="form-select mb-2 mobile-payment-select"
                         aria-label="Metodo de pago"
                         required
                     >

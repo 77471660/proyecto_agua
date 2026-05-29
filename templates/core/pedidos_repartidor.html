@@ -119,6 +119,12 @@
             font-weight: 700;
         }
 
+        .mobile-payment-select {
+            min-height: 48px;
+            padding: 0.65rem 0.85rem;
+            font-weight: 700;
+        }
+
         .location-open-button,
         .location-copy-button,
         .location-fields .btn {
@@ -451,9 +457,16 @@
             }
 
             .action-button,
+            .mobile-payment-select,
             .action-summary,
             .history-summary {
                 min-height: 42px;
+            }
+
+            .mobile-payment-select {
+                margin-bottom: 0.55rem !important;
+                padding-bottom: 0.55rem;
+                padding-top: 0.55rem;
             }
 
             .action-summary,
@@ -522,7 +535,7 @@
 
                 {% if menu_es_jefe_repartidores %}
                     <a href="/repartidor/jefe/" class="btn btn-outline-light btn-sm">
-                        GestiÃ³n de repartos
+                        Gesti&oacute;n de repartos
                     </a>
                 {% endif %}
 
@@ -535,7 +548,7 @@
                 <form method="post" action="{% url 'cerrar_sesion_repartidor' %}" class="mb-0">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-light btn-sm">
-                        Cerrar sesiÃ³n
+                        Cerrar sesi&oacute;n
                     </button>
                 </form>
             </div>
@@ -562,7 +575,7 @@
                     </li>
                     {% if menu_es_jefe_repartidores %}
                         <li>
-                            <a class="dropdown-item" href="/repartidor/jefe/">GestiÃ³n de repartos</a>
+                            <a class="dropdown-item" href="/repartidor/jefe/">Gesti&oacute;n de repartos</a>
                         </li>
                     {% endif %}
                     {% if menu_puede_crm_operativo %}
@@ -587,7 +600,7 @@
                         <form method="post" action="{% url 'cerrar_sesion_repartidor' %}" class="mb-0">
                             {% csrf_token %}
                             <button type="submit" class="dropdown-item">
-                                Cerrar sesiÃ³n
+                                Cerrar sesi&oacute;n
                             </button>
                         </form>
                     </li>

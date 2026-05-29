@@ -92,6 +92,98 @@ Detalle del cliente
         .client-order-actions form {
             width: 100%;
         }
+
+        .client-orders-table,
+        .client-history-table {
+            overflow: visible;
+        }
+
+        .client-orders-table table,
+        .client-orders-table tbody,
+        .client-orders-table tr,
+        .client-orders-table td,
+        .client-history-table table,
+        .client-history-table tbody,
+        .client-history-table tr,
+        .client-history-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .client-orders-table thead,
+        .client-history-table thead {
+            display: none;
+        }
+
+        .client-orders-table tr,
+        .client-history-table tr {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 0.85rem;
+            padding: 0.75rem;
+        }
+
+        .client-orders-table td,
+        .client-history-table td {
+            border: 0;
+            padding: 0.38rem 0 !important;
+        }
+
+        .client-orders-table td::before,
+        .client-history-table td::before {
+            color: #64748b;
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 800;
+            margin-bottom: 0.15rem;
+            text-transform: uppercase;
+        }
+
+        .client-orders-table td:nth-child(1)::before {
+            content: "Fecha";
+        }
+
+        .client-orders-table td:nth-child(2)::before {
+            content: "Bidones";
+        }
+
+        .client-orders-table td:nth-child(3)::before {
+            content: "Total";
+        }
+
+        .client-orders-table td:nth-child(4)::before {
+            content: "Estado";
+        }
+
+        .client-orders-table td:nth-child(5)::before {
+            content: "Acciones";
+        }
+
+        .client-history-table td:nth-child(1)::before {
+            content: "Fecha";
+        }
+
+        .client-history-table td:nth-child(2)::before {
+            content: "Pedido";
+        }
+
+        .client-history-table td:nth-child(3)::before {
+            content: "Acción";
+        }
+
+        .client-history-table td:nth-child(4)::before {
+            content: "Usuario";
+        }
+
+        .client-history-table td:nth-child(5)::before {
+            content: "Descripción";
+        }
+
+        .client-history-description {
+            max-width: none;
+            min-width: 0;
+        }
     }
 </style>
 
@@ -277,7 +369,7 @@ Detalle del cliente
 
                 {% if pedidos %}
 
-                    <div class="table-responsive">
+                    <div class="table-responsive client-orders-table">
 
     <table class="table table-hover align-middle mb-0">
 
@@ -488,7 +580,7 @@ Detalle del cliente
 
             <div class="card-body">
                 {% if historial_pedidos %}
-                    <div class="table-responsive">
+                    <div class="table-responsive client-history-table">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>

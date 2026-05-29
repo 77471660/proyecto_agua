@@ -1,20 +1,44 @@
 ﻿{% extends 'base.html' %}
 
 {% block title %}
-GestiÃ³n de repartos - AquaSmart CRM
+Gesti&oacute;n de repartos - AquaSmart CRM
 {% endblock %}
 
 {% block content %}
 
 <style>
     @media (max-width: 575.98px) {
+        .dispatch-panel {
+            padding-top: max(0.25rem, env(safe-area-inset-top, 0px));
+        }
+
+        .dispatch-panel .page-heading {
+            align-items: stretch !important;
+            gap: 0.75rem !important;
+            margin-bottom: 1rem;
+        }
+
         .dispatch-panel .page-heading h2 {
             font-size: 1.2rem;
+            line-height: 1.2;
+            margin-bottom: 0.2rem;
+        }
+
+        .dispatch-panel .page-heading small {
+            display: block;
+            line-height: 1.35;
+        }
+
+        .dispatch-panel .page-heading > .d-flex {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
         }
 
         .dispatch-panel .page-heading .btn {
             padding-bottom: 0.4rem;
             padding-top: 0.4rem;
+            width: 100%;
         }
 
         .dispatch-panel .card {
@@ -133,9 +157,9 @@ GestiÃ³n de repartos - AquaSmart CRM
 
 <div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
     <div>
-        <h2>GestiÃ³n de repartos</h2>
+        <h2>Gesti&oacute;n de repartos</h2>
         <small class="text-muted">
-            AsignaciÃ³n de pedidos y estado operativo de repartidores.
+            Asignaci&oacute;n de pedidos y estado operativo de repartidores.
         </small>
     </div>
 
@@ -209,7 +233,7 @@ GestiÃ³n de repartos - AquaSmart CRM
                 <thead class="table-light">
                     <tr>
                         <th>Cliente</th>
-                        <th>DirecciÃ³n</th>
+                        <th>Direcci&oacute;n</th>
                         <th>Referencia para llegar</th>
                         <th>Bidones</th>
                         <th>Total</th>
@@ -311,7 +335,7 @@ GestiÃ³n de repartos - AquaSmart CRM
                         </div>
 
                         <div>
-                            <span class="dispatch-mobile-label">DirecciÃ³n</span>
+                            <span class="dispatch-mobile-label">Direcci&oacute;n</span>
                             <span class="dispatch-mobile-value">{{ pedido.cliente.direccion }}</span>
                         </div>
 
@@ -402,7 +426,7 @@ GestiÃ³n de repartos - AquaSmart CRM
                     <tr>
                         <th>Cliente</th>
                         <th>Repartidor</th>
-                        <th>DirecciÃ³n</th>
+                        <th>Direcci&oacute;n</th>
                         <th>Bidones</th>
                         <th>Total</th>
                         <th>Nota</th>
@@ -522,7 +546,7 @@ GestiÃ³n de repartos - AquaSmart CRM
                         </div>
 
                         <div>
-                            <span class="dispatch-mobile-label">DirecciÃ³n</span>
+                            <span class="dispatch-mobile-label">Direcci&oacute;n</span>
                             <span class="dispatch-mobile-value">{{ pedido.cliente.direccion }}</span>
                         </div>
 

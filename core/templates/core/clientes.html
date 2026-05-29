@@ -45,6 +45,28 @@ Clientes - AquaSmart CRM
         color: #1f2937;
         overflow-wrap: anywhere;
     }
+
+    .client-mobile-actions {
+        display: grid;
+        gap: 0.55rem;
+        grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+    }
+
+    .client-mobile-actions .btn {
+        align-items: center;
+        display: inline-flex;
+        justify-content: center;
+        min-height: 42px;
+        padding-left: 0.65rem;
+        padding-right: 0.65rem;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 360px) {
+        .client-mobile-actions {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 <div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -239,7 +261,7 @@ Clientes - AquaSmart CRM
                         </div>
                     </div>
 
-                    <div class="d-grid gap-2" style="grid-template-columns: 1fr 1fr;">
+                    <div class="client-mobile-actions">
                         <a
                             href="{% url 'detalle_cliente' cliente.id %}"
                             class="btn btn-sm btn-outline-primary"

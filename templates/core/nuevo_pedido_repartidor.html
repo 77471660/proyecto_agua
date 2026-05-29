@@ -189,7 +189,7 @@
                         type="search"
                         id="cliente_busqueda"
                         class="form-control form-control-lg"
-                        placeholder="Buscar por nombre, telÃ©fono o direcciÃ³n..."
+                        placeholder="Buscar por nombre, tel&eacute;fono o direcci&oacute;n..."
                         autocomplete="off"
                         data-client-input
                         value="{% if cliente_preseleccionado %}{{ cliente_preseleccionado.nombre }} - {{ cliente_preseleccionado.telefono|format_phone_display }}{% endif %}"
@@ -208,11 +208,11 @@
                         {% if cliente_preseleccionado %}
                             <strong>{{ cliente_preseleccionado.nombre }}</strong><br>
                             <span>{{ cliente_preseleccionado.telefono|format_phone_display }}</span><br>
-                            <small>{{ cliente_preseleccionado.direccion|default:"Sin direcciÃ³n registrada" }}</small>
+                            <small>{{ cliente_preseleccionado.direccion|default:"Sin direcci&oacute;n registrada" }}</small>
                         {% endif %}
                     </div>
                     <div id="cliente_error" class="text-danger small mt-2 d-none" data-client-error>
-                        Selecciona un cliente vÃ¡lido de la lista.
+                        Selecciona un cliente v&aacute;lido de la lista.
                     </div>
                 </div>
 
@@ -262,7 +262,7 @@
 
                 <div class="mb-3">
                     <label class="form-label" for="observacion">
-                        ObservaciÃ³n opcional
+                        Observaci&oacute;n opcional
                     </label>
                     <textarea
                         id="observacion"
