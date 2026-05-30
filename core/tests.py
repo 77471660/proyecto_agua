@@ -3096,6 +3096,28 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.context['total_egresos_semana'], Decimal('4.00'))
         self.assertEqual(response.context['neto_semanal'], Decimal('10.00'))
 
+    def test_reporte_semanal_limita_fecha_visible_a_rango_reciente(self):
+        hoy = timezone.localdate()
+        fecha_minima = hoy.replace(year=hoy.year - 1, month=1, day=1)
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(
+            reverse('reporte_semanal'),
+            {'semana': f'{hoy.year - 3}-01-15'}
+        )
+
+        self.assertEqual(response.context['fecha_minima_reportes'], fecha_minima)
+        self.assertEqual(response.context['fecha_maxima_reportes'], hoy)
+        self.assertEqual(response.context['inicio_semana'].year, hoy.year)
+        self.assertContains(
+            response,
+            f'min="{fecha_minima.strftime("%Y-%m-%d")}"'
+        )
+        self.assertContains(
+            response,
+            f'max="{hoy.strftime("%Y-%m-%d")}"'
+        )
+
     def test_dashboard_y_reporte_diario_contabilizan_por_fecha_entrega(self):
         pedido = self.crear_pedido(self.repartidor)
         Pedido.objects.filter(pk=pedido.pk).update(
@@ -3257,6 +3279,20 @@ class ReporteMensualTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+    def test_reporte_mensual_limita_anios_visibles_a_dos_recientes(self):
+        hoy = timezone.localdate()
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('reporte_mensual'))
+
+        self.assertEqual(
+            list(response.context['anios']),
+            [hoy.year - 1, hoy.year]
+        )
+        self.assertContains(response, f'value="{hoy.year - 1}"')
+        self.assertContains(response, f'value="{hoy.year}"')
+        self.assertNotContains(response, f'value="{hoy.year - 2}"')
 
     def test_reporte_mensual_contabiliza_por_fecha_entrega(self):
         cliente = Cliente.objects.create(

@@ -75,6 +75,7 @@ PEDIDOS_POR_PAGINA = 15
 CLIENTES_POR_PAGINA = 15
 PANEL_JEFE_LIMITE_PEDIDOS = 15
 HISTORIAL_CLIENTE_LIMITE = 10
+REPORTE_ANIOS_VISIBLES = 2
 logger = logging.getLogger(__name__)
 REFERENCIA_CASA_INCOMPLETA_MENSAJE = (
     'Para guardar referencia de casa debes capturar ubicación GPS y tomar foto.'
@@ -305,6 +306,15 @@ def campos_estado_pedido():
         'fecha_estado_actualizado',
         'usuario_estado_actualizado',
     ]
+
+
+def fecha_minima_reportes(hoy):
+
+    return hoy.replace(
+        year=hoy.year - REPORTE_ANIOS_VISIBLES + 1,
+        month=1,
+        day=1
+    )
 
 
 def tipo_historial_estado(nuevo_estado):
@@ -2011,11 +2021,15 @@ def reporte_diario(
 def reporte_semanal(request):
 
     hoy = timezone.localdate()
+    fecha_minima = fecha_minima_reportes(hoy)
     fecha_param = request.GET.get('semana', '').strip()
 
     try:
         fecha_referencia = datetime.strptime(fecha_param, '%Y-%m-%d').date()
     except ValueError:
+        fecha_referencia = hoy
+
+    if fecha_referencia < fecha_minima or fecha_referencia > hoy:
         fecha_referencia = hoy
 
     inicio_semana = fecha_referencia - timedelta(days=fecha_referencia.weekday())
@@ -2085,6 +2099,8 @@ def reporte_semanal(request):
         'resumen_egresos_categoria_semana': resumen_egresos_por_categoria(
             egresos_semana
         ),
+        'fecha_minima_reportes': fecha_minima,
+        'fecha_maxima_reportes': hoy,
     }
 
     return render(request, 'core/reporte_semanal.html', context)
@@ -4396,6 +4412,7 @@ def reporte_mensual(request):
 
     hoy = timezone.localdate()
     zona_horaria_operativa = timezone.get_default_timezone()
+    anio_minimo_reportes = hoy.year - REPORTE_ANIOS_VISIBLES + 1
 
     mes = request.GET.get('mes')
     anio = request.GET.get('anio')
@@ -4413,7 +4430,7 @@ def reporte_mensual(request):
     except (TypeError, ValueError):
         anio = hoy.year
 
-    anios = range(hoy.year - 5, hoy.year + 1)
+    anios = range(anio_minimo_reportes, hoy.year + 1)
 
     if anio not in anios:
         anio = hoy.year

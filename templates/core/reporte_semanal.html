@@ -24,6 +24,8 @@ Reporte Semanal - AquaSmart CRM
                 name="semana"
                 class="form-control"
                 value="{{ inicio_semana|date:'Y-m-d' }}"
+                min="{{ fecha_minima_reportes|date:'Y-m-d' }}"
+                max="{{ fecha_maxima_reportes|date:'Y-m-d' }}"
             >
         </div>
         <div>
