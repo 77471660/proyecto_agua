@@ -79,73 +79,84 @@
                         </div>
                     </div>
 
-                    <div class="credit-actions mb-3">
-                        <div class="row g-2">
-                            <div class="col-6">
-                                {% if credito.telefono_limpio %}
-                                    <a
-                                        href="tel:{{ credito.telefono_limpio }}"
-                                        class="btn btn-outline-primary w-100 action-button"
-                                    >
-                                        Llamar
-                                    </a>
-                                {% else %}
-                                    <button type="button" class="btn btn-outline-secondary w-100 action-button" disabled>
-                                        Sin tel&eacute;fono
-                                    </button>
-                                {% endif %}
-                            </div>
-
-                            <div class="col-6">
-                                {% if credito.telefono_limpio %}
-                                    <a
-                                        href="{{ credito.whatsapp_url }}"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="btn btn-whatsapp w-100 action-button"
-                                        onclick="return confirm('\u00bfDeseas abrir WhatsApp para este cliente?')"
-                                    >
-                                        WhatsApp
-                                    </a>
-                                {% else %}
-                                    <button type="button" class="btn btn-outline-secondary w-100 action-button" disabled>
-                                        WhatsApp
-                                    </button>
-                                {% endif %}
-                            </div>
-
-                            <div class="col-12">
-                                {% include 'core/includes/location_button.html' with cliente=credito.cliente button_class='btn-outline-primary w-100 action-button' hide_copy_button='1' %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <form
-                        method="post"
-                        action="{% url 'cobrar_credito_repartidor' credito.id %}"
-                        class="credit-collect-form mb-0"
-                        onsubmit="return confirm('\u00bfConfirmas registrar este cobro?')"
+                    <details
+                        class="credit-manage-details"
+                        data-refresh-key="credito-{{ credito.id }}"
                     >
-                        {% csrf_token %}
-                        <label class="order-label" for="metodo-cobro-{{ credito.id }}">
-                            M&eacute;todo de cobro
-                        </label>
-                        <select
-                            id="metodo-cobro-{{ credito.id }}"
-                            name="metodo_pago_final"
-                            class="form-select mobile-payment-select"
-                            required
-                        >
-                            <option value="" selected disabled>Selecciona m&eacute;todo</option>
-                            <option value="EFECTIVO">Efectivo</option>
-                            <option value="YAPE">Yape</option>
-                            <option value="PLIN">Plin</option>
-                            <option value="TRANSFERENCIA">Transferencia</option>
-                        </select>
-                        <button type="submit" class="btn btn-success w-100 action-button">
-                            Cobrar
-                        </button>
-                    </form>
+                        <summary class="credit-manage-summary">
+                            Gestionar cr&eacute;dito
+                        </summary>
+
+                        <div class="credit-manage-panel">
+                            <div class="credit-actions mb-3">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        {% if credito.telefono_limpio %}
+                                            <a
+                                                href="tel:{{ credito.telefono_limpio }}"
+                                                class="btn btn-outline-primary w-100 action-button"
+                                            >
+                                                Llamar
+                                            </a>
+                                        {% else %}
+                                            <button type="button" class="btn btn-outline-secondary w-100 action-button" disabled>
+                                                Sin tel&eacute;fono
+                                            </button>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="col-6">
+                                        {% if credito.telefono_limpio %}
+                                            <a
+                                                href="{{ credito.whatsapp_url }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="btn btn-whatsapp w-100 action-button"
+                                                onclick="return confirm('\u00bfDeseas abrir WhatsApp para este cliente?')"
+                                            >
+                                                WhatsApp
+                                            </a>
+                                        {% else %}
+                                            <button type="button" class="btn btn-outline-secondary w-100 action-button" disabled>
+                                                WhatsApp
+                                            </button>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="col-12">
+                                        {% include 'core/includes/location_button.html' with cliente=credito.cliente button_class='btn-outline-primary w-100 action-button' hide_copy_button='1' %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form
+                                method="post"
+                                action="{% url 'cobrar_credito_repartidor' credito.id %}"
+                                class="credit-collect-form mb-0"
+                                onsubmit="return confirm('\u00bfConfirmas registrar este cobro?')"
+                            >
+                                {% csrf_token %}
+                                <label class="mobile-payment-label" for="metodo-cobro-{{ credito.id }}">
+                                    M&eacute;todo de cobro
+                                </label>
+                                <select
+                                    id="metodo-cobro-{{ credito.id }}"
+                                    name="metodo_pago_final"
+                                    class="form-select mobile-payment-select"
+                                    required
+                                >
+                                    <option value="" selected disabled>Selecciona m&eacute;todo</option>
+                                    <option value="EFECTIVO">Efectivo</option>
+                                    <option value="YAPE">Yape</option>
+                                    <option value="PLIN">Plin</option>
+                                    <option value="TRANSFERENCIA">Transferencia</option>
+                                </select>
+                                <button type="submit" class="btn btn-success w-100 action-button">
+                                    Cobrar
+                                </button>
+                            </form>
+                        </div>
+                    </details>
                 </div>
             </article>
         {% empty %}
