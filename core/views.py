@@ -1699,13 +1699,23 @@ def editar_egreso(request, egreso_id):
         messages.success(request, 'Egreso actualizado correctamente.')
         return redirect('egresos')
 
+    hoy = timezone.localdate()
+    egresos_hoy = egresos_en_rango(hoy, hoy)
+    egresos_recientes = Egreso.objects.select_related(
+        'usuario_registro'
+    ).order_by('-fecha_hora', '-id')[:30]
     context = {
-        'egreso': egreso,
+        'hoy': hoy,
         'categorias_egreso': Egreso.CATEGORIAS,
         'metodos_pago_egreso': Egreso.METODOS_PAGO,
+        'egresos_hoy': egresos_hoy,
+        'egresos_recientes': egresos_recientes,
+        'total_egresos_hoy': total_decimal(egresos_hoy),
+        'resumen_categorias_hoy': resumen_egresos_por_categoria(egresos_hoy),
+        'egreso_editando': egreso,
     }
 
-    return render(request, 'core/editar_egreso.html', context)
+    return render(request, 'core/egresos.html', context)
 
 
 @login_required

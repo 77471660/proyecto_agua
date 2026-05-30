@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}
 Egresos - AquaSmart CRM
@@ -19,9 +20,21 @@ Egresos - AquaSmart CRM
 <div class="row g-3 mb-4">
     <div class="col-lg-4">
         <div class="card content-card h-100">
-            <div class="card-header bg-white">Registrar egreso</div>
+            <div class="card-header bg-white">
+                {% if egreso_editando %}
+                    Editar egreso
+                {% else %}
+                    Registrar egreso
+                {% endif %}
+            </div>
             <div class="card-body">
-                <form method="POST">
+                <form
+                    method="POST"
+                    {% if egreso_editando %}
+                        action="{% url 'editar_egreso' egreso_editando.id %}"
+                        onsubmit="return confirm('\u00bfGuardar cambios del egreso?')"
+                    {% endif %}
+                >
                     {% csrf_token %}
 
                     <div class="mb-3">
@@ -33,6 +46,7 @@ Egresos - AquaSmart CRM
                             class="form-control"
                             min="0.01"
                             step="0.01"
+                            value="{% if egreso_editando %}{{ egreso_editando.monto|unlocalize }}{% endif %}"
                             required
                         >
                     </div>
@@ -40,9 +54,11 @@ Egresos - AquaSmart CRM
                     <div class="mb-3">
                         <label for="categoria" class="form-label">Categoria</label>
                         <select id="categoria" name="categoria" class="form-select" required>
-                            <option value="" selected disabled>Selecciona categoria</option>
+                            <option value="" {% if not egreso_editando %}selected{% endif %} disabled>Selecciona categoria</option>
                             {% for valor, etiqueta in categorias_egreso %}
-                                <option value="{{ valor }}">{{ etiqueta }}</option>
+                                <option value="{{ valor }}" {% if egreso_editando and egreso_editando.categoria == valor %}selected{% endif %}>
+                                    {{ etiqueta }}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -50,9 +66,11 @@ Egresos - AquaSmart CRM
                     <div class="mb-3">
                         <label for="metodo_pago" class="form-label">Metodo de pago</label>
                         <select id="metodo_pago" name="metodo_pago" class="form-select" required>
-                            <option value="" selected disabled>Selecciona metodo</option>
+                            <option value="" {% if not egreso_editando %}selected{% endif %} disabled>Selecciona metodo</option>
                             {% for valor, etiqueta in metodos_pago_egreso %}
-                                <option value="{{ valor }}">{{ etiqueta }}</option>
+                                <option value="{{ valor }}" {% if egreso_editando and egreso_editando.metodo_pago == valor %}selected{% endif %}>
+                                    {{ etiqueta }}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -65,6 +83,7 @@ Egresos - AquaSmart CRM
                             name="concepto"
                             class="form-control"
                             maxlength="160"
+                            value="{% if egreso_editando %}{{ egreso_editando.concepto }}{% endif %}"
                             required
                         >
                     </div>
@@ -76,12 +95,21 @@ Egresos - AquaSmart CRM
                             name="observacion"
                             class="form-control"
                             rows="2"
-                        ></textarea>
+                        >{% if egreso_editando %}{{ egreso_editando.observacion }}{% endif %}</textarea>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100">
-                        Guardar egreso
+                        {% if egreso_editando %}
+                            Guardar cambios
+                        {% else %}
+                            Guardar egreso
+                        {% endif %}
                     </button>
+                    {% if egreso_editando %}
+                        <a href="{% url 'egresos' %}" class="btn btn-outline-secondary w-100 mt-2">
+                            Cancelar edicion
+                        </a>
+                    {% endif %}
                 </form>
             </div>
         </div>

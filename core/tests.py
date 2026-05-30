@@ -2940,6 +2940,14 @@ class PermisosRolesTests(TestCase):
             page,
             reverse('editar_egreso', kwargs={'egreso_id': egreso.id})
         )
+        edit_page = self.client.get(
+            reverse('editar_egreso', kwargs={'egreso_id': egreso.id})
+        )
+        self.assertEqual(edit_page.status_code, 200)
+        self.assertTemplateUsed(edit_page, 'core/egresos.html')
+        self.assertContains(edit_page, 'Editar egreso')
+        self.assertNotContains(edit_page, 'Compra corregida')
+        self.assertNotContains(edit_page, 'editar_egreso.html')
 
         response = self.client.post(
             reverse('editar_egreso', kwargs={'egreso_id': egreso.id}),
