@@ -2918,6 +2918,73 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(egreso.monto, Decimal('25.50'))
         self.assertEqual(egreso.usuario_registro, self.secretaria)
 
+    def test_editar_egreso_actualiza_cierre_diario_y_resumen_semanal(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_EFECTIVO
+        )
+        egreso = Egreso.objects.create(
+            monto=Decimal('5.00'),
+            categoria=Egreso.CATEGORIA_MOVILIDAD,
+            metodo_pago=Egreso.PAGO_EFECTIVO,
+            concepto='Combustible mal registrado',
+            usuario_registro=self.secretaria
+        )
+        self.client.force_login(self.secretaria)
+
+        page = self.client.get(reverse('egresos'))
+        self.assertContains(page, 'Editar')
+        self.assertContains(
+            page,
+            reverse('editar_egreso', kwargs={'egreso_id': egreso.id})
+        )
+
+        response = self.client.post(
+            reverse('editar_egreso', kwargs={'egreso_id': egreso.id}),
+            {
+                'monto': '3.00',
+                'categoria': Egreso.CATEGORIA_COMPRAS,
+                'metodo_pago': Egreso.PAGO_YAPE,
+                'concepto': 'Compra corregida',
+                'observacion': 'Recibo corregido',
+            }
+        )
+
+        egreso.refresh_from_db()
+        diario = self.client.get(reverse('reporte_diario'))
+        semanal = self.client.get(reverse('reporte_semanal'))
+
+        self.assertRedirects(response, reverse('egresos'))
+        self.assertEqual(egreso.monto, Decimal('3.00'))
+        self.assertEqual(egreso.categoria, Egreso.CATEGORIA_COMPRAS)
+        self.assertEqual(egreso.metodo_pago, Egreso.PAGO_YAPE)
+        self.assertEqual(egreso.concepto, 'Compra corregida')
+        self.assertEqual(egreso.observacion, 'Recibo corregido')
+        self.assertEqual(egreso.usuario_registro, self.secretaria)
+        self.assertEqual(diario.context['total_egresos_hoy'], Decimal('3.00'))
+        self.assertEqual(diario.context['egresos_efectivo_hoy'], Decimal('0.00'))
+        self.assertEqual(diario.context['efectivo_esperado'], Decimal('14.00'))
+        self.assertEqual(semanal.context['total_egresos_semana'], Decimal('3.00'))
+        self.assertEqual(semanal.context['neto_semanal'], Decimal('11.00'))
+
+    def test_repartidor_no_puede_editar_egreso(self):
+        egreso = Egreso.objects.create(
+            monto=Decimal('5.00'),
+            categoria=Egreso.CATEGORIA_MOVILIDAD,
+            metodo_pago=Egreso.PAGO_EFECTIVO,
+            concepto='Movilidad',
+            usuario_registro=self.secretaria
+        )
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(
+            reverse('editar_egreso', kwargs={'egreso_id': egreso.id})
+        )
+
+        self.assertEqual(response.status_code, 302)
+
     def test_reporte_diario_calcula_cierre_sin_restar_egresos_digitales(self):
         pedido_efectivo = self.crear_pedido(self.repartidor)
         pedido_yape = self.crear_pedido(self.repartidor)

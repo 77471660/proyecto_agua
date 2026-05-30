@@ -114,6 +114,7 @@ Egresos - AquaSmart CRM
                                     <th>Concepto</th>
                                     <th>Metodo</th>
                                     <th class="text-end">Monto</th>
+                                    <th class="text-end">Accion</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -129,6 +130,14 @@ Egresos - AquaSmart CRM
                                         </td>
                                         <td>{{ egreso.get_metodo_pago_display }}</td>
                                         <td class="text-end fw-semibold">S/ {{ egreso.monto|floatformat:2 }}</td>
+                                        <td class="text-end">
+                                            <a
+                                                href="{% url 'editar_egreso' egreso.id %}"
+                                                class="btn btn-outline-primary btn-sm"
+                                            >
+                                                Editar
+                                            </a>
+                                        </td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -156,6 +165,7 @@ Egresos - AquaSmart CRM
                             <th>Metodo</th>
                             <th>Usuario</th>
                             <th class="text-end">Monto</th>
+                            <th class="text-end">Accion</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -167,6 +177,14 @@ Egresos - AquaSmart CRM
                                 <td>{{ egreso.get_metodo_pago_display }}</td>
                                 <td>{{ egreso.usuario_registro|default:"-" }}</td>
                                 <td class="text-end fw-semibold">S/ {{ egreso.monto|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    <a
+                                        href="{% url 'editar_egreso' egreso.id %}"
+                                        class="btn btn-outline-primary btn-sm"
+                                    >
+                                        Editar
+                                    </a>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>

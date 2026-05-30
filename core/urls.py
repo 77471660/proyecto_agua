@@ -166,6 +166,12 @@ urlpatterns = [
     ),
 
     path(
+        'egresos/<int:egreso_id>/editar/',
+        views.editar_egreso,
+        name='editar_egreso'
+    ),
+
+    path(
         'cierre-caja/diario/',
         views.registrar_cierre_caja_diario,
         name='registrar_cierre_caja_diario'

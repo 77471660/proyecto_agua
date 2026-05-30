@@ -1671,6 +1671,45 @@ def egresos(request):
 
 @login_required
 @secretaria_required
+def editar_egreso(request, egreso_id):
+
+    egreso = get_object_or_404(Egreso, id=egreso_id)
+
+    if request.method == 'POST':
+        monto = decimal_post(request.POST.get('monto'))
+        egreso.monto = monto if monto is not None else Decimal('0.00')
+        egreso.categoria = request.POST.get('categoria', '').strip().upper()
+        egreso.metodo_pago = request.POST.get('metodo_pago', '').strip().upper()
+        egreso.concepto = request.POST.get('concepto', '').strip()
+        egreso.observacion = request.POST.get('observacion', '').strip()
+
+        try:
+            egreso.full_clean()
+            egreso.save(update_fields=[
+                'monto',
+                'categoria',
+                'metodo_pago',
+                'concepto',
+                'observacion',
+            ])
+        except ValidationError as error:
+            messages.error(request, mensaje_validacion_modelo(error))
+            return redirect('editar_egreso', egreso_id=egreso.id)
+
+        messages.success(request, 'Egreso actualizado correctamente.')
+        return redirect('egresos')
+
+    context = {
+        'egreso': egreso,
+        'categorias_egreso': Egreso.CATEGORIAS,
+        'metodos_pago_egreso': Egreso.METODOS_PAGO,
+    }
+
+    return render(request, 'core/editar_egreso.html', context)
+
+
+@login_required
+@secretaria_required
 @require_POST
 def registrar_cierre_caja_diario(request):
 
