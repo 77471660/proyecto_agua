@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends base_template|default:'base.html' %}
 
 {% block title %}
 Gesti&oacute;n de repartos - AquaSmart CRM
@@ -154,7 +154,12 @@ Gesti&oacute;n de repartos - AquaSmart CRM
     }
 </style>
 
-<div class="dispatch-panel">
+<div
+    id="panel-jefe-repartidores-live"
+    class="dispatch-panel"
+    data-refresh-url="{% url 'panel_jefe_repartidores_fragmento' %}"
+    data-refresh-ms="5000"
+>
 
 <div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
     <div>
@@ -355,7 +360,11 @@ Gesti&oacute;n de repartos - AquaSmart CRM
                         </div>
                     </div>
 
-                    <details class="dispatch-mobile-details">
+                    <details
+                        class="dispatch-mobile-details"
+                        data-refresh-key="jefe-sin-asignar-{{ pedido.id }}"
+                        data-refresh-pause="true"
+                    >
                         <summary class="btn btn-sm btn-outline-primary w-100">
                             Detalles
                         </summary>
@@ -566,7 +575,11 @@ Gesti&oacute;n de repartos - AquaSmart CRM
                         </div>
                     </div>
 
-                    <details class="dispatch-mobile-details">
+                    <details
+                        class="dispatch-mobile-details"
+                        data-refresh-key="jefe-asignado-{{ pedido.id }}"
+                        data-refresh-pause="true"
+                    >
                         <summary class="btn btn-sm btn-outline-primary w-100">
                             Detalles
                         </summary>

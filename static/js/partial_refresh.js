@@ -19,6 +19,10 @@
     return Boolean(container.querySelector('.collapse.show'));
   }
 
+  function hasRefreshPause(container) {
+    return Boolean(container.querySelector('[data-refresh-pause][open]'));
+  }
+
   function openDetailsKeys(container) {
     return Array.from(
       container.querySelectorAll('details[open][data-refresh-key]')
@@ -39,6 +43,17 @@
     });
   }
 
+  function extractRefreshHtml(container, responseText) {
+    if (!container.id) {
+      return responseText;
+    }
+
+    const parsed = new DOMParser().parseFromString(responseText, 'text/html');
+    const replacement = parsed.getElementById(container.id);
+
+    return replacement ? replacement.innerHTML : responseText;
+  }
+
   function configureRefresh(container) {
     const url = container.dataset.refreshUrl || container.dataset.partialRefreshUrl;
     const interval = Number(
@@ -57,6 +72,7 @@
         || activeInputWithin(container)
         || hasOpenActionForm(container)
         || hasOpenCollapse(container)
+        || hasRefreshPause(container)
       ) {
         return;
       }
@@ -79,7 +95,10 @@
         const openKeys = openDetailsKeys(container);
         const scrollLeft = window.scrollX;
         const scrollTop = window.scrollY;
-        container.innerHTML = await response.text();
+        container.innerHTML = extractRefreshHtml(
+          container,
+          await response.text()
+        );
         restoreDetails(container, openKeys);
         window.scrollTo(scrollLeft, scrollTop);
       } catch (error) {

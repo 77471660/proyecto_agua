@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends base_template|default:'base.html' %}
 {% load l10n %}
 
 {% block title %}
@@ -6,6 +6,12 @@ Reporte Diario - AquaSmart CRM
 {% endblock %}
 
 {% block content %}
+
+<div
+    id="reporte-diario-live"
+    data-refresh-url="{% url 'reporte_diario_fragmento' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+    data-refresh-ms="10000"
+>
 
 <div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
     <div>
@@ -324,6 +330,8 @@ Reporte Diario - AquaSmart CRM
             <div class="empty-state">No hay pedidos para los filtros seleccionados.</div>
         {% endif %}
     </div>
+</div>
+
 </div>
 
 {% endblock %}

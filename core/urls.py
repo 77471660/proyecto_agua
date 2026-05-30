@@ -147,6 +147,13 @@ urlpatterns = [
     ),
 
     path(
+        'reporte-diario/fragmento/',
+        views.reporte_diario,
+        {'base_template': 'core/fragment_base.html'},
+        name='reporte_diario_fragmento'
+    ),
+
+    path(
         'reporte-semanal/',
         views.reporte_semanal,
         name='reporte_semanal'
@@ -252,6 +259,13 @@ urlpatterns = [
         'repartidor/jefe/',
         views.panel_jefe_repartidores,
         name='panel_jefe_repartidores'
+    ),
+
+    path(
+        'repartidor/jefe/fragmento/',
+        views.panel_jefe_repartidores,
+        {'base_template': 'core/fragment_base.html'},
+        name='panel_jefe_repartidores_fragmento'
     ),
 
     path(

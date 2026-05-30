@@ -1,5 +1,7 @@
 (function () {
     const forms = document.querySelectorAll('[data-geolocation-form]');
+    const MAX_ACCEPTED_ACCURACY = 100;
+    const READ_ATTEMPTS = 3;
 
     if (!forms.length) {
         return;
@@ -31,10 +33,61 @@
         return 'No se pudo obtener la ubicacion actual. Puedes guardar el cliente manualmente.';
     }
 
+    function accuracyLabel(accuracy) {
+        if (accuracy <= 30) {
+            return 'Precision alta';
+        }
+
+        if (accuracy <= 80) {
+            return 'Precision media';
+        }
+
+        return 'Precision baja';
+    }
+
+    function getPosition() {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+                resolve,
+                reject,
+                {
+                    enableHighAccuracy: true,
+                    timeout: 12000,
+                    maximumAge: 0,
+                }
+            );
+        });
+    }
+
+    async function getBestPosition(attempts) {
+        const positions = [];
+        let lastError = null;
+
+        for (let index = 0; index < attempts; index += 1) {
+            try {
+                positions.push(await getPosition());
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        if (!positions.length) {
+            throw lastError;
+        }
+
+        return positions.reduce((best, current) => {
+            const bestAccuracy = best.coords.accuracy || Number.POSITIVE_INFINITY;
+            const currentAccuracy = current.coords.accuracy || Number.POSITIVE_INFINITY;
+
+            return currentAccuracy < bestAccuracy ? current : best;
+        });
+    }
+
     forms.forEach((form) => {
         const button = form.querySelector('[data-geolocation-button]');
         const latitudeInput = form.querySelector('[data-geolocation-latitude]');
         const longitudeInput = form.querySelector('[data-geolocation-longitude]');
+        const accuracyInput = form.querySelector('[data-geolocation-accuracy]');
         const status = form.querySelector('[data-geolocation-status]');
 
         if (!button || !latitudeInput || !longitudeInput || !status) {
@@ -59,7 +112,7 @@
             return;
         }
 
-        button.addEventListener('click', function () {
+        button.addEventListener('click', async function () {
             if (button.disabled || button.getAttribute('aria-busy') === 'true') {
                 return;
             }
@@ -67,29 +120,50 @@
             button.disabled = true;
             button.setAttribute('aria-busy', 'true');
             button.textContent = 'Obteniendo ubicacion...';
-            setStatus(status, 'Solicitando permiso de ubicacion...', 'text-muted');
-
-            navigator.geolocation.getCurrentPosition(
-                function (position) {
-                    latitudeInput.value = position.coords.latitude.toFixed(6);
-                    longitudeInput.value = position.coords.longitude.toFixed(6);
-                    setStatus(status, 'Ubicacion actual capturada correctamente.', 'text-success');
-                    restoreButton();
-                },
-                function (error) {
-                    console.warn('Error de geolocalizacion', {
-                        code: error ? error.code : null,
-                        message: error ? error.message : '',
-                    });
-                    setStatus(status, geolocationMessage(error), 'text-danger');
-                    restoreButton();
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 12000,
-                    maximumAge: 60000,
-                }
+            setStatus(
+                status,
+                'Tomando varias lecturas GPS para elegir la mas precisa...',
+                'text-muted'
             );
+
+            try {
+                const position = await getBestPosition(READ_ATTEMPTS);
+                const accuracy = Number(position.coords.accuracy || 0);
+
+                if (accuracy > MAX_ACCEPTED_ACCURACY) {
+                    latitudeInput.value = '';
+                    longitudeInput.value = '';
+                    if (accuracyInput) {
+                        accuracyInput.value = '';
+                    }
+                    setStatus(
+                        status,
+                        `Precision baja (${Math.round(accuracy)} m). Acercate a una zona abierta y reintenta antes de guardar GPS.`,
+                        'text-danger'
+                    );
+                    restoreButton();
+                    return;
+                }
+
+                latitudeInput.value = position.coords.latitude.toFixed(6);
+                longitudeInput.value = position.coords.longitude.toFixed(6);
+                if (accuracyInput) {
+                    accuracyInput.value = accuracy.toFixed(1);
+                }
+                setStatus(
+                    status,
+                    `${accuracyLabel(accuracy)} (${Math.round(accuracy)} m). Ubicacion capturada con precision estimada.`,
+                    accuracy <= 80 ? 'text-success' : 'text-danger'
+                );
+            } catch (error) {
+                console.warn('Error de geolocalizacion', {
+                    code: error ? error.code : null,
+                    message: error ? error.message : '',
+                });
+                setStatus(status, geolocationMessage(error), 'text-danger');
+            } finally {
+                restoreButton();
+            }
         });
     });
 })();

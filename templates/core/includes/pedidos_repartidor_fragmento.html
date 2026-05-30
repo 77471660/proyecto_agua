@@ -82,6 +82,7 @@
                     <details
                         class="credit-manage-details"
                         data-refresh-key="credito-{{ credito.id }}"
+                        data-refresh-pause="true"
                     >
                         <summary class="credit-manage-summary">
                             Gestionar cr&eacute;dito
@@ -126,6 +127,19 @@
                                     <div class="col-12">
                                         {% include 'core/includes/location_button.html' with cliente=credito.cliente button_class='btn-outline-primary w-100 action-button' hide_copy_button='1' %}
                                     </div>
+
+                                    {% if credito.cliente.foto_referencia_url %}
+                                        <div class="col-12">
+                                            <a
+                                                href="{{ credito.cliente.foto_referencia_url }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="btn btn-outline-secondary w-100 action-button"
+                                            >
+                                                Ver foto
+                                            </a>
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
 

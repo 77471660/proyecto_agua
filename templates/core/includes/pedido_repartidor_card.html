@@ -153,28 +153,20 @@
                 >
                     {% csrf_token %}
                     {% include 'core/includes/lugar_para_finalizar.html' with accion='entregar' %}
-                    <div class="mobile-payment-field">
-                        <label
-                            class="mobile-payment-label"
-                            for="metodo-pago-entrega-{{ pedido.id }}"
-                        >
-                            M&eacute;todo de cobro
-                        </label>
-                        <select
-                            id="metodo-pago-entrega-{{ pedido.id }}"
-                            name="metodo_pago"
-                            class="form-select mobile-payment-select"
-                            aria-label="Metodo de pago"
-                            required
-                        >
-                            <option value="" {% if pedido.metodo_pago == 'PENDIENTE' %}selected{% endif %} disabled>Selecciona pago</option>
-                            <option value="EFECTIVO" {% if pedido.metodo_pago == 'EFECTIVO' %}selected{% endif %}>Efectivo</option>
-                            <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
-                            <option value="PLIN" {% if pedido.metodo_pago == 'PLIN' %}selected{% endif %}>Plin</option>
-                            <option value="TRANSFERENCIA" {% if pedido.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>Transferencia</option>
-                            <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Cr&eacute;dito</option>
-                        </select>
-                    </div>
+                    <select
+                        id="metodo-pago-entrega-{{ pedido.id }}"
+                        name="metodo_pago"
+                        class="form-select mobile-payment-select"
+                        aria-label="Metodo de pago"
+                        required
+                    >
+                        <option value="" {% if pedido.metodo_pago == 'PENDIENTE' %}selected{% endif %} disabled>Selecciona pago</option>
+                        <option value="EFECTIVO" {% if pedido.metodo_pago == 'EFECTIVO' %}selected{% endif %}>Efectivo</option>
+                        <option value="YAPE" {% if pedido.metodo_pago == 'YAPE' %}selected{% endif %}>Yape</option>
+                        <option value="PLIN" {% if pedido.metodo_pago == 'PLIN' %}selected{% endif %}>Plin</option>
+                        <option value="TRANSFERENCIA" {% if pedido.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>Transferencia</option>
+                        <option value="FIADO" {% if pedido.metodo_pago == 'FIADO' %}selected{% endif %}>Cr&eacute;dito</option>
+                    </select>
                     <button type="submit" class="btn btn-primary w-100 action-button">
                         Marcar entregado
                     </button>

@@ -79,12 +79,14 @@ logger = logging.getLogger(__name__)
 REFERENCIA_CASA_INCOMPLETA_MENSAJE = (
     'Para guardar referencia de casa debes capturar ubicación GPS y tomar foto.'
 )
+GPS_ACCURACY_MAX_METROS = Decimal('100')
 
 
 def leer_ubicacion_cliente_post(post_data):
 
     latitud_texto = post_data.get('latitud', '').strip()
     longitud_texto = post_data.get('longitud', '').strip()
+    precision_texto = post_data.get('gps_accuracy', '').strip()
     referencia_ubicacion = post_data.get(
         'referencia_ubicacion',
         ''
@@ -127,6 +129,30 @@ def leer_ubicacion_cliente_post(post_data):
         return None, None, referencia_ubicacion, (
             'La longitud debe estar entre -180 y 180.'
         )
+
+    if precision_texto:
+        try:
+            precision = Decimal(precision_texto)
+        except InvalidOperation:
+            logger.warning(
+                'Precision GPS invalida recibida. accuracy=%s',
+                precision_texto
+            )
+            return None, None, referencia_ubicacion, (
+                'La precisión GPS recibida no es válida. Vuelve a capturar la ubicación.'
+            )
+
+        if precision <= 0:
+            logger.warning('Precision GPS no positiva recibida. accuracy=%s', precision)
+            return None, None, referencia_ubicacion, (
+                'La precisión GPS recibida no es válida. Vuelve a capturar la ubicación.'
+            )
+
+        if precision > GPS_ACCURACY_MAX_METROS:
+            logger.warning('Precision GPS baja recibida. accuracy=%s', precision)
+            return None, None, referencia_ubicacion, (
+                'La precisión GPS es baja. Acércate a una zona abierta y vuelve a capturar la ubicación.'
+            )
 
     return latitud, longitud, referencia_ubicacion, ''
 
@@ -1684,7 +1710,11 @@ def registrar_cierre_caja_diario(request):
 
 @login_required
 @secretaria_required
-def reporte_diario(request):
+def reporte_diario(
+    request,
+    template_name='core/reporte_diario.html',
+    base_template='base.html'
+):
 
     hoy = timezone.localdate()
     ayer = hoy - timedelta(days=1)
@@ -1917,11 +1947,12 @@ def reporte_diario(request):
         'lugares': lugares,
         'repartidores': repartidores,
         'hoy': hoy,
+        'base_template': base_template,
     }
 
     return render(
         request,
-        'core/reporte_diario.html',
+        template_name,
         context
     )
 
@@ -3320,7 +3351,11 @@ def pedidos_repartidor(request, template_name='core/pedidos_repartidor.html'):
 
 @login_required
 @jefe_repartidores_required
-def panel_jefe_repartidores(request):
+def panel_jefe_repartidores(
+    request,
+    template_name='core/panel_jefe_repartidores.html',
+    base_template='base.html'
+):
 
     hoy = timezone.localdate()
     repartidores = repartidores_disponibles()
@@ -3413,11 +3448,12 @@ def panel_jefe_repartidores(request):
         'hay_mas_sin_asignar': total_pedidos_sin_asignar > PANEL_JEFE_LIMITE_PEDIDOS,
         'hay_mas_asignados': total_pedidos_asignados > PANEL_JEFE_LIMITE_PEDIDOS,
         'hoy': hoy,
+        'base_template': base_template,
     }
 
     return render(
         request,
-        'core/panel_jefe_repartidores.html',
+        template_name,
         context
     )
 

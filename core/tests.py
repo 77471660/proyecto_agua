@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase, override_settings
@@ -326,6 +327,33 @@ class PermisosRolesTests(TestCase):
         )
         self.assertFalse(
             Cliente.objects.filter(telefono='999888778').exists()
+        )
+
+    def test_registrar_cliente_bloquea_gps_con_precision_baja(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('registrar_cliente'),
+            {
+                'nombre': 'Cliente GPS Impreciso',
+                'telefono': '999888779',
+                'direccion': 'Jr. Rio 790',
+                'lugar': str(self.lugar_operativo.id),
+                'latitud': '-12.046374',
+                'longitud': '-77.042793',
+                'gps_accuracy': '145.5',
+                'referencia_ubicacion': 'Frente al parque',
+                'foto_referencia': self.crear_foto_prueba(),
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('registrar_cliente'),
+            fetch_redirect_response=False
+        )
+        self.assertFalse(
+            Cliente.objects.filter(telefono='999888779').exists()
         )
 
     def test_repartidor_puede_crear_cliente_sin_gps_ni_foto(self):
@@ -1077,6 +1105,8 @@ class PermisosRolesTests(TestCase):
             'dashboard_fragmento',
             'clientes_fragmento',
             'pedidos_fragmento',
+            'reporte_diario_fragmento',
+            'panel_jefe_repartidores_fragmento',
         ):
             response = self.client.get(reverse(fragment_name))
 
@@ -1115,6 +1145,30 @@ class PermisosRolesTests(TestCase):
         self.assertNotContains(fragment, 'Sin historial')
         self.assertNotContains(fragment, 'eco_agua_banner_dashboard')
         self.assertNotContains(fragment, 'Buscar cliente')
+
+    def test_reporte_diario_refresca_fragmento_operativo(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_EFECTIVO
+        )
+        self.client.force_login(self.secretaria)
+
+        page = self.client.get(reverse('reporte_diario'))
+        fragment = self.client.get(reverse('reporte_diario_fragmento'))
+
+        self.assertContains(page, 'id="reporte-diario-live"')
+        self.assertContains(page, 'data-refresh-ms="10000"')
+        self.assertEqual(fragment.status_code, 200)
+        self.assertTemplateUsed(fragment, 'core/reporte_diario.html')
+        self.assertContains(fragment, 'id="reporte-diario-live"')
+        self.assertContains(fragment, 'Cobrado hoy')
+        self.assertContains(fragment, 'Cr&eacute;dito otorgado hoy')
+        self.assertContains(fragment, 'Cierre de caja del dia')
+        self.assertContains(fragment, 'Cierre operativo del dia')
+        self.assertContains(fragment, pedido.cliente.nombre)
+        self.assertNotContains(fragment, '<html')
 
     def test_clientes_refresca_fragmento_con_clientes_actuales(self):
         self.client.force_login(self.secretaria)
@@ -1198,6 +1252,25 @@ class PermisosRolesTests(TestCase):
         self.assertNotContains(fragment, cliente_otro.nombre)
         self.assertNotContains(fragment, '<html')
 
+    def test_panel_jefe_refresca_fragmento_operativo(self):
+        pedido = self.crear_pedido(None)
+        self.client.force_login(self.jefe_reparto)
+
+        page = self.client.get(reverse('panel_jefe_repartidores'))
+        fragment = self.client.get(reverse('panel_jefe_repartidores_fragmento'))
+
+        self.assertContains(page, 'id="panel-jefe-repartidores-live"')
+        self.assertContains(page, 'data-refresh-ms="5000"')
+        self.assertContains(page, 'js/partial_refresh.js')
+        self.assertEqual(fragment.status_code, 200)
+        self.assertTemplateUsed(fragment, 'core/panel_jefe_repartidores.html')
+        self.assertContains(fragment, 'id="panel-jefe-repartidores-live"')
+        self.assertContains(fragment, 'Resumen de repartidores hoy')
+        self.assertContains(fragment, 'Pedidos sin asignar de hoy / atrasados')
+        self.assertContains(fragment, pedido.cliente.nombre)
+        self.assertContains(fragment, 'data-refresh-pause="true"')
+        self.assertNotContains(fragment, '<html')
+
     def test_panel_repartidor_muestra_solo_creditos_pendientes_propios(self):
         cliente_propio = Cliente.objects.create(
             nombre='Cliente Credito Propio',
@@ -1239,6 +1312,34 @@ class PermisosRolesTests(TestCase):
         self.assertContains(response, 'Abrir ubicaci&oacute;n')
         self.assertNotContains(response, cliente_ajeno.nombre)
         self.assertNotContains(response, 'Fiado')
+
+    def test_panel_repartidor_muestra_ver_foto_en_credito_si_existe(self):
+        cliente_con_foto = Cliente.objects.create(
+            nombre='Cliente Credito Foto',
+            telefono='999333113',
+            direccion='Av. Foto Credito 123',
+            foto_referencia_url='https://res.cloudinary.com/demo/fachada.jpg',
+            foto_referencia_public_id='aquasmart/clientes/fachada'
+        )
+        credito = self.crear_pedido(
+            self.repartidor,
+            cliente=cliente_con_foto
+        )
+        Pedido.objects.filter(pk=credito.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_FIADO
+        )
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(reverse('pedidos_repartidor_fragmento'))
+
+        self.assertContains(response, 'Gestionar cr&eacute;dito')
+        self.assertContains(response, 'Ver foto')
+        self.assertContains(
+            response,
+            'https://res.cloudinary.com/demo/fachada.jpg'
+        )
 
     def test_repartidor_puede_ver_clientes_sin_acciones_administrativas(self):
         self.client.force_login(self.repartidor)
@@ -3145,6 +3246,11 @@ class ReporteMensualTests(TestCase):
 
 
 class ProductionSettingsTests(SimpleTestCase):
+    def test_timezone_operativa_es_lima_con_fechas_aware(self):
+        self.assertEqual(settings.TIME_ZONE, 'America/Lima')
+        self.assertTrue(settings.USE_TZ)
+        self.assertEqual(str(timezone.get_default_timezone()), 'America/Lima')
+
     def test_debug_es_false_por_defecto(self):
         env = os.environ.copy()
         env.pop('DEBUG', None)
