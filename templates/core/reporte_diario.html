@@ -20,6 +20,10 @@ Reporte Diario - AquaSmart CRM
             Resumen operativo para responder que paso hoy.
         </small>
     </div>
+
+    <button type="button" class="btn btn-outline-secondary no-print" onclick="window.print()">
+        Imprimir
+    </button>
 </div>
 
 <div class="row g-3 mb-2">
@@ -75,7 +79,7 @@ Reporte Diario - AquaSmart CRM
 <div class="card content-card mb-4">
     <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span>Cierre de caja del dia</span>
-        <a href="{% url 'egresos' %}" class="btn btn-outline-primary btn-sm">
+        <a href="{% url 'egresos' %}" class="btn btn-outline-primary btn-sm no-print">
             Registrar egreso
         </a>
     </div>
@@ -121,7 +125,7 @@ Reporte Diario - AquaSmart CRM
             {% endif %}
         </div>
 
-        <form method="POST" action="{% url 'registrar_cierre_caja_diario' %}" class="row g-2 align-items-end mb-3">
+        <form method="POST" action="{% url 'registrar_cierre_caja_diario' %}" class="row g-2 align-items-end mb-3 no-print">
             {% csrf_token %}
             <div class="col-sm-6 col-lg-3">
                 <label for="efectivo_contado" class="form-label small text-muted mb-1">
@@ -209,7 +213,7 @@ Reporte Diario - AquaSmart CRM
     </div>
 
     <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end mb-3">
+        <form method="GET" class="row g-2 align-items-end mb-3 no-print">
             <div class="col-sm-6 col-lg-2">
                 <label for="filtro-metodo-pago" class="form-label small text-muted mb-1">
                     Metodo de pago
