@@ -1170,6 +1170,20 @@ class PermisosRolesTests(TestCase):
         self.assertContains(fragment, pedido.cliente.nombre)
         self.assertNotContains(fragment, '<html')
 
+    def test_reporte_diario_tiene_impresion_limpia(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('reporte_diario'))
+
+        self.assertContains(response, 'onclick="window.print()"')
+        self.assertContains(response, 'Imprimir')
+        self.assertContains(response, 'Registrar egreso')
+        self.assertContains(response, 'Guardar cierre')
+        self.assertContains(response, 'class="btn btn-outline-primary btn-sm no-print"')
+        self.assertContains(response, 'row g-2 align-items-end mb-3 no-print')
+        self.assertContains(response, 'Cierre de caja del dia')
+        self.assertContains(response, 'Cierre operativo del dia')
+
     def test_clientes_refresca_fragmento_con_clientes_actuales(self):
         self.client.force_login(self.secretaria)
 
@@ -3272,6 +3286,54 @@ class ReporteMensualTests(TestCase):
         self.assertEqual(response.context['ingresos_mes'], Decimal('21.00'))
         self.assertEqual(response.context['bidones_mes'], 3)
         self.assertContains(response, 'diario de ventas')
+
+    def test_reporte_mensual_muestra_resumen_financiero_basico(self):
+        cliente = Cliente.objects.create(
+            nombre='Cliente Financiero',
+            telefono='999111997',
+            direccion='Av. Finanzas 1'
+        )
+        Pedido.objects.create(
+            cliente=cliente,
+            cantidad_bidones=2,
+            precio_unitario=Decimal('7.00'),
+            total=Decimal('14.00'),
+            estado=Pedido.ENTREGADO,
+            metodo_pago=Pedido.PAGO_EFECTIVO,
+            fecha_entrega=timezone.now()
+        )
+        Pedido.objects.create(
+            cliente=cliente,
+            cantidad_bidones=1,
+            precio_unitario=Decimal('7.00'),
+            total=Decimal('7.00'),
+            estado=Pedido.ENTREGADO,
+            metodo_pago=Pedido.PAGO_FIADO,
+            metodo_pago_final=Pedido.PAGO_YAPE,
+            fecha_entrega=timezone.now() - timedelta(days=5),
+            fecha_pago=timezone.now()
+        )
+        Egreso.objects.create(
+            monto=Decimal('6.00'),
+            categoria=Egreso.CATEGORIA_MATERIALES,
+            metodo_pago=Egreso.PAGO_TRANSFERENCIA,
+            concepto='Material mensual',
+            usuario_registro=self.secretaria
+        )
+        hoy = timezone.localdate()
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(
+            reverse('reporte_mensual'),
+            {'mes': str(hoy.month), 'anio': str(hoy.year)}
+        )
+
+        self.assertContains(response, 'Ingresos cobrados del mes')
+        self.assertContains(response, 'Egresos del mes')
+        self.assertContains(response, 'Neto mensual')
+        self.assertEqual(response.context['ingresos_cobrados_mes'], Decimal('21.00'))
+        self.assertEqual(response.context['total_egresos_mes'], Decimal('6.00'))
+        self.assertEqual(response.context['neto_mensual'], Decimal('15.00'))
 
     def test_reporte_mensual_agrupa_medianoche_en_fecha_local_peru(self):
         hoy = timezone.localdate()

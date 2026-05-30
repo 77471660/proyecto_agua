@@ -4443,6 +4443,11 @@ def reporte_mensual(request):
     ingresos_mes = pedidos_entregados.aggregate(
         total=Sum('total')
     )['total'] or 0
+    cobros_mes = totales_cobros_periodo(inicio_mes, fin_mes)
+    ingresos_cobrados_mes = cobros_mes['cobrado']
+    egresos_mes = egresos_en_rango(inicio_mes, fin_mes)
+    total_egresos_mes = total_decimal(egresos_mes)
+    neto_mensual = ingresos_cobrados_mes - total_egresos_mes
 
     bidones_mes = pedidos_entregados.aggregate(
         total=Sum('cantidad_bidones')
@@ -4585,6 +4590,9 @@ def reporte_mensual(request):
         'nombre_mes_analizado': nombre_mes_analizado,
 
         'ingresos_mes': ingresos_mes,
+        'ingresos_cobrados_mes': ingresos_cobrados_mes,
+        'total_egresos_mes': total_egresos_mes,
+        'neto_mensual': neto_mensual,
         'bidones_mes': bidones_mes,
         'total_entregados': total_entregados,
         'clientes_unicos': clientes_unicos,
