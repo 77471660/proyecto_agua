@@ -229,6 +229,21 @@
                             <div class="order-label">Total</div>
                             <div class="order-value">S/ {{ entrega.total|floatformat:2 }}</div>
                         </div>
+
+                        <div class="col-12">
+                            <div class="order-label">Pago</div>
+                            <div class="order-value">
+                                {% if entrega.metodo_pago == 'FIADO' %}
+                                    {% if entrega.metodo_pago_final %}
+                                        Cobrado ({{ entrega.get_metodo_pago_final_display }})
+                                    {% else %}
+                                        Cr&eacute;dito
+                                    {% endif %}
+                                {% else %}
+                                    {{ entrega.get_metodo_pago_display }}
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </article>

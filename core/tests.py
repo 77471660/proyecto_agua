@@ -1240,6 +1240,12 @@ class PermisosRolesTests(TestCase):
         Pedido.objects.filter(pk=pedido_credito.pk).update(
             metodo_pago=Pedido.PAGO_FIADO
         )
+        entrega_hoy = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=entrega_hoy.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega=timezone.now(),
+            metodo_pago=Pedido.PAGO_YAPE
+        )
         cliente_otro = Cliente.objects.create(
             nombre='Cliente Fragmento Ajeno',
             telefono='999555444',
@@ -1261,6 +1267,10 @@ class PermisosRolesTests(TestCase):
             'core/includes/pedidos_repartidor_fragmento.html'
         )
         self.assertContains(fragment, pedido_asignado.cliente.nombre)
+        self.assertContains(fragment, entrega_hoy.cliente.nombre)
+        self.assertContains(fragment, 'Ver entregas de hoy')
+        self.assertContains(fragment, 'Pago')
+        self.assertContains(fragment, 'Yape')
         self.assertContains(fragment, 'Cr&eacute;dito')
         self.assertNotContains(fragment, 'Fiado')
         self.assertNotContains(fragment, cliente_otro.nombre)
