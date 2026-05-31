@@ -124,11 +124,10 @@
                                         {% endif %}
                                     </div>
 
-                                    <div class="{% if credito.cliente.foto_referencia_url %}col-6{% else %}col-12{% endif %}">
-                                        {% include 'core/includes/location_button.html' with cliente=credito.cliente button_class='btn-outline-primary w-100 action-button mobile-quick-action-button' hide_copy_button='1' %}
-                                    </div>
-
-                                    {% if credito.cliente.foto_referencia_url %}
+                                    {% if credito.cliente.referencia_completa %}
+                                        <div class="col-6">
+                                            {% include 'core/includes/location_button.html' with cliente=credito.cliente button_class='btn-outline-primary w-100 action-button mobile-quick-action-button' hide_copy_button='1' %}
+                                        </div>
                                         <div class="col-6">
                                             <a
                                                 href="{{ credito.cliente.foto_referencia_url }}"
@@ -137,6 +136,15 @@
                                                 class="btn btn-outline-secondary w-100 action-button mobile-quick-action-button"
                                             >
                                                 Ver foto
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <div class="col-12">
+                                            <a
+                                                href="{% url 'actualizar_referencia_cliente_repartidor' credito.cliente.id %}"
+                                                class="btn btn-outline-primary w-100 action-button mobile-quick-action-button"
+                                            >
+                                                Completar referencia
                                             </a>
                                         </div>
                                     {% endif %}

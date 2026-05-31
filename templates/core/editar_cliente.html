@@ -114,6 +114,35 @@ Editar cliente
                             </div>
                         {% endif %}
 
+                        <div class="form-check mb-2">
+                            <input
+                                type="checkbox"
+                                id="limpiar_gps_referencia"
+                                name="limpiar_gps_referencia"
+                                value="1"
+                                class="form-check-input"
+                            >
+                            <label class="form-check-label" for="limpiar_gps_referencia">
+                                Limpiar GPS
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input
+                                type="checkbox"
+                                id="limpiar_referencia_completa"
+                                name="limpiar_referencia_completa"
+                                value="1"
+                                class="form-check-input"
+                            >
+                            <label class="form-check-label" for="limpiar_referencia_completa">
+                                Limpiar referencia completa
+                            </label>
+                            <small class="form-text text-muted d-block">
+                                Limpia foto, GPS y referencia para llegar.
+                            </small>
+                        </div>
+
                         <input
                             type="file"
                             id="foto_referencia"

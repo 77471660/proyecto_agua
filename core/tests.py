@@ -891,6 +891,75 @@ class PermisosRolesTests(TestCase):
         self.assertIsNone(self.cliente.foto_referencia_actualizada_en)
         destroy_mock.assert_called_once()
 
+    def test_admin_limpia_gps_desde_editar_cliente(self):
+        self.cliente.latitud = Decimal('-12.046374')
+        self.cliente.longitud = Decimal('-77.042793')
+        self.cliente.referencia_ubicacion = 'Porton negro'
+        self.cliente.save()
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('editar_cliente', kwargs={'cliente_id': self.cliente.id}),
+            {
+                'nombre': self.cliente.nombre,
+                'telefono': self.cliente.telefono,
+                'direccion': self.cliente.direccion,
+                'referencia': self.cliente.referencia or '',
+                'limpiar_gps_referencia': '1',
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('detalle_cliente', kwargs={'cliente_id': self.cliente.id}),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertIsNone(self.cliente.latitud)
+        self.assertIsNone(self.cliente.longitud)
+        self.assertEqual(self.cliente.referencia_ubicacion, '')
+
+    @override_settings(
+        CLOUDINARY_CLOUD_NAME='demo',
+        CLOUDINARY_API_KEY='key',
+        CLOUDINARY_API_SECRET='secret'
+    )
+    @patch('core.cloudinary_images.cloudinary.uploader.destroy')
+    def test_admin_limpia_referencia_completa(self, destroy_mock):
+        self.cliente.foto_referencia_url = 'https://old.example/foto.jpg'
+        self.cliente.foto_referencia_public_id = 'aquasmart/clientes/old'
+        self.cliente.foto_referencia_actualizada_en = timezone.now()
+        self.cliente.latitud = Decimal('-12.046374')
+        self.cliente.longitud = Decimal('-77.042793')
+        self.cliente.referencia_ubicacion = 'Porton negro'
+        self.cliente.save()
+        self.client.force_login(self.secretaria)
+
+        response = self.client.post(
+            reverse('editar_cliente', kwargs={'cliente_id': self.cliente.id}),
+            {
+                'nombre': self.cliente.nombre,
+                'telefono': self.cliente.telefono,
+                'direccion': self.cliente.direccion,
+                'referencia': self.cliente.referencia or '',
+                'limpiar_referencia_completa': '1',
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('detalle_cliente', kwargs={'cliente_id': self.cliente.id}),
+            fetch_redirect_response=False
+        )
+        self.cliente.refresh_from_db()
+        self.assertFalse(self.cliente.foto_referencia_url)
+        self.assertFalse(self.cliente.foto_referencia_public_id)
+        self.assertIsNone(self.cliente.foto_referencia_actualizada_en)
+        self.assertIsNone(self.cliente.latitud)
+        self.assertIsNone(self.cliente.longitud)
+        self.assertEqual(self.cliente.referencia_ubicacion, '')
+        destroy_mock.assert_called_once()
+
     @override_settings(
         CLOUDINARY_CLOUD_NAME='demo',
         CLOUDINARY_API_KEY='key',
@@ -1339,7 +1408,7 @@ class PermisosRolesTests(TestCase):
         self.assertContains(response, cliente_propio.nombre)
         self.assertContains(response, 'Crédito pendiente')
         self.assertContains(response, 'Cobrar')
-        self.assertContains(response, 'Abrir ubicaci&oacute;n')
+        self.assertContains(response, 'Completar referencia')
         self.assertNotContains(response, cliente_ajeno.nombre)
         self.assertNotContains(response, 'Fiado')
 
@@ -1349,7 +1418,9 @@ class PermisosRolesTests(TestCase):
             telefono='999333113',
             direccion='Av. Foto Credito 123',
             foto_referencia_url='https://res.cloudinary.com/demo/fachada.jpg',
-            foto_referencia_public_id='aquasmart/clientes/fachada'
+            foto_referencia_public_id='aquasmart/clientes/fachada',
+            latitud=Decimal('-12.046374'),
+            longitud=Decimal('-77.042793')
         )
         credito = self.crear_pedido(
             self.repartidor,
@@ -1736,6 +1807,8 @@ class PermisosRolesTests(TestCase):
     def test_repartidor_ve_boton_foto_referencia_cliente(self):
         self.cliente.foto_referencia_url = 'https://res.cloudinary.com/demo/foto.jpg'
         self.cliente.foto_referencia_public_id = 'aquasmart/clientes/foto'
+        self.cliente.latitud = Decimal('-12.046374')
+        self.cliente.longitud = Decimal('-77.042793')
         self.cliente.save()
         pedido = self.crear_pedido(self.repartidor)
         Pedido.objects.filter(pk=pedido.pk).update(estado=Pedido.ASIGNADO)
@@ -1747,6 +1820,45 @@ class PermisosRolesTests(TestCase):
         self.assertContains(
             response,
             'https://res.cloudinary.com/demo/foto.jpg'
+        )
+        self.assertNotContains(response, 'Completar referencia')
+
+    def test_repartidor_ve_completar_referencia_si_falta_foto_o_gps(self):
+        pedido = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido.pk).update(estado=Pedido.ASIGNADO)
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(reverse('pedidos_repartidor'))
+
+        self.assertContains(response, 'Completar referencia')
+        self.assertContains(
+            response,
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            )
+        )
+
+    def test_repartidor_no_edita_referencia_completa(self):
+        self.cliente.foto_referencia_url = 'https://res.cloudinary.com/demo/foto.jpg'
+        self.cliente.foto_referencia_public_id = 'aquasmart/clientes/foto'
+        self.cliente.latitud = Decimal('-12.046374')
+        self.cliente.longitud = Decimal('-77.042793')
+        self.cliente.save()
+        self.crear_pedido(self.repartidor)
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(
+            reverse(
+                'actualizar_referencia_cliente_repartidor',
+                kwargs={'cliente_id': self.cliente.id}
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('pedidos_repartidor'),
+            fetch_redirect_response=False
         )
 
     def test_jefe_repartidores_accede_a_mi_reparto_y_filtra_sus_pedidos(self):

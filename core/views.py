@@ -199,6 +199,11 @@ def puede_repartidor_actualizar_foto_cliente(cliente):
     return cliente.foto_referencia_actualizada_en >= limite
 
 
+def referencia_cliente_completa(cliente):
+
+    return cliente.tiene_coordenadas() and bool(cliente.foto_referencia_url)
+
+
 def aplicar_foto_referencia_cliente(cliente, uploaded_file, usuario=None):
 
     if not uploaded_file:
@@ -837,6 +842,9 @@ def preparar_pedido_repartidor(pedido):
         f'https://wa.me/{numero}?text={quote(mensaje)}'
     )
     pedido.telefono_limpio = limpiar_telefono(pedido.cliente.telefono)
+    pedido.cliente.referencia_completa = referencia_cliente_completa(
+        pedido.cliente
+    )
     pedido.tiempo_esperando = tiempo_esperando_pedido(pedido)
     pedido.tiempo_esperando_clase = clase_tiempo_esperando_pedido(pedido)
     if pedido.metodo_pago == Pedido.PAGO_FIADO:
@@ -886,6 +894,9 @@ def preparar_credito_pendiente_repartidor(pedido):
         f'https://wa.me/{numero}?text={quote(mensaje)}'
     )
     pedido.telefono_limpio = limpiar_telefono(pedido.cliente.telefono)
+    pedido.cliente.referencia_completa = referencia_cliente_completa(
+        pedido.cliente
+    )
     pedido.hora_entrega_panel = hora_panel(pedido.fecha_entrega)
     pedido.pago_operativo = 'Crédito pendiente'
 
@@ -2444,9 +2455,35 @@ def editar_cliente(request, cliente_id):
         eliminar_foto_referencia = (
             request.POST.get('eliminar_foto_referencia') == '1'
         )
+        limpiar_gps_referencia = (
+            request.POST.get('limpiar_gps_referencia') == '1'
+        )
+        limpiar_referencia_completa = (
+            request.POST.get('limpiar_referencia_completa') == '1'
+        )
         latitud, longitud, referencia_ubicacion, error_ubicacion = (
             leer_ubicacion_cliente_post(request.POST)
         )
+
+        if limpiar_referencia_completa and foto_referencia:
+            messages.error(
+                request,
+                'No puedes limpiar la referencia completa y subir una foto nueva al mismo tiempo.'
+            )
+            return redirect(
+                'editar_cliente',
+                cliente_id=cliente.id
+            )
+
+        if limpiar_referencia_completa:
+            limpiar_gps_referencia = True
+            eliminar_foto_referencia = True
+
+        if limpiar_gps_referencia:
+            latitud = None
+            longitud = None
+            referencia_ubicacion = ''
+            error_ubicacion = ''
 
         if error_lugar:
             messages.error(request, error_lugar)
@@ -4022,6 +4059,14 @@ def actualizar_referencia_cliente_repartidor(request, cliente_id):
         ).distinct()
     )
     puede_cambiar_foto = puede_repartidor_actualizar_foto_cliente(cliente)
+    referencia_completa = referencia_cliente_completa(cliente)
+
+    if referencia_completa:
+        messages.info(
+            request,
+            'La referencia de casa ya está completa. Solo puede corregirse desde administración.'
+        )
+        return redirect('pedidos_repartidor')
 
     if request.method == 'POST':
         foto_referencia = request.FILES.get('foto_referencia')
@@ -4036,14 +4081,14 @@ def actualizar_referencia_cliente_repartidor(request, cliente_id):
                 cliente_id=cliente.id
             )
 
-        error_referencia_casa = validar_referencia_casa_completa(
-            latitud,
-            longitud,
-            foto_referencia
-        )
+        tiene_gps_final = latitud is not None and longitud is not None
+        tiene_foto_final = bool(foto_referencia or cliente.foto_referencia_url)
 
-        if error_referencia_casa:
-            messages.error(request, error_referencia_casa)
+        if not tiene_gps_final or not tiene_foto_final:
+            messages.error(
+                request,
+                'Para completar la referencia debes guardar GPS y foto.'
+            )
             return redirect(
                 'actualizar_referencia_cliente_repartidor',
                 cliente_id=cliente.id
@@ -4122,6 +4167,7 @@ def actualizar_referencia_cliente_repartidor(request, cliente_id):
     context = {
         'cliente': cliente,
         'puede_cambiar_foto': puede_cambiar_foto,
+        'referencia_completa': referencia_completa,
     }
 
     return render(
