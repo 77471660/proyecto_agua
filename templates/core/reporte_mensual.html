@@ -8,42 +8,44 @@ Reporte Mensual
 
 <style>
     .monthly-chart {
-        align-items: end;
         display: grid;
         gap: 0.45rem;
         grid-template-columns: repeat(auto-fit, minmax(18px, 1fr));
-        min-height: 170px;
     }
 
     .monthly-chart-item {
-        align-items: center;
-        display: flex;
-        flex-direction: column;
+        display: grid;
         gap: 0.4rem;
-        height: 170px;
-        justify-content: end;
+        grid-template-rows: 140px auto;
         min-width: 0;
+    }
+
+    .monthly-chart-plot {
+        align-items: end;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: center;
     }
 
     .monthly-chart-bar {
         background: #2563eb;
         border-radius: 6px 6px 0 0;
+        max-width: 28px;
         min-height: 4px;
         width: 100%;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
     .monthly-chart-label {
         color: #64748b;
         font-size: 0.72rem;
+        text-align: center;
     }
 
     @media print {
-        .monthly-chart {
-            min-height: 120px;
-        }
-
         .monthly-chart-item {
-            height: 120px;
+            grid-template-rows: 95px auto;
         }
     }
 </style>
@@ -317,11 +319,15 @@ Reporte Mensual
             <div class="monthly-chart" aria-label="Ventas por dia del mes">
                 {% for dia in detalle_diario_mes %}
                     <div class="monthly-chart-item">
-                        <div
-                            class="monthly-chart-bar"
-                            style="height: {{ dia.porcentaje }}%;"
-                            title="{{ dia.fecha|date:'j \\d\\e F \\d\\e Y' }} - S/ {{ dia.ingresos|floatformat:2 }}"
-                        ></div>
+                        <div class="monthly-chart-plot">
+                            {% if dia.ingresos %}
+                                <div
+                                    class="monthly-chart-bar"
+                                    style="height: {{ dia.porcentaje }}%;"
+                                    title="{{ dia.fecha|date:'j \\d\\e F \\d\\e Y' }} - S/ {{ dia.ingresos|floatformat:2 }}"
+                                ></div>
+                            {% endif %}
+                        </div>
                         <span class="monthly-chart-label">
                             {{ dia.dia }}
                         </span>
@@ -330,7 +336,7 @@ Reporte Mensual
             </div>
         {% else %}
             <div class="empty-state">
-                No hay ventas entregadas para graficar en este mes.
+                Sin ventas en este periodo
             </div>
         {% endif %}
     </div>

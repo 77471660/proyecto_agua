@@ -3322,6 +3322,18 @@ class ReporteMensualTests(TestCase):
         self.assertEqual(response.context['ingresos_mes'], Decimal('21.00'))
         self.assertEqual(response.context['bidones_mes'], 3)
         self.assertContains(response, 'diario de ventas')
+        self.assertContains(response, 'monthly-chart-bar')
+        self.assertContains(response, 'height: 100%;')
+        self.assertNotContains(response, 'Sin ventas en este periodo')
+
+    def test_reporte_mensual_muestra_empty_state_si_no_hay_ventas(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('reporte_mensual'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['max_ingresos_grafico'], 0)
+        self.assertContains(response, 'Sin ventas en este periodo')
 
     def test_reporte_mensual_muestra_resumen_financiero_basico(self):
         cliente = Cliente.objects.create(
