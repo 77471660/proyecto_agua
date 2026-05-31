@@ -52,11 +52,18 @@
     }
 
     function clientUrl(clientId) {
-        return `/cliente/${clientId}/`;
+        const template = root.dataset.viewUrlTemplate || '/cliente/__ID__/';
+
+        return template.replace('__ID__', clientId);
     }
 
     function newOrderUrl(clientId) {
-        return `/registrar-pedido/?cliente=${clientId}`;
+        const template = (
+            root.dataset.useUrlTemplate
+            || '/registrar-pedido/?cliente=__ID__'
+        );
+
+        return template.replace('__ID__', clientId);
     }
 
     function renderSuggestions(results) {

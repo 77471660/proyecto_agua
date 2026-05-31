@@ -428,6 +428,22 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(cliente.lugar, self.lugar_operativo)
         self.assertEqual(cliente.referencia, '')
 
+    def test_nuevo_cliente_repartidor_muestra_sugerencias_compactas(self):
+        self.client.force_login(self.repartidor)
+
+        response = self.client.get(reverse('nuevo_cliente_repartidor'))
+
+        self.assertContains(response, 'Posibles clientes similares')
+        self.assertContains(response, 'data-client-suggestions')
+        self.assertContains(response, 'data-client-suggestion-field="nombre"')
+        self.assertContains(response, 'data-client-suggestion-field="telefono"')
+        self.assertContains(response, 'data-client-suggestion-field="direccion"')
+        self.assertContains(response, 'client_suggestions.js')
+        self.assertContains(
+            response,
+            'data-use-url-template="/repartidor/pedidos/nuevo/?cliente=__ID__"'
+        )
+
     def test_lista_pedidos_no_muestra_botones_ubicacion_directos(self):
         self.crear_pedido(self.repartidor)
         self.client.force_login(self.secretaria)

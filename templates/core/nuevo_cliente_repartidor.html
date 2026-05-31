@@ -98,6 +98,32 @@
             display: block;
         }
 
+        .client-suggestions-mobile {
+            background: #f8fafc;
+            border: 1px solid #dbe3ef;
+            border-radius: 8px;
+            margin-bottom: 0.8rem;
+            padding: 0.75rem;
+        }
+
+        .client-suggestions-mobile .list-group-item {
+            background: transparent;
+            border-color: #e2e8f0;
+        }
+
+        .client-suggestions-mobile .list-group-item:first-child {
+            padding-top: 0;
+        }
+
+        .client-suggestions-mobile .list-group-item:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .client-suggestions-mobile .btn {
+            font-weight: 700;
+        }
+
         @media (max-width: 575.98px) {
             body {
                 padding-bottom: calc(1.25rem + var(--app-safe-area-bottom));
@@ -192,6 +218,7 @@
                         name="nombre"
                         class="form-control form-control-lg"
                         maxlength="100"
+                        data-client-suggestion-field="nombre"
                         required
                     >
                 </div>
@@ -204,6 +231,7 @@
                         name="telefono"
                         class="form-control form-control-lg"
                         maxlength="20"
+                        data-client-suggestion-field="telefono"
                         required
                     >
                 </div>
@@ -216,8 +244,22 @@
                         name="direccion"
                         class="form-control form-control-lg"
                         maxlength="255"
+                        data-client-suggestion-field="direccion"
                         required
                     >
+                </div>
+
+                <div
+                    class="client-suggestions-mobile d-none"
+                    data-client-suggestions
+                    data-search-url="{% url 'buscar_clientes' %}"
+                    data-use-url-template="{% url 'nuevo_pedido_repartidor' %}?cliente=__ID__"
+                >
+                    <div class="small fw-bold mb-1">Posibles clientes similares</div>
+                    <div class="small text-muted mb-2">
+                        Sugerencias, no bloquean el registro.
+                    </div>
+                    <div class="list-group list-group-flush" data-client-suggestions-list></div>
                 </div>
 
                 <div class="mb-3">
@@ -283,6 +325,7 @@
 </script>
 <script src="{% static 'js/ui_safety.js' %}"></script>
 <script src="{% static 'js/reference_house_form.js' %}" defer></script>
+<script src="{% static 'js/client_suggestions.js' %}" defer></script>
 
 </body>
 </html>
