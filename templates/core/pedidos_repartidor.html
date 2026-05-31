@@ -226,6 +226,24 @@
             color: #9a3412;
         }
 
+        .credit-filter {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.65rem;
+        }
+
+        .credit-filter-input {
+            border-color: #cbd5e1;
+            border-radius: 8px;
+            min-height: 42px;
+        }
+
+        .credit-filter-input:focus {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 0.16rem rgba(37, 99, 235, 0.14);
+        }
+
         .credit-actions {
             display: grid;
             gap: 0.65rem;
@@ -728,6 +746,49 @@
 <script src="{% static 'js/location_actions.js' %}"></script>
 <script src="{% static 'js/ui_safety.js' %}"></script>
 <script src="{% static 'js/partial_refresh.js' %}"></script>
+<script>
+    (function () {
+        function normalize(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
+        }
+
+        function filterCredits(input) {
+            const root = input.closest('[data-credit-filter-root]');
+
+            if (!root) {
+                return;
+            }
+
+            const query = normalize(input.value);
+            const items = Array.from(root.querySelectorAll('[data-credit-filter-item]'));
+            const emptyState = root.querySelector('[data-credit-filter-empty]');
+            let visibleCount = 0;
+
+            items.forEach(function (item) {
+                const matches = !query || normalize(item.textContent).includes(query);
+                item.classList.toggle('d-none', !matches);
+
+                if (matches) {
+                    visibleCount += 1;
+                }
+            });
+
+            if (emptyState) {
+                emptyState.classList.toggle('d-none', !query || visibleCount > 0);
+            }
+        }
+
+        document.addEventListener('input', function (event) {
+            if (event.target && event.target.matches('[data-credit-filter-input]')) {
+                filterCredits(event.target);
+            }
+        });
+    })();
+</script>
 
 </body>
 </html>
