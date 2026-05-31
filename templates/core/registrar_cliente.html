@@ -38,6 +38,7 @@ Registrar cliente - AquaSmart CRM
                                 name="nombre"
                                 class="form-control"
                                 maxlength="100"
+                                data-client-suggestion-field="nombre"
                                 required
                             >
                         </div>
@@ -50,6 +51,7 @@ Registrar cliente - AquaSmart CRM
                                 class="form-control"
                                 minlength="6"
                                 maxlength="20"
+                                data-client-suggestion-field="telefono"
                                 required
                             >
                         </div>
@@ -61,6 +63,7 @@ Registrar cliente - AquaSmart CRM
                                 name="direccion"
                                 class="form-control"
                                 maxlength="255"
+                                data-client-suggestion-field="direccion"
                                 required
                             >
                         </div>
@@ -74,6 +77,18 @@ Registrar cliente - AquaSmart CRM
                                 {% endfor %}
                             </select>
                         </div>
+                    </div>
+
+                    <div
+                        class="form-section d-none"
+                        data-client-suggestions
+                        data-search-url="{% url 'buscar_clientes' %}"
+                    >
+                        <div class="form-section-title">Posibles clientes similares</div>
+                        <div class="small text-muted mb-2">
+                            Son solo sugerencias. El sistema solo bloquea si el tel&eacute;fono exacto ya existe.
+                        </div>
+                        <div class="list-group list-group-flush" data-client-suggestions-list></div>
                     </div>
 
                     <div class="form-section">
@@ -139,5 +154,6 @@ Registrar cliente - AquaSmart CRM
 </div>
 
 <script src="{% static 'js/reference_house_form.js' %}" defer></script>
+<script src="{% static 'js/client_suggestions.js' %}" defer></script>
 
 {% endblock %}

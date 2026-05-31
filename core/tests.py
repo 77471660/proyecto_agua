@@ -279,6 +279,33 @@ class PermisosRolesTests(TestCase):
         self.assertNotContains(response, 'Referencia de entrega')
         self.assertNotContains(response, 'name="referencia"')
 
+    def test_registrar_cliente_muestra_bloque_sugerencias_no_bloqueantes(self):
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('registrar_cliente'))
+
+        self.assertContains(response, 'Posibles clientes similares')
+        self.assertContains(response, 'data-client-suggestions')
+        self.assertContains(response, 'data-client-suggestion-field="nombre"')
+        self.assertContains(response, 'data-client-suggestion-field="telefono"')
+        self.assertContains(response, 'data-client-suggestion-field="direccion"')
+        self.assertContains(response, 'client_suggestions.js')
+
+    def test_buscar_clientes_sugiere_por_coincidencia_sin_bloquear(self):
+        Cliente.objects.create(
+            nombre='Vanesa Similar',
+            telefono='999 555 111',
+            direccion='Av. Las Flores 123',
+            lugar=self.lugar_operativo
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(reverse('buscar_clientes'), {'q': 'Van'})
+
+        self.assertEqual(response.status_code, 200)
+        resultados = response.json()['results']
+        self.assertEqual(resultados[0]['nombre'], 'Vanesa Similar')
+
     def test_registrar_cliente_bloquea_gps_sin_foto(self):
         self.client.force_login(self.secretaria)
 
