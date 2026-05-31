@@ -76,6 +76,43 @@ Gesti&oacute;n de repartos - AquaSmart CRM
         .dispatch-panel .table-action-group .form-select {
             min-width: 7.75rem !important;
         }
+
+        .dispatch-summary-table thead {
+            display: none;
+        }
+
+        .dispatch-summary-table tbody,
+        .dispatch-summary-table tr,
+        .dispatch-summary-table td {
+            display: block;
+        }
+
+        .dispatch-summary-table tr {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 0.7rem;
+            padding: 0.7rem;
+        }
+
+        .dispatch-summary-table td {
+            border: 0;
+            padding: 0.28rem 0 !important;
+        }
+
+        .dispatch-summary-table td:not(:first-child) {
+            align-items: center;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: space-between;
+        }
+
+        .dispatch-summary-table td:not(:first-child)::before {
+            color: #64748b;
+            content: attr(data-label);
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
     }
 
     .dispatch-panel .location-details summary {
@@ -92,6 +129,52 @@ Gesti&oacute;n de repartos - AquaSmart CRM
         flex-wrap: wrap;
         gap: 0.35rem;
         margin-top: 0.45rem;
+    }
+
+    .dispatch-summary-table td:first-child {
+        font-weight: 800;
+    }
+
+    .dispatch-summary-chip {
+        border: 1px solid transparent;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1.15;
+        padding: 0.32rem 0.55rem;
+        white-space: nowrap;
+    }
+
+    .dispatch-summary-chip.is-muted {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        color: #64748b;
+        font-weight: 700;
+    }
+
+    .dispatch-summary-chip.is-warning {
+        background: #fff7ed;
+        border-color: #fed7aa;
+        color: #9a3412;
+    }
+
+    .dispatch-summary-chip.is-success {
+        background: #ecfdf5;
+        border-color: #bbf7d0;
+        color: #166534;
+    }
+
+    .dispatch-summary-chip.is-info {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+    }
+
+    .dispatch-summary-chip.is-danger {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #b91c1c;
     }
 
     .dispatch-mobile-list {
@@ -187,7 +270,7 @@ Gesti&oacute;n de repartos - AquaSmart CRM
 
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 dispatch-summary-table">
                 <thead class="table-light">
                     <tr>
                         <th>Repartidor</th>
@@ -209,11 +292,31 @@ Gesti&oacute;n de repartos - AquaSmart CRM
                                     {{ resumen.usuario.username }}
                                 {% endif %}
                             </td>
-                            <td>{{ resumen.pendientes }}</td>
-                            <td>{{ resumen.entregados_hoy }}</td>
-                            <td>{{ resumen.cancelados_hoy }}</td>
-                            <td>{{ resumen.bidones_hoy }}</td>
-                            <td>S/ {{ resumen.dinero_hoy|floatformat:2 }}</td>
+                            <td data-label="Pendientes">
+                                <span class="dispatch-summary-chip {% if resumen.pendientes %}is-warning{% else %}is-muted{% endif %}">
+                                    {{ resumen.pendientes }} pendientes
+                                </span>
+                            </td>
+                            <td data-label="Entregados hoy">
+                                <span class="dispatch-summary-chip {% if resumen.entregados_hoy %}is-success{% else %}is-muted{% endif %}">
+                                    {% if resumen.entregados_hoy %}+{% endif %}{{ resumen.entregados_hoy }} entregados
+                                </span>
+                            </td>
+                            <td data-label="Cancelados hoy">
+                                <span class="dispatch-summary-chip {% if resumen.cancelados_hoy %}is-danger{% else %}is-muted{% endif %}">
+                                    {{ resumen.cancelados_hoy }} cancelados
+                                </span>
+                            </td>
+                            <td data-label="Bidones hoy">
+                                <span class="dispatch-summary-chip {% if resumen.bidones_hoy %}is-info{% else %}is-muted{% endif %}">
+                                    {% if resumen.bidones_hoy %}+{% endif %}{{ resumen.bidones_hoy }} bidones
+                                </span>
+                            </td>
+                            <td data-label="Cobrado hoy">
+                                <span class="dispatch-summary-chip {% if resumen.dinero_hoy %}is-success{% else %}is-muted{% endif %}">
+                                    {% if resumen.dinero_hoy %}+{% endif %}S/ {{ resumen.dinero_hoy|floatformat:2 }}
+                                </span>
+                            </td>
                         </tr>
                     {% empty %}
                         <tr>
@@ -465,7 +568,11 @@ Gesti&oacute;n de repartos - AquaSmart CRM
                             </td>
                             <td>
                                 <div>{{ pedido.cliente.direccion }}</div>
-                                <details class="location-details mt-1">
+                                <details
+                                    class="location-details mt-1"
+                                    data-refresh-key="jefe-asignado-ubicacion-{{ pedido.id }}"
+                                    data-refresh-pause="true"
+                                >
                                     <summary class="btn btn-sm btn-outline-secondary">
                                         Detalles
                                     </summary>
