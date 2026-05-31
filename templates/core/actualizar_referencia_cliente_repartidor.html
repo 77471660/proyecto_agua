@@ -21,6 +21,8 @@
 
     <style>
         body {
+            --app-safe-area-top: env(safe-area-inset-top, 0px);
+            --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
             --primary-blue: #0f5fb8;
             --primary-blue-deep: #0e55a8;
             background: #f8fafc;
@@ -28,6 +30,11 @@
             min-height: 100vh;
             min-height: 100dvh;
             -webkit-text-size-adjust: 100%;
+        }
+
+        .capacitor-android body {
+            --app-safe-area-top: max(env(safe-area-inset-top, 0px), 24px);
+            --app-safe-area-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
         }
 
         .top-bar {
@@ -93,6 +100,28 @@
 
         .photo-preview-status.is-visible {
             display: block;
+        }
+
+        @media (max-width: 575.98px) {
+            body {
+                padding-bottom: calc(1.25rem + var(--app-safe-area-bottom));
+            }
+
+            .top-bar {
+                margin-bottom: 0.75rem !important;
+                padding-bottom: 0.6rem !important;
+                padding-top: calc(0.6rem + var(--app-safe-area-top)) !important;
+            }
+
+            .top-bar h1 {
+                font-size: 1rem;
+            }
+
+            main.container {
+                padding-bottom: calc(4rem + var(--app-safe-area-bottom)) !important;
+                padding-left: 0.8rem;
+                padding-right: 0.8rem;
+            }
         }
     </style>
 </head>
