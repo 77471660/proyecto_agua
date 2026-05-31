@@ -9,7 +9,7 @@ Reporte Semanal - AquaSmart CRM
 <div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
     <div>
         <h2>Reporte Semanal</h2>
-        <small class="text-muted">Ventas entregadas y control de pagos de la semana.</small>
+        <small class="text-muted">Resumen de la semana para ver avance, cobros y pendientes.</small>
         <p class="mb-0 mt-1 text-primary fw-semibold">
             {{ inicio_semana|date:"d/m/Y" }} - {{ fin_semana|date:"d/m/Y" }}
         </p>
@@ -45,42 +45,6 @@ Reporte Semanal - AquaSmart CRM
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card metric-card metric-success h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Total ventas</h6>
-                <div class="metric-value">S/ {{ total_ventas|floatformat:2 }}</div>
-                <small class="text-muted">Por fecha de entrega</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card metric-card h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Bidones vendidos</h6>
-                <div class="metric-value">{{ total_bidones }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card metric-card metric-info h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Entregados</h6>
-                <div class="metric-value">{{ total_entregados }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card metric-card metric-muted h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Cancelados</h6>
-                <div class="metric-value">{{ total_cancelados }}</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="card metric-card metric-success h-100">
             <div class="card-body">
@@ -93,63 +57,115 @@ Reporte Semanal - AquaSmart CRM
     <div class="col-md-4">
         <div class="card metric-card metric-warning h-100">
             <div class="card-body">
-                <h6 class="metric-label">Total fiado</h6>
-                <div class="metric-value">S/ {{ fiado|floatformat:2 }}</div>
-                <small class="text-muted">Entregado como cr&eacute;dito</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card metric-card metric-warning h-100">
-            <div class="card-body">
                 <h6 class="metric-label">Cuentas por cobrar</h6>
                 <div class="metric-value">S/ {{ cuentas_por_cobrar|floatformat:2 }}</div>
                 <small class="text-muted">Fiados pendientes de esta semana</small>
             </div>
         </div>
     </div>
+    <div class="col-md-4">
+        <div class="card metric-card metric-success h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Total ventas</h6>
+                <div class="metric-value">S/ {{ total_ventas|floatformat:2 }}</div>
+                <small class="text-muted">Por fecha de entrega</small>
+            </div>
+        </div>
+    </div>
+
+    {% if fiado %}
+        <div class="col-md-4">
+            <div class="card metric-card metric-warning h-100">
+                <div class="card-body">
+                    <h6 class="metric-label">Total fiado</h6>
+                    <div class="metric-value">S/ {{ fiado|floatformat:2 }}</div>
+                    <small class="text-muted">Entregado como credito</small>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="col-md-4">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Bidones vendidos</h6>
+                <div class="metric-value">{{ total_bidones }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card metric-card metric-info h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Entregados / cancelados</h6>
+                <div class="metric-value">{{ total_entregados }}</div>
+                <small class="text-muted">
+                    {% if total_cancelados %}
+                        {{ total_cancelados }} cancelados en la semana
+                    {% else %}
+                        Sin cancelaciones registradas
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
 </div>
 
+{% if pendiente %}
+    <div class="alert alert-warning mb-4">
+        Sin metodo registrado en la semana: <strong>S/ {{ pendiente|floatformat:2 }}</strong>
+    </div>
+{% endif %}
+
 <div class="card content-card mb-4">
-    <div class="card-header bg-white">Desglose por m&eacute;todo de pago</div>
+    <div class="card-header bg-white">Cobros por metodo</div>
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Efectivo</div>
-                    <div class="fs-4 fw-semibold">S/ {{ efectivo|floatformat:2 }}</div>
+            {% if efectivo %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Efectivo</div>
+                        <div class="fs-4 fw-semibold">S/ {{ efectivo|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Yape</div>
-                    <div class="fs-4 fw-semibold">S/ {{ yape|floatformat:2 }}</div>
+            {% endif %}
+            {% if yape %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Yape</div>
+                        <div class="fs-4 fw-semibold">S/ {{ yape|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Plin</div>
-                    <div class="fs-4 fw-semibold">S/ {{ plin|floatformat:2 }}</div>
+            {% endif %}
+            {% if plin %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Plin</div>
+                        <div class="fs-4 fw-semibold">S/ {{ plin|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Transferencia</div>
-                    <div class="fs-4 fw-semibold">S/ {{ transferencia|floatformat:2 }}</div>
+            {% endif %}
+            {% if transferencia %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Transferencia</div>
+                        <div class="fs-4 fw-semibold">S/ {{ transferencia|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Sin m&eacute;todo registrado</div>
-                    <div class="fs-4 fw-semibold">S/ {{ pendiente|floatformat:2 }}</div>
+            {% endif %}
+            {% if fiado %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Fiado entregado</div>
+                        <div class="fs-4 fw-semibold">S/ {{ fiado|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Fiado entregado</div>
-                    <div class="fs-4 fw-semibold">S/ {{ fiado|floatformat:2 }}</div>
+            {% endif %}
+            {% if not efectivo and not yape and not plin and not transferencia and not fiado %}
+                <div class="col-12">
+                    <div class="empty-state">No hay cobros registrados en la semana seleccionada.</div>
                 </div>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -165,7 +181,7 @@ Reporte Semanal - AquaSmart CRM
                             <th>Entrega</th>
                             <th>Cliente</th>
                             <th>Bidones</th>
-                            <th>M&eacute;todo</th>
+                            <th>Metodo</th>
                             <th>Lugar</th>
                             <th class="text-end">Total</th>
                         </tr>

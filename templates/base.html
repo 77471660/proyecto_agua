@@ -100,6 +100,49 @@
         color: #fff;
     }
 
+    .navbar-report-cluster {
+        align-items: center;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 7px;
+        display: inline-flex;
+        gap: 0.5rem;
+        padding: 0.18rem 0.3rem;
+    }
+
+    .navbar-report-title {
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding-left: 0.2rem;
+        text-transform: uppercase;
+    }
+
+    .navbar-report-group .btn {
+        background: transparent;
+        border-color: transparent;
+        box-shadow: none;
+        color: rgba(255, 255, 255, 0.92);
+        min-width: 0;
+        padding-left: 0.55rem;
+        padding-right: 0.55rem;
+    }
+
+    .navbar-report-group .btn:hover,
+    .navbar-report-group .btn:focus,
+    .navbar-report-group .btn:focus-visible {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: transparent;
+        color: #fff;
+    }
+
+    .navbar-report-group .btn.btn-light {
+        background: #fff;
+        border-color: #fff;
+        color: #0f5fb8;
+    }
+
     .page-heading {
         border-bottom: 1px solid #e2e8f0;
         margin-bottom: 1.5rem;
@@ -706,20 +749,25 @@
                         class="btn btn-sm {% if request.path == '/pedidos/' %}btn-light{% else %}btn-outline-light{% endif %}"
                     >Pedidos</a>
 
-                    <a
-                        href="/reporte-diario/"
-                        class="btn btn-sm {% if request.path == '/reporte-diario/' %}btn-light{% else %}btn-outline-light{% endif %}"
-                    >Reporte Diario</a>
+                    <div class="navbar-report-cluster">
+                        <span class="navbar-report-title">Reportes</span>
+                        <div class="btn-group btn-group-sm navbar-report-group" role="group" aria-label="Reportes">
+                            <a
+                                href="/reporte-diario/"
+                                class="btn {% if request.path == '/reporte-diario/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                            >Diario</a>
 
-                    <a
-                        href="/reporte-mensual/"
-                        class="btn btn-sm {% if request.path == '/reporte-mensual/' %}btn-light{% else %}btn-outline-light{% endif %}"
-                    >Reporte Mensual</a>
+                            <a
+                                href="/reporte-semanal/"
+                                class="btn {% if request.path == '/reporte-semanal/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                            >Semanal</a>
 
-                    <a
-                        href="/reporte-semanal/"
-                        class="btn btn-sm {% if request.path == '/reporte-semanal/' %}btn-light{% else %}btn-outline-light{% endif %}"
-                    >Reporte Semanal</a>
+                            <a
+                                href="/reporte-mensual/"
+                                class="btn {% if request.path == '/reporte-mensual/' %}btn-light{% else %}btn-outline-light{% endif %}"
+                            >Mensual</a>
+                        </div>
+                    </div>
 
                     <a
                         href="/pagos/"
@@ -792,7 +840,13 @@
                             <a class="dropdown-item" href="/registrar-pedido/">Nuevo pedido</a>
                         </li>
                         <li>
+                            <a class="dropdown-item" href="/reporte-diario/">Reporte diario</a>
+                        </li>
+                        <li>
                             <a class="dropdown-item" href="/reporte-semanal/">Reporte semanal</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/reporte-mensual/">Reporte mensual</a>
                         </li>
                         <li>
                             <a class="dropdown-item" href="/pagos/">Pagos</a>

@@ -49,332 +49,318 @@ Reporte Mensual
 </style>
 
 <div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+        <h2>Reporte Mensual</h2>
 
-        <div>
-            <h2>
-                Reporte Mensual
-            </h2>
+        <small class="text-muted">
+            Vista del negocio en el mes seleccionado
+        </small>
+        <p class="mb-0 mt-1 text-primary fw-semibold">
+            Periodo analizado:
 
-            <small class="text-muted">
-                Consulta de ventas por mes y año
-            </small>
-            <p class="mb-0 mt-1 text-primary fw-semibold">
-                Período analizado:
+            {% for numero, nombre in meses %}
+                {% if numero == mes_actual %}
+                    {{ nombre }}
+                {% endif %}
+            {% endfor %}
 
-                {% for numero, nombre in meses %}
-                    {% if numero == mes_actual %}
-                        {{ nombre }}
-                    {% endif %}
-                {% endfor %}
+            {{ anio_actual }}
+        </p>
+    </div>
 
-                {{ anio_actual }}
-            </p>
-        </div>
+    <form method="GET" class="d-flex gap-2 flex-wrap no-print">
+        <select name="mes" class="form-select w-auto">
+            {% for numero, nombre in meses %}
+                <option
+                    value="{{ numero }}"
+                    {% if numero == mes_actual %}selected{% endif %}
+                >
+                    {{ nombre }}
+                </option>
+            {% endfor %}
+        </select>
 
-        <form method="GET" class="d-flex gap-2 flex-wrap no-print">
+        <select name="anio" class="form-select w-auto">
+            {% for anio in anios %}
+                <option
+                    value="{{ anio }}"
+                    {% if anio == anio_actual %}selected{% endif %}
+                >
+                    {{ anio }}
+                </option>
+            {% endfor %}
+        </select>
 
-            <select name="mes" class="form-select w-auto">
-                {% for numero, nombre in meses %}
-                    <option
-                        value="{{ numero }}"
-                        {% if numero == mes_actual %}selected{% endif %}
-                    >
-                        {{ nombre }}
-                    </option>
-                {% endfor %}
-            </select>
+        <button type="submit" class="btn btn-primary">
+            Filtrar
+        </button>
 
-            <select name="anio" class="form-select w-auto">
-                {% for anio in anios %}
-                    <option
-                        value="{{ anio }}"
-                        {% if anio == anio_actual %}selected{% endif %}
-                    >
-                        {{ anio }}
-                    </option>
-                {% endfor %}
-            </select>
-
-            <button type="submit" class="btn btn-primary">
-                Filtrar
-            </button>
-
-            <button
-                type="button"
-                class="btn btn-outline-secondary"
-                onclick="window.print()"
-            >
-                Imprimir
-            </button>
-
-        </form>
-
+        <button
+            type="button"
+            class="btn btn-outline-secondary"
+            onclick="window.print()"
+        >
+            Imprimir
+        </button>
+    </form>
 </div>
 
-    <div class="row g-4">
-
-        <div class="col-md-4">
-            <div class="card metric-card metric-success h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Ingresos del Mes</h6>
-                    <h3 class="text-success">
-                        S/ {{ ingresos_mes|floatformat:2 }}
-                    </h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card metric-card h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Pedidos Entregados</h6>
-                    <h3>{{ total_entregados }}</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card metric-card h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Bidones Vendidos</h6>
-                    <h3>{{ bidones_mes }}</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card metric-card metric-info h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Clientes Únicos</h6>
-                    <h3>{{ clientes_unicos }}</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card metric-card metric-warning h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Pedidos Pendientes</h6>
-                    <h3 class="text-warning">{{ pendientes }}</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card metric-card metric-muted h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Pedidos Cancelados</h6>
-                    <h3 class="text-secondary">{{ cancelados }}</h3>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <div class="card content-card mt-4">
-        <div class="card-header bg-white">
-            Análisis del mes
-        </div>
-
-        <div class="card-body">
-            <p class="alert alert-info mb-4">
-                {{ lectura_mes }}
-            </p>
-
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <div class="form-section h-100 mb-0">
-                        <h6 class="mb-3">Estado de pedidos</h6>
-
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>Entregados</span>
-                                <strong>{{ total_entregados }}</strong>
-                            </div>
-                            <div class="progress" style="height: 10px;">
-                                <div
-                                    class="progress-bar progress-entregado"
-                                    style="width: {{ porcentaje_entregados }}%;"
-                                ></div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>Pendientes</span>
-                                <strong>{{ pendientes }}</strong>
-                            </div>
-                            <div class="progress" style="height: 10px;">
-                                <div
-                                    class="progress-bar progress-pendiente"
-                                    style="width: {{ porcentaje_pendientes }}%;"
-                                ></div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>Cancelados</span>
-                                <strong>{{ cancelados }}</strong>
-                            </div>
-                            <div class="progress" style="height: 10px;">
-                                <div
-                                    class="progress-bar progress-cancelado"
-                                    style="width: {{ porcentaje_cancelados }}%;"
-                                ></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="form-section h-100 mb-0">
-                        <h6>Top cliente del mes</h6>
-
-                        {% if top_cliente_mes %}
-                            <p class="mb-1 fw-semibold">
-                                {{ top_cliente_mes.cliente__nombre }}
-                            </p>
-                            <p class="mb-1">
-                                Bidones comprados:
-                                <strong>{{ top_cliente_mes.bidones }}</strong>
-                            </p>
-                            <p class="mb-0">
-                                Total gastado:
-                                <strong>S/ {{ top_cliente_mes.total|floatformat:2 }}</strong>
-                            </p>
-                        {% else %}
-                            <p class="text-muted mb-0">
-                                Sin clientes con pedidos entregados.
-                            </p>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="form-section h-100 mb-0">
-                        <h6>Día con más ventas</h6>
-
-                        {% if dia_mas_ventas %}
-                            <p class="mb-1 fw-semibold">
-                                {{ dia_mas_ventas.fecha_larga|date:"j \\d\\e F \\d\\e Y" }}
-                            </p>
-                            <p class="mb-1">
-                                Total vendido:
-                                <strong>S/ {{ dia_mas_ventas.total|floatformat:2 }}</strong>
-                            </p>
-                            <p class="mb-0">
-                                Bidones vendidos:
-                                <strong>{{ dia_mas_ventas.bidones }}</strong>
-                            </p>
-                        {% else %}
-                            <p class="text-muted mb-0">
-                                Sin ventas entregadas en el mes.
-                            </p>
-                        {% endif %}
-                    </div>
-                </div>
+<div class="row g-4">
+    <div class="col-md-3">
+        <div class="card metric-card metric-success h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Ingresos del Mes</h6>
+                <h3 class="text-success">
+                    S/ {{ ingresos_mes|floatformat:2 }}
+                </h3>
             </div>
         </div>
     </div>
 
-    <div class="card content-card mt-4">
-        <div class="card-header bg-white">
-            <h5 class="mb-0">
-                Gráfico diario de ventas
-            </h5>
+    <div class="col-md-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Pedidos Entregados</h6>
+                <h3>{{ total_entregados }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Bidones Vendidos</h6>
+                <h3>{{ bidones_mes }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card metric-card metric-info h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Clientes Unicos</h6>
+                <h3>{{ clientes_unicos }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card mt-4">
+    <div class="card-header bg-white">
+        Analisis del mes
+    </div>
+
+    <div class="card-body">
+        <p class="alert alert-info mb-4">
+            {{ lectura_mes }}
+        </p>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            {% if pendientes %}
+                <span class="badge-estado badge-pendiente">
+                    Pendientes: {{ pendientes }}
+                </span>
+            {% endif %}
+            {% if cancelados %}
+                <span class="badge-estado badge-cancelado">
+                    Cancelados: {{ cancelados }}
+                </span>
+            {% endif %}
+            {% if not pendientes and not cancelados %}
+                <span class="badge-estado badge-entregado">
+                    Sin acumulacion operativa relevante
+                </span>
+            {% endif %}
         </div>
 
-        <div class="card-body">
-            {% if max_ingresos_grafico %}
-                <div class="monthly-chart" aria-label="Ventas por dia del mes">
-                    {% for dia in detalle_diario_mes %}
-                        <div class="monthly-chart-item">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="form-section h-100 mb-0">
+                    <h6 class="mb-3">Estado del mes</h6>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Entregados</span>
+                            <strong>{{ total_entregados }}</strong>
+                        </div>
+                        <div class="progress" style="height: 10px;">
                             <div
-                                class="monthly-chart-bar"
-                                style="height: {{ dia.porcentaje }}%;"
-                                title="{{ dia.fecha|date:'j \\d\\e F \\d\\e Y' }} - S/ {{ dia.ingresos|floatformat:2 }}"
+                                class="progress-bar progress-entregado"
+                                style="width: {{ porcentaje_entregados }}%;"
                             ></div>
-                            <span class="monthly-chart-label">
-                                {{ dia.dia }}
-                            </span>
                         </div>
-                    {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Pendientes</span>
+                            <strong>{{ pendientes }}</strong>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div
+                                class="progress-bar progress-pendiente"
+                                style="width: {{ porcentaje_pendientes }}%;"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Cancelados</span>
+                            <strong>{{ cancelados }}</strong>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div
+                                class="progress-bar progress-cancelado"
+                                style="width: {{ porcentaje_cancelados }}%;"
+                            ></div>
+                        </div>
+                    </div>
                 </div>
-            {% else %}
-                <div class="empty-state">
-                    No hay ventas entregadas para graficar en este mes.
+            </div>
+
+            <div class="col-md-4">
+                <div class="form-section h-100 mb-0">
+                    <h6>Top cliente del mes</h6>
+
+                    {% if top_cliente_mes %}
+                        <p class="mb-1 fw-semibold">
+                            {{ top_cliente_mes.cliente__nombre }}
+                        </p>
+                        <p class="mb-1">
+                            Bidones comprados:
+                            <strong>{{ top_cliente_mes.bidones }}</strong>
+                        </p>
+                        <p class="mb-0">
+                            Total gastado:
+                            <strong>S/ {{ top_cliente_mes.total|floatformat:2 }}</strong>
+                        </p>
+                    {% else %}
+                        <p class="text-muted mb-0">
+                            Sin clientes con pedidos entregados.
+                        </p>
+                    {% endif %}
                 </div>
-            {% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <div class="form-section h-100 mb-0">
+                    <h6>Dia con mas ventas</h6>
+
+                    {% if dia_mas_ventas %}
+                        <p class="mb-1 fw-semibold">
+                            {{ dia_mas_ventas.fecha_larga|date:"j \\d\\e F \\d\\e Y" }}
+                        </p>
+                        <p class="mb-1">
+                            Total vendido:
+                            <strong>S/ {{ dia_mas_ventas.total|floatformat:2 }}</strong>
+                        </p>
+                        <p class="mb-0">
+                            Bidones vendidos:
+                            <strong>{{ dia_mas_ventas.bidones }}</strong>
+                        </p>
+                    {% else %}
+                        <p class="text-muted mb-0">
+                            Sin ventas entregadas en el mes.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <div class="card content-card mt-4">
-        <div class="card-header bg-white">
-            <h5 class="mb-0">
-                Pedidos de {{ nombre_mes_analizado }} {{ anio_actual }}
-            </h5>
-        </div>
+<div class="card content-card mt-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            Grafico diario de ventas
+        </h5>
+    </div>
 
-        <div class="card-body">
+    <div class="card-body">
+        {% if max_ingresos_grafico %}
+            <div class="monthly-chart" aria-label="Ventas por dia del mes">
+                {% for dia in detalle_diario_mes %}
+                    <div class="monthly-chart-item">
+                        <div
+                            class="monthly-chart-bar"
+                            style="height: {{ dia.porcentaje }}%;"
+                            title="{{ dia.fecha|date:'j \\d\\e F \\d\\e Y' }} - S/ {{ dia.ingresos|floatformat:2 }}"
+                        ></div>
+                        <span class="monthly-chart-label">
+                            {{ dia.dia }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                No hay ventas entregadas para graficar en este mes.
+            </div>
+        {% endif %}
+    </div>
+</div>
 
-            {% if pedidos_mes.object_list %}
+<div class="card content-card mt-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            Pedidos de {{ nombre_mes_analizado }} {{ anio_actual }}
+        </h5>
+    </div>
 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+    <div class="card-body">
+        {% if pedidos_mes.object_list %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Bidones</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for pedido in pedidos_mes %}
                             <tr>
-                                <th>Fecha</th>
-                                <th>Cliente</th>
-                                <th>Bidones</th>
-                                <th>Total</th>
-                                <th>Estado</th>
+                                <td>
+                                    <div>{{ pedido.fecha_pedido|date:"d/m/Y" }}</div>
+                                    <small class="text-muted">
+                                        {{ pedido.fecha_pedido|date:"H:i" }}
+                                    </small>
+                                </td>
+
+                                <td>
+                                    {{ pedido.cliente.nombre }}
+                                </td>
+
+                                <td>
+                                    {{ pedido.cantidad_bidones }}
+                                </td>
+
+                                <td>
+                                    S/ {{ pedido.total|floatformat:2 }}
+                                </td>
+
+                                <td>
+                                    <span class="badge-estado {{ pedido.badge_estado_clase }}">
+                                        {{ pedido.get_estado_display }}
+                                    </span>
+                                </td>
                             </tr>
-                        </thead>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
 
-                        <tbody>
-                            {% for pedido in pedidos_mes %}
-                                <tr>
-                                    <td>
-                                        <div>{{ pedido.fecha_pedido|date:"d/m/Y" }}</div>
-                                        <small class="text-muted">
-                                            {{ pedido.fecha_pedido|date:"H:i" }}
-                                        </small>
-                                    </td>
-
-                                    <td>
-                                        {{ pedido.cliente.nombre }}
-                                    </td>
-
-                                    <td>
-                                        {{ pedido.cantidad_bidones }}
-                                    </td>
-
-                                    <td>
-                                        S/ {{ pedido.total|floatformat:2 }}
-                                    </td>
-
-                                    <td>
-                                        <span class="badge-estado {{ pedido.badge_estado_clase }}">
-                                            {{ pedido.get_estado_display }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                {% include 'includes/pagination.html' with page_obj=pedidos_mes_page pagination_query=pedidos_mes_query page_param='pedidos_page' %}
-
-            {% else %}
-
-                <div class="empty-state">
-                    No hay pedidos registrados para el mes seleccionado.
-                </div>
-
-            {% endif %}
-
-        </div>
+            {% include 'includes/pagination.html' with page_obj=pedidos_mes_page pagination_query=pedidos_mes_query page_param='pedidos_page' %}
+        {% else %}
+            <div class="empty-state">
+                No hay pedidos registrados para el mes seleccionado.
+            </div>
+        {% endif %}
     </div>
+</div>
 {% endblock %}

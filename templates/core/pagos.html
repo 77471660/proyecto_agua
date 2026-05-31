@@ -10,14 +10,14 @@ Pagos - AquaSmart CRM
 <div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3">
     <div>
         <h2>Pagos</h2>
-        <small class="text-muted">Control operativo de cobros registrados en entregas.</small>
+        <small class="text-muted">Control de lo cobrado y lo que sigue pendiente por cobrar.</small>
     </div>
 
     <form method="GET" class="d-flex gap-2 align-items-end flex-wrap">
         <div>
-            <label class="form-label mb-1" for="periodo">Per&iacute;odo</label>
+            <label class="form-label mb-1" for="periodo">Periodo</label>
             <select id="periodo" name="periodo" class="form-select">
-                <option value="dia" {% if periodo == 'dia' %}selected{% endif %}>D&iacute;a</option>
+                <option value="dia" {% if periodo == 'dia' %}selected{% endif %}>Dia</option>
                 <option value="semana" {% if periodo == 'semana' %}selected{% endif %}>Semana</option>
             </select>
         </div>
@@ -40,128 +40,231 @@ Pagos - AquaSmart CRM
     </form>
 </div>
 
-<div class="section-title">
-    <h5>Resumen de hoy</h5>
-    <small>Solo pedidos entregados el {{ hoy|date:"d/m/Y" }}</small>
-</div>
-
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-2">
-        <div class="card metric-card h-100">
+    <div class="col-md-4">
+        <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="metric-label">Efectivo hoy</h6>
-                <div class="metric-value">S/ {{ efectivo_hoy|floatformat:2 }}</div>
+                <h6 class="metric-label">Total cobrado</h6>
+                <div class="metric-value">S/ {{ total_cobrado_periodo|floatformat:2 }}</div>
+                <small class="text-muted">
+                    {% if periodo == 'semana' %}
+                        Cobrado entre {{ inicio_periodo|date:"d/m" }} y {{ fin_periodo|date:"d/m" }}
+                    {% else %}
+                        Cobrado el {{ inicio_periodo|date:"d/m/Y" }}
+                    {% endif %}
+                </small>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-2">
-        <div class="card metric-card metric-info h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Yape hoy</h6>
-                <div class="metric-value">S/ {{ yape_hoy|floatformat:2 }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-2">
-        <div class="card metric-card h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Plin hoy</h6>
-                <div class="metric-value">S/ {{ plin_hoy|floatformat:2 }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-2">
-        <div class="card metric-card h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Transferencia hoy</h6>
-                <div class="metric-value">S/ {{ transferencia_hoy|floatformat:2 }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-2">
-        <div class="card metric-card metric-warning h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Fiado hoy</h6>
-                <div class="metric-value">S/ {{ fiado_hoy|floatformat:2 }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-2">
+
+    <div class="col-md-4">
         <div class="card metric-card metric-warning h-100">
             <div class="card-body">
                 <h6 class="metric-label">Total por cobrar</h6>
                 <div class="metric-value">S/ {{ total_por_cobrar|floatformat:2 }}</div>
+                <small class="text-muted">Fiados pendientes</small>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-2">
-        <div class="card metric-card metric-success h-100">
-            <div class="card-body">
-                <h6 class="metric-label">Total cobrado hoy</h6>
-                <div class="metric-value">S/ {{ total_cobrado_hoy|floatformat:2 }}</div>
+
+    {% if fiado_periodo %}
+        <div class="col-md-4">
+            <div class="card metric-card metric-warning h-100">
+                <div class="card-body">
+                    <h6 class="metric-label">Fiado del periodo</h6>
+                    <div class="metric-value">S/ {{ fiado_periodo|floatformat:2 }}</div>
+                    <small class="text-muted">Entregado como credito</small>
+                </div>
             </div>
         </div>
-    </div>
+    {% endif %}
+
+    {% if pendiente_periodo %}
+        <div class="col-md-4">
+            <div class="card metric-card metric-muted h-100">
+                <div class="card-body">
+                    <h6 class="metric-label">Sin m&eacute;todo registrado</h6>
+                    <div class="metric-value">S/ {{ pendiente_periodo|floatformat:2 }}</div>
+                    <small class="text-muted">Entregas por identificar</small>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 </div>
+
+{% if periodo == 'semana' and total_cobrado_hoy %}
+    <div class="alert alert-info mb-4">
+        Hoy se cobro <strong>S/ {{ total_cobrado_hoy|floatformat:2 }}</strong>
+        {% if fiado_hoy %}
+            y se entrego fiado por <strong>S/ {{ fiado_hoy|floatformat:2 }}</strong>.
+        {% else %}
+            .
+        {% endif %}
+    </div>
+{% endif %}
 
 <div class="card content-card mb-4">
     <div class="card-header bg-white">
         {% if periodo == 'semana' %}
-            Semana {{ inicio_periodo|date:"d/m/Y" }} - {{ fin_periodo|date:"d/m/Y" }}
+            Cobros de la semana {{ inicio_periodo|date:"d/m/Y" }} - {{ fin_periodo|date:"d/m/Y" }}
         {% else %}
-            D&iacute;a {{ inicio_periodo|date:"d/m/Y" }}
+            Cobros del dia {{ inicio_periodo|date:"d/m/Y" }}
         {% endif %}
     </div>
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Efectivo</div>
-                    <div class="fs-4 fw-semibold">S/ {{ efectivo_periodo|floatformat:2 }}</div>
+            {% if efectivo_periodo %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Efectivo</div>
+                        <div class="fs-4 fw-semibold">S/ {{ efectivo_periodo|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Yape</div>
-                    <div class="fs-4 fw-semibold">S/ {{ yape_periodo|floatformat:2 }}</div>
+            {% endif %}
+            {% if yape_periodo %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Yape</div>
+                        <div class="fs-4 fw-semibold">S/ {{ yape_periodo|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Plin</div>
-                    <div class="fs-4 fw-semibold">S/ {{ plin_periodo|floatformat:2 }}</div>
+            {% endif %}
+            {% if plin_periodo %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Plin</div>
+                        <div class="fs-4 fw-semibold">S/ {{ plin_periodo|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Transferencia</div>
-                    <div class="fs-4 fw-semibold">S/ {{ transferencia_periodo|floatformat:2 }}</div>
+            {% endif %}
+            {% if transferencia_periodo %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Transferencia</div>
+                        <div class="fs-4 fw-semibold">S/ {{ transferencia_periodo|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Sin m&eacute;todo registrado</div>
-                    <div class="fs-4 fw-semibold">S/ {{ pendiente_periodo|floatformat:2 }}</div>
+            {% endif %}
+            {% if fiado_periodo %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Fiado entregado</div>
+                        <div class="fs-4 fw-semibold">S/ {{ fiado_periodo|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Fiado entregado</div>
-                    <div class="fs-4 fw-semibold">S/ {{ fiado_periodo|floatformat:2 }}</div>
+            {% endif %}
+            {% if pendiente_periodo %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="form-section mb-0 h-100">
+                        <div class="text-muted small">Sin m&eacute;todo registrado</div>
+                        <div class="fs-4 fw-semibold">S/ {{ pendiente_periodo|floatformat:2 }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="form-section mb-0 h-100">
-                    <div class="text-muted small">Total cobrado</div>
-                    <div class="fs-4 fw-semibold text-success">S/ {{ total_cobrado_periodo|floatformat:2 }}</div>
+            {% endif %}
+            {% if not efectivo_periodo and not yape_periodo and not plin_periodo and not transferencia_periodo and not fiado_periodo and not pendiente_periodo %}
+                <div class="col-12">
+                    <div class="empty-state">No hay movimientos de cobro para el periodo seleccionado.</div>
                 </div>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
 <div class="card content-card mb-4">
-    <div class="card-header bg-white">Ventas por lugar</div>
+    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>Fiados / cuentas por cobrar ({{ total_fiados_pendientes }})</span>
+        <span class="fw-semibold text-warning">S/ {{ total_por_cobrar|floatformat:2 }}</span>
+    </div>
+    <div class="card-body">
+        {% if fiados_pendientes %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Telefono</th>
+                            <th>Entrega</th>
+                            <th>Bidones</th>
+                            <th>Repartidor</th>
+                            <th>Dias pendiente</th>
+                            <th class="text-end">Deuda</th>
+                            <th>Accion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pedido in fiados_pendientes %}
+                            <tr>
+                                <td>{{ pedido.cliente.nombre }}</td>
+                                <td>{{ pedido.cliente.telefono|format_phone_display }}</td>
+                                <td>{{ pedido.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                                <td>{{ pedido.cantidad_bidones }}</td>
+                                <td>{{ pedido.repartidor|default:"Sin asignar" }}</td>
+                                <td>{{ pedido.dias_pendiente }}</td>
+                                <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
+                                <td>
+                                    <form
+                                        method="POST"
+                                        action="{% url 'marcar_fiado_pagado' pedido.id %}"
+                                        class="d-flex gap-2 align-items-center"
+                                        onsubmit="return confirm('\u00bfConfirmas registrar el pago de este fiado?')"
+                                    >
+                                        {% csrf_token %}
+                                        <select name="metodo_pago_final" class="form-select form-select-sm" required aria-label="Metodo de cobro final">
+                                            <option value="EFECTIVO">Efectivo</option>
+                                            <option value="YAPE">Yape</option>
+                                            <option value="PLIN">Plin</option>
+                                            <option value="TRANSFERENCIA">Transferencia</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">Marcar pagado</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">No hay cuentas por cobrar pendientes.</div>
+        {% endif %}
+    </div>
+</div>
+
+{% if total_pendientes_pago %}
+    <div class="card content-card mb-4">
+        <div class="card-header bg-white">
+            Pedidos entregados sin m&eacute;todo registrado ({{ total_pendientes_pago }})
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Entrega</th>
+                            <th>Cliente</th>
+                            <th>Bidones</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pedido in pendientes_pago %}
+                            <tr>
+                                <td>{{ pedido.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                                <td>{{ pedido.cliente.nombre }}</td>
+                                <td>{{ pedido.cantidad_bidones }}</td>
+                                <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<div class="card content-card">
+    <div class="card-header bg-white">
+        Cobros por lugar
+    </div>
     <div class="card-body">
         {% if resumen_lugares %}
             <div class="table-responsive">
@@ -199,100 +302,7 @@ Pagos - AquaSmart CRM
                 </table>
             </div>
         {% else %}
-            <div class="empty-state">No hay ventas entregadas para el per&iacute;odo y lugar seleccionados.</div>
-        {% endif %}
-    </div>
-</div>
-
-<div class="card content-card mb-4">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span>Fiados / cuentas por cobrar ({{ total_fiados_pendientes }})</span>
-        <span class="fw-semibold text-warning">S/ {{ total_por_cobrar|floatformat:2 }}</span>
-    </div>
-    <div class="card-body">
-        {% if fiados_pendientes %}
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Cliente</th>
-                            <th>Tel&eacute;fono</th>
-                            <th>Entrega</th>
-                            <th>Bidones</th>
-                            <th>Repartidor</th>
-                            <th>D&iacute;as pendiente</th>
-                            <th class="text-end">Deuda</th>
-                            <th>Acci&oacute;n</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for pedido in fiados_pendientes %}
-                            <tr>
-                                <td>{{ pedido.cliente.nombre }}</td>
-                                <td>{{ pedido.cliente.telefono|format_phone_display }}</td>
-                                <td>{{ pedido.fecha_entrega|date:"d/m/Y H:i" }}</td>
-                                <td>{{ pedido.cantidad_bidones }}</td>
-                                <td>{{ pedido.repartidor|default:"Sin asignar" }}</td>
-                                <td>{{ pedido.dias_pendiente }}</td>
-                                <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
-                                <td>
-                                    <form
-                                        method="POST"
-                                        action="{% url 'marcar_fiado_pagado' pedido.id %}"
-                                        class="d-flex gap-2 align-items-center"
-                                        onsubmit="return confirm('\u00bfConfirmas registrar el pago de este fiado?')"
-                                    >
-                                        {% csrf_token %}
-                                        <select name="metodo_pago_final" class="form-select form-select-sm" required aria-label="Método de cobro final">
-                                            <option value="EFECTIVO">Efectivo</option>
-                                            <option value="YAPE">Yape</option>
-                                            <option value="PLIN">Plin</option>
-                                            <option value="TRANSFERENCIA">Transferencia</option>
-                                        </select>
-                                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">Marcar pagado</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">No hay cuentas por cobrar pendientes.</div>
-        {% endif %}
-    </div>
-</div>
-
-<div class="card content-card">
-    <div class="card-header bg-white">
-        Pedidos entregados sin m&eacute;todo registrado ({{ total_pendientes_pago }})
-    </div>
-    <div class="card-body">
-        {% if pendientes_pago %}
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Entrega</th>
-                            <th>Cliente</th>
-                            <th>Bidones</th>
-                            <th class="text-end">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for pedido in pendientes_pago %}
-                            <tr>
-                                <td>{{ pedido.fecha_entrega|date:"d/m/Y H:i" }}</td>
-                                <td>{{ pedido.cliente.nombre }}</td>
-                                <td>{{ pedido.cantidad_bidones }}</td>
-                                <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">No hay entregas pendientes de identificar en este per&iacute;odo.</div>
+            <div class="empty-state">No hay ventas entregadas para el periodo y lugar seleccionados.</div>
         {% endif %}
     </div>
 </div>

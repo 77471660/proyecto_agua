@@ -125,9 +125,9 @@ class Cliente(models.Model):
             return 'Coordenadas GPS'
 
         if self.direccion_normalizada:
-            return 'Dirección textual'
+            return 'Direcci\u00f3n textual'
 
-        return 'Sin ubicación'
+        return 'Sin ubicaci\u00f3n'
 
     def obtener_ubicacion_copiable(self):
         if self.tiene_coordenadas():

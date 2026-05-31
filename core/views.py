@@ -917,7 +917,9 @@ def leer_metodo_pago_entrega_post(post_data):
 
     metodo_pago = post_data.get('metodo_pago', '').strip().upper()
     metodos_validos = {
-        valor for valor, etiqueta in Pedido.METODOS_COBRO
+        valor
+        for valor, etiqueta in Pedido.METODOS_COBRO
+        if valor != Pedido.PAGO_PENDIENTE
     } | {Pedido.PAGO_FIADO}
 
     if metodo_pago not in metodos_validos:
@@ -1578,13 +1580,38 @@ def reporte_diario(request):
 
         fecha_iteracion += timedelta(days=1)
 
+    cancelados_hoy = Pedido.objects.filter(
+        estado=Pedido.CANCELADO,
+        fecha_cancelacion__date=hoy
+    ).count()
+    pagos_hoy = totales_por_metodo_pago(
+        Pedido.objects.filter(
+            estado=Pedido.ENTREGADO,
+            fecha_entrega__date=hoy
+        )
+    )
+    cobros_hoy = totales_cobros_periodo(hoy, hoy)
+    pedidos_hoy = Pedido.objects.filter(
+        fecha_pedido__date=hoy
+    ).select_related(
+        'cliente',
+        'lugar',
+        'repartidor'
+    ).order_by('-fecha_pedido')
+
     context = {
         'ventas_hoy': comparativo_ventas[0]['ingresos'],
         'bidones_hoy': comparativo_ventas[0]['bidones'],
         'pedidos_entregados_hoy': comparativo_ventas[0]['pedidos'],
+        'cancelados_hoy': cancelados_hoy,
+        'cobrado_hoy': cobros_hoy['cobrado'],
+        'fiado_hoy': pagos_hoy['fiado'],
         'comparativo_ventas': comparativo_ventas,
         'lectura_comparativo': lectura_comparativo,
         'detalle_diario_mes': detalle_diario_mes,
+        'detalle_diario_reciente': detalle_diario_mes[-7:],
+        'pedidos_hoy': pedidos_hoy,
+        'total_pedidos_hoy': pedidos_hoy.count(),
         'hoy': hoy,
     }
 

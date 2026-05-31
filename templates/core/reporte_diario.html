@@ -10,13 +10,13 @@ Reporte Diario - AquaSmart CRM
     <div>
         <h2>Reporte Diario</h2>
         <small class="text-muted">
-            Ventas entregadas y detalle diario del mes actual.
+            Resumen operativo para responder que paso hoy.
         </small>
     </div>
 </div>
 
-<div class="row mb-3">
-    <div class="col-md-4 mb-3">
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
         <div class="card metric-card metric-success h-100">
             <div class="card-body">
                 <h6 class="metric-label">Ventas de hoy</h6>
@@ -26,31 +26,72 @@ Reporte Diario - AquaSmart CRM
         </div>
     </div>
 
-    <div class="col-md-4 mb-3">
-        <div class="card metric-card h-100">
+    <div class="col-md-4">
+        <div class="card metric-card metric-success h-100">
             <div class="card-body">
-                <h6 class="metric-label">Bidones vendidos hoy</h6>
-                <div class="metric-value">{{ bidones_hoy }}</div>
-                <small class="text-muted">Solo pedidos entregados</small>
+                <h6 class="metric-label">Cobrado hoy</h6>
+                <div class="metric-value">S/ {{ cobrado_hoy|floatformat:2 }}</div>
+                <small class="text-muted">Por fecha de cobro</small>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4">
         <div class="card metric-card metric-info h-100">
             <div class="card-body">
-                <h6 class="metric-label">Pedidos entregados hoy</h6>
-                <div class="metric-value">{{ pedidos_entregados_hoy }}</div>
-                <small class="text-muted">Completados durante el día</small>
+                <h6 class="metric-label">Pedidos de hoy</h6>
+                <div class="metric-value">{{ total_pedidos_hoy }}</div>
+                <small class="text-muted">Registrados durante el dia</small>
             </div>
         </div>
     </div>
 </div>
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-4 mb-3">
-    <div>
-        <h5 class="mb-0">Tarjetas rápidas</h5>
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Bidones vendidos hoy</h6>
+                <div class="metric-value">{{ bidones_hoy }}</div>
+            </div>
+        </div>
+    </div>
 
+    <div class="col-sm-6 col-lg-3">
+        <div class="card metric-card metric-info h-100">
+            <div class="card-body">
+                <h6 class="metric-label">Pedidos entregados hoy</h6>
+                <div class="metric-value">{{ pedidos_entregados_hoy }}</div>
+            </div>
+        </div>
+    </div>
+
+    {% if cancelados_hoy %}
+        <div class="col-sm-6 col-lg-3">
+            <div class="card metric-card metric-muted h-100">
+                <div class="card-body">
+                    <h6 class="metric-label">Cancelados hoy</h6>
+                    <div class="metric-value">{{ cancelados_hoy }}</div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if fiado_hoy %}
+        <div class="col-sm-6 col-lg-3">
+            <div class="card metric-card metric-warning h-100">
+                <div class="card-body">
+                    <h6 class="metric-label">Fiado hoy</h6>
+                    <div class="metric-value">S/ {{ fiado_hoy|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+        <h5 class="mb-0">Comparativo corto</h5>
         <small class="text-muted d-block">
             {{ lectura_comparativo }}
         </small>
@@ -82,23 +123,69 @@ Reporte Diario - AquaSmart CRM
 
 <div class="card content-card mb-4">
     <div class="card-header bg-white">
-        Detalle diario del mes
+        Pedidos registrados hoy
     </div>
 
     <div class="card-body">
+        {% if pedidos_hoy %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Hora</th>
+                            <th>Cliente</th>
+                            <th>Estado</th>
+                            <th>Lugar</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for pedido in pedidos_hoy %}
+                            <tr>
+                                <td>{{ pedido.fecha_pedido|date:"H:i" }}</td>
+                                <td>{{ pedido.cliente.nombre }}</td>
+                                <td>
+                                    <span class="badge-estado {{ pedido.badge_estado_clase }}">
+                                        {{ pedido.get_estado_display }}
+                                    </span>
+                                </td>
+                                <td>{{ pedido.lugar|default:"Sin lugar asignado" }}</td>
+                                <td class="text-end fw-semibold">S/ {{ pedido.total|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">No hay pedidos registrados hoy.</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-header bg-white">
+        Ritmo reciente
+    </div>
+
+    <div class="card-body">
+        <small class="text-muted d-block mb-3">
+            Vista compacta de los ultimos dias del mes para no recargar este panel.
+        </small>
+
         <div class="table-responsive">
             <table class="table table-striped table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
                         <th>Fecha</th>
-                        <th>Ventas del día</th>
-                        <th>Bidones vendidos</th>
-                        <th>Pedidos entregados</th>
+                        <th>Ventas del dia</th>
+                        <th>Bidones</th>
+                        <th>Entregados</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    {% for dia in detalle_diario_mes %}
+                    {% for dia in detalle_diario_reciente %}
                         <tr>
                             <td>{{ dia.fecha|date:"d/m/Y" }}</td>
                             <td class="fw-semibold text-success">S/ {{ dia.ingresos|floatformat:2 }}</td>
