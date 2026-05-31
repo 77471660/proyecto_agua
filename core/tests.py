@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.staticfiles import finders
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -290,6 +291,7 @@ class PermisosRolesTests(TestCase):
         self.assertContains(response, 'data-client-suggestion-field="telefono"')
         self.assertContains(response, 'data-client-suggestion-field="direccion"')
         self.assertContains(response, 'client_suggestions.js')
+        self.assertIsNotNone(finders.find('js/client_suggestions.js'))
 
     def test_buscar_clientes_sugiere_por_coincidencia_sin_bloquear(self):
         Cliente.objects.create(
@@ -305,6 +307,24 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(response.status_code, 200)
         resultados = response.json()['results']
         self.assertEqual(resultados[0]['nombre'], 'Vanesa Similar')
+
+    def test_buscar_clientes_sugiere_por_telefono_normalizado(self):
+        Cliente.objects.create(
+            nombre='Cliente Telefono Espaciado',
+            telefono='999 555-111',
+            direccion='Av. Las Flores 123',
+            lugar=self.lugar_operativo
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(
+            reverse('buscar_clientes'),
+            {'q': '999555111'}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        resultados = response.json()['results']
+        self.assertEqual(resultados[0]['nombre'], 'Cliente Telefono Espaciado')
 
     def test_registrar_cliente_bloquea_gps_sin_foto(self):
         self.client.force_login(self.secretaria)

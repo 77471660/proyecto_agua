@@ -1586,18 +1586,47 @@ def buscar_clientes(request):
         )
 
     busqueda = request.GET.get('q', '').strip()
+    telefono_busqueda = limpiar_telefono(busqueda)
 
     clientes = Cliente.objects.filter(
         activo=True
     ).order_by('nombre')
 
     if len(busqueda) >= 2:
-        clientes = clientes.filter(
+        filtro_busqueda = (
             Q(nombre__icontains=busqueda)
             | Q(telefono__icontains=busqueda)
             | Q(direccion__icontains=busqueda)
             | Q(referencia__icontains=busqueda)
             | Q(referencia_ubicacion__icontains=busqueda)
+        )
+
+        if telefono_busqueda:
+            clientes = clientes.annotate(
+                telefono_sugerencia=Replace(
+                    Replace(
+                        Replace(
+                            Replace(
+                                Replace('telefono', Value(' '), Value('')),
+                                Value('-'),
+                                Value('')
+                            ),
+                            Value('('),
+                            Value('')
+                        ),
+                        Value(')'),
+                        Value('')
+                    ),
+                    Value('+'),
+                    Value('')
+                )
+            )
+            filtro_busqueda |= Q(
+                telefono_sugerencia__icontains=telefono_busqueda
+            )
+
+        clientes = clientes.filter(
+            filtro_busqueda
         )
     else:
         clientes = clientes.none()
