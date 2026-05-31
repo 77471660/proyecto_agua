@@ -90,17 +90,17 @@
 
                         <div class="credit-manage-panel">
                             <div class="credit-actions mb-3">
-                                <div class="row g-2">
+                                <div class="row g-2 quick-action-row">
                                     <div class="col-6">
                                         {% if credito.telefono_limpio %}
                                             <a
                                                 href="tel:{{ credito.telefono_limpio }}"
-                                                class="btn btn-outline-primary w-100 action-button"
+                                                class="btn btn-outline-primary w-100 action-button mobile-quick-action-button"
                                             >
                                                 Llamar
                                             </a>
                                         {% else %}
-                                            <button type="button" class="btn btn-outline-secondary w-100 action-button" disabled>
+                                            <button type="button" class="btn btn-outline-secondary w-100 action-button mobile-quick-action-button" disabled>
                                                 Sin tel&eacute;fono
                                             </button>
                                         {% endif %}
@@ -112,29 +112,29 @@
                                                 href="{{ credito.whatsapp_url }}"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                class="btn btn-whatsapp w-100 action-button"
+                                                class="btn btn-whatsapp w-100 action-button mobile-quick-action-button"
                                                 onclick="return confirm('\u00bfDeseas abrir WhatsApp para este cliente?')"
                                             >
                                                 WhatsApp
                                             </a>
                                         {% else %}
-                                            <button type="button" class="btn btn-outline-secondary w-100 action-button" disabled>
+                                            <button type="button" class="btn btn-outline-secondary w-100 action-button mobile-quick-action-button" disabled>
                                                 WhatsApp
                                             </button>
                                         {% endif %}
                                     </div>
 
-                                    <div class="col-12">
-                                        {% include 'core/includes/location_button.html' with cliente=credito.cliente button_class='btn-outline-primary w-100 action-button' hide_copy_button='1' %}
+                                    <div class="{% if credito.cliente.foto_referencia_url %}col-6{% else %}col-12{% endif %}">
+                                        {% include 'core/includes/location_button.html' with cliente=credito.cliente button_class='btn-outline-primary w-100 action-button mobile-quick-action-button' hide_copy_button='1' %}
                                     </div>
 
                                     {% if credito.cliente.foto_referencia_url %}
-                                        <div class="col-12">
+                                        <div class="col-6">
                                             <a
                                                 href="{{ credito.cliente.foto_referencia_url }}"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                class="btn btn-outline-secondary w-100 action-button"
+                                                class="btn btn-outline-secondary w-100 action-button mobile-quick-action-button"
                                             >
                                                 Ver foto
                                             </a>
