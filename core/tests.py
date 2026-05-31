@@ -1278,6 +1278,9 @@ class PermisosRolesTests(TestCase):
 
     def test_panel_jefe_refresca_fragmento_operativo(self):
         pedido = self.crear_pedido(None)
+        pedido_en_ruta = self.crear_pedido(self.repartidor)
+        pedido_en_ruta.registrar_estado(Pedido.EN_RUTA, self.repartidor)
+        pedido_en_ruta.save(update_fields=['estado'])
         self.client.force_login(self.jefe_reparto)
 
         page = self.client.get(reverse('panel_jefe_repartidores'))
@@ -1292,7 +1295,10 @@ class PermisosRolesTests(TestCase):
         self.assertContains(fragment, 'Resumen de repartidores hoy')
         self.assertContains(fragment, 'Pedidos sin asignar de hoy / atrasados')
         self.assertContains(fragment, pedido.cliente.nombre)
+        self.assertContains(fragment, pedido_en_ruta.cliente.nombre)
+        self.assertContains(fragment, 'En ruta')
         self.assertContains(fragment, 'data-refresh-pause="true"')
+        self.assertNotContains(fragment, 'Copiar ubicaci&oacute;n')
         self.assertNotContains(fragment, '<html')
 
     def test_panel_repartidor_muestra_solo_creditos_pendientes_propios(self):

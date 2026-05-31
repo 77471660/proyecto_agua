@@ -435,6 +435,7 @@ Gesti&oacute;n de repartos - AquaSmart CRM
                 <thead class="table-light">
                     <tr>
                         <th>Cliente</th>
+                        <th>Estado</th>
                         <th>Repartidor</th>
                         <th>Direcci&oacute;n</th>
                         <th>Bidones</th>
@@ -451,6 +452,11 @@ Gesti&oacute;n de repartos - AquaSmart CRM
                         <tr>
                             <td>{{ pedido.cliente.nombre }}</td>
                             <td>
+                                <span class="badge-estado {{ pedido.badge_estado_clase }}">
+                                    {{ pedido.get_estado_display }}
+                                </span>
+                            </td>
+                            <td>
                                 {% if pedido.repartidor.get_full_name %}
                                     {{ pedido.repartidor.get_full_name }}
                                 {% else %}
@@ -464,7 +470,7 @@ Gesti&oacute;n de repartos - AquaSmart CRM
                                         Detalles
                                     </summary>
                                     <div class="location-details-actions">
-                                        {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
+                                        {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' hide_copy_button='1' %}
                                     </div>
                                 </details>
                             </td>
@@ -545,6 +551,13 @@ Gesti&oacute;n de repartos - AquaSmart CRM
 
                     <div class="dispatch-mobile-meta">
                         <div>
+                            <span class="dispatch-mobile-label">Estado</span>
+                            <span class="badge-estado {{ pedido.badge_estado_clase }}">
+                                {{ pedido.get_estado_display }}
+                            </span>
+                        </div>
+
+                        <div>
                             <span class="dispatch-mobile-label">Repartidor</span>
                             <span class="dispatch-mobile-value">
                                 {% if pedido.repartidor.get_full_name %}
@@ -585,7 +598,7 @@ Gesti&oacute;n de repartos - AquaSmart CRM
                         </summary>
 
                         <div class="dispatch-mobile-details-panel">
-                            {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' %}
+                            {% include 'core/includes/location_button.html' with cliente=pedido.cliente button_class='btn-outline-primary btn-sm' hide_copy_button='1' %}
 
                             <form
                                 method="post"
