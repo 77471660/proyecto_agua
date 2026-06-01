@@ -384,7 +384,9 @@
 
         function setSavingState() {
             if (button) {
-                button.disabled = true;
+                button.dataset.saveInProgress = 'true';
+                button.setAttribute('aria-disabled', 'true');
+                button.classList.add('disabled');
                 button.textContent = 'Guardando cliente...';
             }
 
@@ -396,6 +398,9 @@
         function resetSavingState() {
             if (button) {
                 button.disabled = false;
+                delete button.dataset.saveInProgress;
+                button.removeAttribute('aria-disabled');
+                button.classList.remove('disabled');
                 button.textContent = defaultButtonText;
             }
 
@@ -414,7 +419,13 @@
         }
 
         if (button) {
-            button.addEventListener('click', function () {
+            button.addEventListener('click', function (event) {
+                if (button.dataset.saveInProgress === 'true') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
+
                 if (placeSelect && !placeSelect.value) {
                     showPlaceError();
                     placeSelect.focus();
@@ -445,6 +456,9 @@
                 }
 
                 setSavingState();
+                if (button) {
+                    button.disabled = true;
+                }
             }, 0);
         });
     });
