@@ -358,6 +358,9 @@
 
         const placeSelect = form.querySelector('#lugar');
         const placeError = form.querySelector('[data-place-error]');
+        const button = form.querySelector('[data-save-client-button]');
+        const status = form.querySelector('[data-save-client-status]');
+        const defaultButtonText = button ? button.textContent.trim() : 'Guardar cliente';
 
         function showPlaceError() {
             if (placeSelect) {
@@ -379,6 +382,28 @@
             }
         }
 
+        function setSavingState() {
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Guardando cliente...';
+            }
+
+            if (status) {
+                status.classList.remove('d-none');
+            }
+        }
+
+        function resetSavingState() {
+            if (button) {
+                button.disabled = false;
+                button.textContent = defaultButtonText;
+            }
+
+            if (status) {
+                status.classList.add('d-none');
+            }
+        }
+
         if (placeSelect) {
             placeSelect.addEventListener('invalid', showPlaceError);
             placeSelect.addEventListener('change', function () {
@@ -388,30 +413,38 @@
             });
         }
 
+        if (button) {
+            button.addEventListener('click', function () {
+                if (placeSelect && !placeSelect.value) {
+                    showPlaceError();
+                    placeSelect.focus();
+                    return;
+                }
+
+                if (!form.checkValidity()) {
+                    return;
+                }
+
+                setSavingState();
+            });
+        }
+
         form.addEventListener('submit', function (event) {
             if (placeSelect && !placeSelect.value) {
                 event.preventDefault();
                 showPlaceError();
                 placeSelect.focus();
+                resetSavingState();
                 return;
             }
 
-            const button = form.querySelector('[data-save-client-button]');
-            const status = form.querySelector('[data-save-client-status]');
-
             window.setTimeout(function () {
                 if (event.defaultPrevented) {
+                    resetSavingState();
                     return;
                 }
 
-                if (button) {
-                    button.disabled = true;
-                    button.textContent = 'Guardando cliente...';
-                }
-
-                if (status) {
-                    status.classList.remove('d-none');
-                }
+                setSavingState();
             }, 0);
         });
     });
