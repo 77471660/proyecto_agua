@@ -19,15 +19,15 @@
         }
 
         if (error.code === error.PERMISSION_DENIED) {
-            return 'Permiso de ubicacion denegado. Puedes escribir la direccion o las coordenadas manualmente.';
+            return 'Permite el acceso a la ubicacion para usar esta funcion.';
         }
 
         if (error.code === error.POSITION_UNAVAILABLE) {
-            return 'GPS desactivado o ubicacion no disponible. Puedes continuar con direccion manual.';
+            return 'Activa tu ubicacion para continuar.';
         }
 
         if (error.code === error.TIMEOUT) {
-            return 'La ubicacion tardo demasiado. Revisa el GPS o intenta nuevamente.';
+            return 'No se pudo obtener tu ubicacion. Activa tu ubicacion e intenta nuevamente.';
         }
 
         return 'No se pudo obtener la ubicacion actual. Puedes guardar el cliente manualmente.';
