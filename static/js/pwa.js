@@ -3,10 +3,88 @@
 
   let serviceWorkerRegistration = null;
   let subscriptionInProgress = false;
+  const LAUNCH_SPLASH_KEY = 'aquasmartLaunchSplashShown';
   const ACTIVE_PUSH_TEXT = '\u{1F514} Notificaciones activas';
   const ANDROID_PUSH_TEXT = '\u{1F514} Notificaciones Android activas';
   const INACTIVE_PUSH_TEXT = '\u26A0\uFE0F Activar notificaciones';
   const RENEW_PUSH_TEXT = '\u{1F504} Renovar notificaciones';
+
+  function isStandaloneApp() {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true
+    );
+  }
+
+  function showLaunchSplashOnce() {
+    if (!isStandaloneApp()) {
+      return;
+    }
+
+    try {
+      if (window.sessionStorage.getItem(LAUNCH_SPLASH_KEY)) {
+        return;
+      }
+
+      window.sessionStorage.setItem(LAUNCH_SPLASH_KEY, '1');
+    } catch (error) {
+      return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.style.alignItems = 'center';
+    overlay.style.background = '#0f5fb8';
+    overlay.style.bottom = '0';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.left = '0';
+    overlay.style.pointerEvents = 'none';
+    overlay.style.position = 'fixed';
+    overlay.style.right = '0';
+    overlay.style.top = '0';
+    overlay.style.zIndex = '2147483647';
+
+    const logo = document.createElement('img');
+    logo.alt = '';
+    logo.decoding = 'async';
+    logo.src = '/static/img/icons/apple-touch-icon.png';
+    logo.style.borderRadius = '22px';
+    logo.style.height = '104px';
+    logo.style.width = '104px';
+
+    overlay.appendChild(logo);
+
+    function removeOverlay() {
+      if (overlay.parentElement) {
+        overlay.remove();
+      }
+    }
+
+    function attachOverlay() {
+      if (!document.body) {
+        return;
+      }
+
+      document.body.appendChild(overlay);
+
+      if (document.readyState === 'complete') {
+        window.requestAnimationFrame(removeOverlay);
+      } else {
+        window.addEventListener('load', removeOverlay, { once: true });
+      }
+
+      window.setTimeout(removeOverlay, 1200);
+    }
+
+    if (document.body) {
+      attachOverlay();
+    } else {
+      document.addEventListener('DOMContentLoaded', attachOverlay, { once: true });
+    }
+  }
+
+  showLaunchSplashOnce();
 
   function webpushButtons() {
     return Array.from(document.querySelectorAll('[data-webpush-toggle]'));
