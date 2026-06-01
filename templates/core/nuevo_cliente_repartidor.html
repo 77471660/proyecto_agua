@@ -5,6 +5,15 @@
     <meta charset="UTF-8">
     <title>Nuevo cliente - AquaSmart CRM</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AquaSmart">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/icons/apple-touch-icon.png' %}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{% static 'img/icons/apple-touch-icon.png' %}">
+    <link rel="icon" href="{% static 'img/icons/favicon.ico' %}">
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -311,9 +320,19 @@
                     ></div>
                 </div>
 
-                <button type="submit" class="btn btn-success w-100 action-button">
+                <button
+                    type="submit"
+                    class="btn btn-success w-100 action-button"
+                    data-save-client-button
+                >
                     Guardar cliente
                 </button>
+                <div
+                    class="form-text text-muted text-center mt-2 d-none"
+                    data-save-client-status
+                >
+                    Registrando cliente, espere...
+                </div>
             </form>
         </div>
     </section>
@@ -326,6 +345,33 @@
 <script src="{% static 'js/ui_safety.js' %}"></script>
 <script src="{% static 'js/reference_house_form.js' %}" defer></script>
 <script src="{% static 'js/client_suggestions.js' %}" defer></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form[data-reference-house-form]');
+
+        if (!form) {
+            return;
+        }
+
+        form.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) {
+                return;
+            }
+
+            const button = form.querySelector('[data-save-client-button]');
+            const status = form.querySelector('[data-save-client-status]');
+
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Guardando cliente...';
+            }
+
+            if (status) {
+                status.classList.remove('d-none');
+            }
+        });
+    });
+</script>
 
 </body>
 </html>
