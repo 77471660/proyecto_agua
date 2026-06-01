@@ -3263,6 +3263,131 @@ class PermisosRolesTests(TestCase):
         self.assertEqual(cuadrado.context['estado_caja'], 'Cuadra')
         self.assertEqual(cuadrado.context['diferencia_caja'], Decimal('0.00'))
 
+    def test_reporte_diario_permite_consultar_fecha_anterior(self):
+        hoy = timezone.localdate()
+        ayer = hoy - timedelta(days=1)
+        fecha_ayer = timezone.make_aware(
+            datetime.combine(ayer, time(10, 0)),
+            timezone.get_current_timezone()
+        )
+        fecha_hoy = timezone.now()
+        pedido_ayer = self.crear_pedido(self.repartidor)
+        pedido_hoy = self.crear_pedido(self.repartidor)
+        Pedido.objects.filter(pk=pedido_ayer.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_pedido=fecha_ayer,
+            fecha_entrega=fecha_ayer,
+            metodo_pago=Pedido.PAGO_YAPE
+        )
+        Pedido.objects.filter(pk=pedido_hoy.pk).update(
+            estado=Pedido.ENTREGADO,
+            fecha_pedido=fecha_hoy,
+            fecha_entrega=fecha_hoy,
+            metodo_pago=Pedido.PAGO_EFECTIVO
+        )
+        self.client.force_login(self.secretaria)
+
+        response = self.client.get(
+            reverse('reporte_diario'),
+            {'fecha': ayer.strftime('%Y-%m-%d')}
+        )
+
+        self.assertEqual(response.context['fecha_reporte'], ayer)
+        self.assertEqual(response.context['cobrado_hoy'], Decimal('14.00'))
+        self.assertEqual(response.context['digital_cobrado_hoy'], Decimal('14.00'))
+        self.assertEqual(response.context['total_pedidos_hoy'], 1)
+        self.assertContains(response, f'value="{ayer.strftime("%Y-%m-%d")}"')
+        self.assertContains(response, 'Por cobrar actual')
+
+    def test_reporte_diario_fecha_invalida_o_futura_vuelve_a_hoy(self):
+        hoy = timezone.localdate()
+        self.client.force_login(self.secretaria)
+
+        fecha_invalida = self.client.get(
+            reverse('reporte_diario'),
+            {'fecha': 'fecha-rota'}
+        )
+        fecha_futura = self.client.get(
+            reverse('reporte_diario'),
+            {'fecha': (hoy + timedelta(days=1)).strftime('%Y-%m-%d')}
+        )
+
+        self.assertEqual(fecha_invalida.context['fecha_reporte'], hoy)
+        self.assertEqual(fecha_futura.context['fecha_reporte'], hoy)
+
+    def test_registra_cierre_atrasado_solo_si_no_existe(self):
+        hoy = timezone.localdate()
+        ayer = hoy - timedelta(days=1)
+        manana = hoy + timedelta(days=1)
+        self.client.force_login(self.secretaria)
+
+        futuro = self.client.post(
+            reverse('registrar_cierre_caja_diario'),
+            {
+                'fecha_cierre': manana.strftime('%Y-%m-%d'),
+                'efectivo_contado': '10.00',
+            }
+        )
+
+        self.assertRedirects(futuro, reverse('reporte_diario'))
+        self.assertFalse(CierreCajaDiario.objects.filter(fecha=manana).exists())
+
+        response = self.client.post(
+            reverse('registrar_cierre_caja_diario'),
+            {
+                'fecha_cierre': ayer.strftime('%Y-%m-%d'),
+                'efectivo_contado': '10.00',
+                'observacion_cierre': 'Cierre atrasado',
+            }
+        )
+        cierre = CierreCajaDiario.objects.get(fecha=ayer)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('reporte_diario')}?fecha={ayer.strftime('%Y-%m-%d')}"
+        )
+        self.assertEqual(cierre.efectivo_contado, Decimal('10.00'))
+
+        bloqueado = self.client.post(
+            reverse('registrar_cierre_caja_diario'),
+            {
+                'fecha_cierre': ayer.strftime('%Y-%m-%d'),
+                'efectivo_contado': '20.00',
+                'observacion_cierre': 'No debe editar',
+            }
+        )
+        cierre.refresh_from_db()
+
+        self.assertRedirects(
+            bloqueado,
+            f"{reverse('reporte_diario')}?fecha={ayer.strftime('%Y-%m-%d')}"
+        )
+        self.assertEqual(CierreCajaDiario.objects.filter(fecha=ayer).count(), 1)
+        self.assertEqual(cierre.efectivo_contado, Decimal('10.00'))
+
+    def test_cierre_de_hoy_mantiene_actualizacion_actual(self):
+        hoy = timezone.localdate()
+        self.client.force_login(self.secretaria)
+
+        self.client.post(
+            reverse('registrar_cierre_caja_diario'),
+            {
+                'fecha_cierre': hoy.strftime('%Y-%m-%d'),
+                'efectivo_contado': '12.00',
+            }
+        )
+        self.client.post(
+            reverse('registrar_cierre_caja_diario'),
+            {
+                'fecha_cierre': hoy.strftime('%Y-%m-%d'),
+                'efectivo_contado': '15.00',
+            }
+        )
+        cierre = CierreCajaDiario.objects.get(fecha=hoy)
+
+        self.assertEqual(CierreCajaDiario.objects.count(), 1)
+        self.assertEqual(cierre.efectivo_contado, Decimal('15.00'))
+
     def test_reporte_semanal_incluye_egresos_y_neto(self):
         pedido = self.crear_pedido(self.repartidor)
         Pedido.objects.filter(pk=pedido.pk).update(

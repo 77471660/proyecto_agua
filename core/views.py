@@ -1,6 +1,7 @@
 ﻿from django.http import FileResponse, JsonResponse
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.forms import AuthenticationForm
@@ -1178,6 +1179,24 @@ def decimal_post(valor):
         return None
 
 
+def fecha_reporte_diario(valor_fecha=None, limitar_futuro=True):
+
+    hoy = timezone.localdate()
+
+    if not valor_fecha:
+        return hoy
+
+    try:
+        fecha = datetime.strptime(valor_fecha, '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        return hoy
+
+    if limitar_futuro and fecha > hoy:
+        return hoy
+
+    return fecha
+
+
 def resumen_pagos_por_lugar(pedidos_entregados):
 
     resumen = []
@@ -1774,15 +1793,38 @@ def editar_egreso(request, egreso_id):
 def registrar_cierre_caja_diario(request):
 
     hoy = timezone.localdate()
+    fecha_cierre_valor = request.POST.get('fecha_cierre', '').strip()
+    if fecha_cierre_valor:
+        try:
+            fecha_cierre = datetime.strptime(fecha_cierre_valor, '%Y-%m-%d').date()
+        except ValueError:
+            messages.error(request, 'Fecha de cierre inválida.')
+            return redirect('reporte_diario')
+    else:
+        fecha_cierre = hoy
+
     efectivo_contado = decimal_post(request.POST.get('efectivo_contado'))
     observacion_cierre = request.POST.get('observacion_cierre', '').strip()
+    redirect_url = f"{reverse('reporte_diario')}?fecha={fecha_cierre:%Y-%m-%d}"
 
     if efectivo_contado is None:
         messages.error(request, 'Ingresa un efectivo contado válido.')
+        return redirect(redirect_url)
+
+    if fecha_cierre > hoy:
+        messages.error(request, 'No se puede registrar un cierre de caja futuro.')
         return redirect('reporte_diario')
 
+    if fecha_cierre < hoy and CierreCajaDiario.objects.filter(fecha=fecha_cierre).exists():
+        messages.error(
+            request,
+            'Ese dia ya tiene cierre registrado. La edicion de cierres pasados '
+            'queda pendiente para una fase futura.'
+        )
+        return redirect(redirect_url)
+
     cierre = CierreCajaDiario(
-        fecha=hoy,
+        fecha=fecha_cierre,
         efectivo_contado=efectivo_contado,
         observacion_cierre=observacion_cierre,
         usuario_registro=request.user,
@@ -1792,10 +1834,10 @@ def registrar_cierre_caja_diario(request):
         cierre.full_clean(validate_unique=False)
     except ValidationError as error:
         messages.error(request, mensaje_validacion_modelo(error))
-        return redirect('reporte_diario')
+        return redirect(redirect_url)
 
     CierreCajaDiario.objects.update_or_create(
-        fecha=hoy,
+        fecha=fecha_cierre,
         defaults={
             'efectivo_contado': efectivo_contado,
             'observacion_cierre': observacion_cierre,
@@ -1804,7 +1846,7 @@ def registrar_cierre_caja_diario(request):
     )
 
     messages.success(request, 'Cierre de caja actualizado.')
-    return redirect('reporte_diario')
+    return redirect(redirect_url)
 
 
 @login_required
@@ -1816,17 +1858,19 @@ def reporte_diario(
 ):
 
     hoy = timezone.localdate()
+    fecha_reporte = fecha_reporte_diario(request.GET.get('fecha'))
     ayer = hoy - timedelta(days=1)
-    antes_ayer = hoy - timedelta(days=2)
-    hace_3_dias = hoy - timedelta(days=3)
-    inicio_mes_actual = hoy.replace(day=1)
+    dia_anterior = fecha_reporte - timedelta(days=1)
+    hace_2_dias = fecha_reporte - timedelta(days=2)
+    hace_3_dias = fecha_reporte - timedelta(days=3)
+    inicio_mes_actual = fecha_reporte.replace(day=1)
 
     comparativo_ventas = []
 
     for etiqueta, fecha in [
-        ('Hoy', hoy),
-        ('Ayer', ayer),
-        ('Antes de ayer', antes_ayer),
+        ('Dia seleccionado', fecha_reporte),
+        ('Dia anterior', dia_anterior),
+        ('Hace 2 dias', hace_2_dias),
         ('Hace 3 días', hace_3_dias),
     ]:
         pedidos_dia = Pedido.objects.filter(
@@ -1855,7 +1899,7 @@ def reporte_diario(
     detalle_diario_mes = []
     fecha_iteracion = inicio_mes_actual
 
-    while fecha_iteracion <= hoy:
+    while fecha_iteracion <= fecha_reporte:
         pedidos_dia = Pedido.objects.filter(
             estado=Pedido.ENTREGADO,
             fecha_entrega__date=fecha_iteracion
@@ -1872,15 +1916,15 @@ def reporte_diario(
 
     cancelados_hoy = Pedido.objects.filter(
         estado=Pedido.CANCELADO,
-        fecha_cancelacion__date=hoy
+        fecha_cancelacion__date=fecha_reporte
     ).count()
     pagos_hoy = totales_por_metodo_pago(
         Pedido.objects.filter(
             estado=Pedido.ENTREGADO,
-            fecha_entrega__date=hoy
+            fecha_entrega__date=fecha_reporte
         )
     )
-    cobros_hoy = totales_cobros_periodo(hoy, hoy)
+    cobros_hoy = totales_cobros_periodo(fecha_reporte, fecha_reporte)
     digital_cobrado_hoy = (
         cobros_hoy['yape']
         + cobros_hoy['plin']
@@ -1889,13 +1933,13 @@ def reporte_diario(
     total_por_cobrar = fiados_por_cobrar().aggregate(
         total=Sum('total')
     )['total'] or Decimal('0.00')
-    egresos_hoy = egresos_en_rango(hoy, hoy)
+    egresos_hoy = egresos_en_rango(fecha_reporte, fecha_reporte)
     total_egresos_hoy = total_decimal(egresos_hoy)
     egresos_efectivo_hoy = total_decimal(
         egresos_hoy.filter(metodo_pago=Egreso.PAGO_EFECTIVO)
     )
     efectivo_esperado = cobros_hoy['efectivo'] - egresos_efectivo_hoy
-    cierre_caja = CierreCajaDiario.objects.filter(fecha=hoy).first()
+    cierre_caja = CierreCajaDiario.objects.filter(fecha=fecha_reporte).first()
     efectivo_contado = None
     diferencia_caja = None
     estado_caja = 'Sin cierre'
@@ -1906,7 +1950,7 @@ def reporte_diario(
         estado_caja = estado_cierre_caja(diferencia_caja)
 
     pedidos_hoy = Pedido.objects.filter(
-        fecha_pedido__date=hoy
+        fecha_pedido__date=fecha_reporte
     ).select_related(
         'cliente',
         'lugar',
@@ -2046,6 +2090,10 @@ def reporte_diario(
         'lugares': lugares,
         'repartidores': repartidores,
         'hoy': hoy,
+        'ayer': ayer,
+        'fecha_reporte': fecha_reporte,
+        'es_reporte_hoy': fecha_reporte == hoy,
+        'puede_guardar_cierre': fecha_reporte == hoy or cierre_caja is None,
         'base_template': base_template,
     }
 
