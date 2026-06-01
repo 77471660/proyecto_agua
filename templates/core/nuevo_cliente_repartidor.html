@@ -279,6 +279,9 @@
                             <option value="{{ lugar.id }}">{{ lugar.nombre }}</option>
                         {% endfor %}
                     </select>
+                    <div class="invalid-feedback" data-place-error>
+                        Selecciona un lugar / zona para continuar.
+                    </div>
                 </div>
 
                 {% include 'core/includes/cliente_ubicacion_fields.html' %}
@@ -353,22 +356,63 @@
             return;
         }
 
+        const placeSelect = form.querySelector('#lugar');
+        const placeError = form.querySelector('[data-place-error]');
+
+        function showPlaceError() {
+            if (placeSelect) {
+                placeSelect.classList.add('is-invalid');
+            }
+
+            if (placeError) {
+                placeError.classList.add('d-block');
+            }
+        }
+
+        function clearPlaceError() {
+            if (placeSelect) {
+                placeSelect.classList.remove('is-invalid');
+            }
+
+            if (placeError) {
+                placeError.classList.remove('d-block');
+            }
+        }
+
+        if (placeSelect) {
+            placeSelect.addEventListener('invalid', showPlaceError);
+            placeSelect.addEventListener('change', function () {
+                if (placeSelect.value) {
+                    clearPlaceError();
+                }
+            });
+        }
+
         form.addEventListener('submit', function (event) {
-            if (event.defaultPrevented) {
+            if (placeSelect && !placeSelect.value) {
+                event.preventDefault();
+                showPlaceError();
+                placeSelect.focus();
                 return;
             }
 
             const button = form.querySelector('[data-save-client-button]');
             const status = form.querySelector('[data-save-client-status]');
 
-            if (button) {
-                button.disabled = true;
-                button.textContent = 'Guardando cliente...';
-            }
+            window.setTimeout(function () {
+                if (event.defaultPrevented) {
+                    return;
+                }
 
-            if (status) {
-                status.classList.remove('d-none');
-            }
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Guardando cliente...';
+                }
+
+                if (status) {
+                    status.classList.remove('d-none');
+                }
+            }, 0);
         });
     });
 </script>
