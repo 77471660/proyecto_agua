@@ -136,13 +136,23 @@ Registrar cliente - AquaSmart CRM
                     </div>
 
                     <div class="form-actions d-flex gap-2 flex-wrap">
-                        <button type="submit" class="btn btn-success">
+                        <button
+                            type="submit"
+                            class="btn btn-success"
+                            data-save-client-button
+                        >
                             Guardar cliente
                         </button>
 
                         <a href="/clientes/" class="btn btn-outline-secondary">
                             Cancelar
                         </a>
+                    </div>
+                    <div
+                        class="form-text text-muted mt-2 d-none"
+                        data-save-client-status
+                    >
+                        Registrando cliente, espere...
                     </div>
 
                 </form>
@@ -155,5 +165,32 @@ Registrar cliente - AquaSmart CRM
 
 <script src="{% static 'js/reference_house_form.js' %}" defer></script>
 <script src="{% static 'js/client_suggestions.js' %}" defer></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form[data-reference-house-form]');
+
+        if (!form) {
+            return;
+        }
+
+        form.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) {
+                return;
+            }
+
+            const button = form.querySelector('[data-save-client-button]');
+            const status = form.querySelector('[data-save-client-status]');
+
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Guardando cliente...';
+            }
+
+            if (status) {
+                status.classList.remove('d-none');
+            }
+        });
+    });
+</script>
 
 {% endblock %}
